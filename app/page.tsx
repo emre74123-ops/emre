@@ -95,11 +95,6 @@ export default function Home() {
 
   return (
     <main id="top">
-      <div className="notice-bar">
-        <p><span>●</span> Bu site geliştirme aşamasındadır. Şu anda gerçek ödeme alınmamaktadır.</p>
-        <a href="#seffaflik">Detaylı bilgi</a>
-      </div>
-
       <header className="site-header">
         <a className="brand" href="#top" aria-label="İyilik Adresim ana sayfa">
           <span className="brand-symbol"><i>i</i><b>a</b></span>
