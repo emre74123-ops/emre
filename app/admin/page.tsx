@@ -349,12 +349,12 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
     if (!editing) return;
     const updated: Slide = {
       ...editing,
-      eyebrow: String(formData.get("eyebrow") || ""),
-      title: String(formData.get("title") || ""),
-      highlight: String(formData.get("highlight") || ""),
-      description: String(formData.get("description") || ""),
+      eyebrow: "",
+      title: "",
+      highlight: "",
+      description: "",
       buttonText: String(formData.get("buttonText") || ""),
-      buttonLink: String(formData.get("buttonLink") || ""),
+      buttonLink: "#destek",
       desktopImage: String(formData.get("desktopImage") || ""),
       mobileImage: String(formData.get("mobileImage") || ""),
       active: formData.get("active") === "on",
@@ -422,11 +422,8 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
         <div className={styles.modalBackdrop}>
           <form className={`${styles.modal} ${styles.slideModal}`} action={saveSlide}>
             <button className={styles.modalClose} type="button" onClick={() => setEditing(null)}>×</button>
-            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Görselleri, buton yazısını ve buton bağlantısını belirleyebilirsiniz.</p>
-            <div className={styles.modalRow}>
-              <label>Buton yazısı<input name="buttonText" defaultValue={editing.buttonText} required /></label>
-              <label>Buton bağlantısı<input name="buttonLink" defaultValue={editing.buttonLink} placeholder="#projeler" required /></label>
-            </div>
+            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Görselleri ve slider üzerinde görünecek tek butonun yazısını belirleyebilirsiniz.</p>
+            <label>Buton yazısı<input name="buttonText" defaultValue={editing.buttonText} required /></label>
             <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
             <section className={styles.desktopUploadSection}>
               <div><span>MASAÜSTÜ SLIDER</span><strong>1920 × 900 piksel</strong><small>Yatay görsel · Önerilen oran 16:7,5 · En fazla 5 MB</small></div>
@@ -436,7 +433,7 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
               {editing.desktopImage && <div className={styles.desktopImagePreview}><img src={editing.desktopImage} alt="Masaüstü slider önizlemesi" /></div>}
             </section>
             <section className={styles.mobileUploadSection}>
-              <div className={styles.mobileUploadCopy}><span>MOBİL SLIDER — AYRI GÖRSEL</span><strong>900 × 1400 piksel</strong><small>Dikey görsel · Önerilen oran 9:14 · Minimum 720×1120 · En fazla 5 MB</small><p>Önemli kişi veya nesneyi görselin orta bölümünde tutun. Buton alt tarafta yer alacağı için görselin alt kısmını sade bırakın.</p></div>
+              <div className={styles.mobileUploadCopy}><span>MOBİL SLIDER — AYRI GÖRSEL</span><strong>900 × 1050 piksel</strong><small>Dikey görsel · Önerilen oran 6:7 · Minimum 720×840 · En fazla 5 MB</small><p>Önemli kişi veya nesneyi görselin orta bölümünde tutun. Buton alt tarafta yer alacağı için görselin alt kısmını sade bırakın.</p></div>
               <div className={styles.mobileUploadGrid}>
                 <label className={styles.uploadField}>Mobil görseli
                   <span><input name="mobileImage" type="url" value={editing.mobileImage} onChange={(event) => setEditing({ ...editing, mobileImage: event.target.value })} placeholder="Mobil görsel adresi veya yükleme" required /><b>{uploading === "mobile" ? "Yükleniyor..." : "Mobil Görsel Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "mobile")} /></b></span>
