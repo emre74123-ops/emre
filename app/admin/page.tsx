@@ -24,8 +24,22 @@ type Application = {
   created_at: string;
 };
 
+type Slide = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  highlight: string;
+  description: string;
+  buttonText: string;
+  buttonLink: string;
+  desktopImage: string;
+  mobileImage: string;
+  active: boolean;
+};
+
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
+  ["slider", "▣", "Slider Yönetimi"],
   ["campaigns", "◇", "Kampanyalar"],
   ["applications", "◫", "Başvurular"],
   ["members", "◎", "Üyeler"],
@@ -38,6 +52,7 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
   const [campaignModal, setCampaignModal] = useState(false);
   const [toast, setToast] = useState("");
@@ -48,9 +63,11 @@ export default function AdminPage() {
     Promise.all([
       fetch("/api/admin/campaigns").then((response) => response.json()),
       fetch("/api/admin/applications").then((response) => response.json()),
-    ]).then(([campaignResult, applicationResult]) => {
+      fetch("/api/admin/slides").then((response) => response.json()),
+    ]).then(([campaignResult, applicationResult, slideResult]) => {
       setCampaigns(campaignResult.campaigns || []);
       setApplications(applicationResult.applications || []);
+      setSlides(slideResult.slides || []);
       setLoading(false);
     }).catch(() => {
       setLoading(false);
@@ -206,6 +223,8 @@ export default function AdminPage() {
             </>
           )}
 
+          {active === "slider" && <SliderManager slides={slides} setSlides={setSlides} showToast={showToast} />}
+
           {active === "campaigns" && (
             <>
               <div className={styles.pageHeading}><div><p>İçerik yönetimi</p><h1>Kampanyalar</h1><span>Yardım kampanyalarını oluştur, düzenle ve yayınla.</span></div><button className={styles.primaryButton} type="button" onClick={() => setCampaignModal(true)}>＋ Yeni Kampanya</button></div>
@@ -300,6 +319,113 @@ function ApplicationTable({ applications, detailed = false }: { applications: Ap
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setSlides: (slides: Slide[]) => void; showToast: (message: string) => void }) {
+  const [editing, setEditing] = useState<Slide | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function persist(nextSlides: Slide[]) {
+    setSaving(true);
+    const response = await fetch("/api/admin/slides", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slides: nextSlides }),
+    });
+    const result = await response.json();
+    setSaving(false);
+    if (!response.ok) {
+      showToast(result.error || "Slider ayarları kaydedilemedi.");
+      return false;
+    }
+    setSlides(result.slides);
+    showToast("Slider ayarları canlı siteye kaydedildi.");
+    return true;
+  }
+
+  async function saveSlide(formData: FormData) {
+    if (!editing) return;
+    const updated: Slide = {
+      ...editing,
+      eyebrow: String(formData.get("eyebrow") || ""),
+      title: String(formData.get("title") || ""),
+      highlight: String(formData.get("highlight") || ""),
+      description: String(formData.get("description") || ""),
+      buttonText: String(formData.get("buttonText") || ""),
+      buttonLink: String(formData.get("buttonLink") || ""),
+      desktopImage: String(formData.get("desktopImage") || ""),
+      mobileImage: String(formData.get("mobileImage") || ""),
+      active: formData.get("active") === "on",
+    };
+    const exists = slides.some((slide) => slide.id === updated.id);
+    const next = exists ? slides.map((slide) => slide.id === updated.id ? updated : slide) : [...slides, updated];
+    if (await persist(next)) setEditing(null);
+  }
+
+  function newSlide() {
+    setEditing({
+      id: crypto.randomUUID(),
+      eyebrow: "Yeni duyuru",
+      title: "İyiliği birlikte",
+      highlight: "büyütüyoruz.",
+      description: "Slider açıklamasını buraya yazın.",
+      buttonText: "Detaylı Bilgi",
+      buttonLink: "#projeler",
+      desktopImage: "",
+      mobileImage: "",
+      active: true,
+    });
+  }
+
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>Ana sayfa</p><h1>Slider Yönetimi</h1><span>Masaüstü ve mobil ziyaretçiler için ayrı görsellerle profesyonel duyurular hazırlayın.</span></div>
+        <button className={styles.primaryButton} type="button" onClick={newSlide}>＋ Yeni Slayt</button>
+      </div>
+      <div className={styles.sliderInfo}><span>i</span><p><strong>Önerilen görsel ölçüleri</strong>Masaüstü: 1920×900 piksel · Mobil: 900×1400 piksel. En fazla 8 slayt kullanabilirsiniz.</p></div>
+      <section className={styles.slideManager}>
+        {slides.length === 0 && <div className={styles.listEmpty}><span>▣</span><strong>Henüz slayt yok</strong><p>İlk slaytı ekleyerek ana sayfanızı canlandırın.</p></div>}
+        {slides.map((slide, index) => (
+          <article className={styles.slideCard} key={slide.id}>
+            <div className={styles.slidePreview}>
+              {slide.desktopImage ? <img src={slide.desktopImage} alt="" /> : <span>Görsel bekleniyor</span>}
+              <div><small>{slide.eyebrow}</small><strong>{slide.title} <em>{slide.highlight}</em></strong></div>
+              <b>0{index + 1}</b>
+            </div>
+            <div className={styles.slideCardBody}>
+              <div><span className={slide.active ? styles.liveStatus : styles.draftStatus}>● {slide.active ? "Yayında" : "Gizli"}</span><small>Masaüstü + mobil görsel</small></div>
+              <button type="button" onClick={() => setEditing(slide)}>Düzenle</button>
+              <button type="button" onClick={() => persist(slides.filter((item) => item.id !== slide.id))}>Sil</button>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {editing && (
+        <div className={styles.modalBackdrop}>
+          <form className={`${styles.modal} ${styles.slideModal}`} action={saveSlide}>
+            <button className={styles.modalClose} type="button" onClick={() => setEditing(null)}>×</button>
+            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Mobil ve masaüstü görsellerini ayrı ayrı belirleyebilirsiniz.</p>
+            <div className={styles.modalRow}>
+              <label>Üst etiket<input name="eyebrow" defaultValue={editing.eyebrow} required /></label>
+              <label>Buton yazısı<input name="buttonText" defaultValue={editing.buttonText} required /></label>
+            </div>
+            <label>Ana başlık<input name="title" defaultValue={editing.title} required /></label>
+            <label>Vurgulu başlık<input name="highlight" defaultValue={editing.highlight} required /></label>
+            <label>Açıklama<input name="description" defaultValue={editing.description} required /></label>
+            <div className={styles.modalRow}>
+              <label>Buton bağlantısı<input name="buttonLink" defaultValue={editing.buttonLink} placeholder="#projeler" required /></label>
+              <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
+            </div>
+            <label>Masaüstü görsel adresi<input name="desktopImage" type="url" defaultValue={editing.desktopImage} placeholder="https://..." required /></label>
+            <label>Mobil görsel adresi<input name="mobileImage" type="url" defaultValue={editing.mobileImage} placeholder="https://..." required /></label>
+            <div className={styles.modalActions}><button type="button" onClick={() => setEditing(null)}>Vazgeç</button><button type="submit" disabled={saving}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button></div>
+          </form>
+        </div>
+      )}
+    </>
   );
 }
 
