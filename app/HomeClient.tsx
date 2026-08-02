@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Slide = {
   id: string;
@@ -55,6 +55,8 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
   const [openFaq, setOpenFaq] = useState(0);
   const [slides] = useState<Slide[]>(initialSlides);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [draggingSlider, setDraggingSlider] = useState(false);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (slides.length < 2) return;
@@ -63,6 +65,32 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
   }, [slides.length]);
 
   const slide = slides[currentSlide] || slides[0];
+
+  function startSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
+    if (slides.length < 2) return;
+    dragStart.current = { x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
+    if (!dragStart.current) return;
+    const horizontal = Math.abs(event.clientX - dragStart.current.x);
+    const vertical = Math.abs(event.clientY - dragStart.current.y);
+    if (horizontal > 8 && horizontal > vertical) setDraggingSlider(true);
+  }
+
+  function finishSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
+    const start = dragStart.current;
+    dragStart.current = null;
+    setDraggingSlider(false);
+    if (!start || slides.length < 2) return;
+    const horizontal = event.clientX - start.x;
+    const vertical = event.clientY - start.y;
+    if (Math.abs(horizontal) < 45 || Math.abs(horizontal) <= Math.abs(vertical)) return;
+    setCurrentSlide((current) => horizontal < 0
+      ? (current + 1) % slides.length
+      : (current - 1 + slides.length) % slides.length);
+  }
 
   function openDonation(project = "Genel Destek") {
     setSelectedProject(project);
@@ -94,7 +122,13 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
       </header>
 
       <section className="hero" aria-roledescription="carousel" aria-label="İyilik Adresim duyuruları">
-        <div className="hero-image">
+        <div
+          className={`hero-image${draggingSlider ? " is-dragging" : ""}`}
+          onPointerDown={startSliderDrag}
+          onPointerMove={moveSliderDrag}
+          onPointerUp={finishSliderDrag}
+          onPointerCancel={() => { dragStart.current = null; setDraggingSlider(false); }}
+        >
           {slide && <picture className="hero-media">
             <source media="(max-width: 760px)" srcSet={slide.mobileImage} />
             <img src={slide.desktopImage} alt="" />
