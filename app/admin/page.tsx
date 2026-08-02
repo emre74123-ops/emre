@@ -35,6 +35,13 @@ type Slide = {
   active: boolean;
 };
 
+type SliderImage = {
+  path: string;
+  url: string;
+  size: number;
+  createdAt: string | null;
+};
+
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
   ["slider", "▣", "Slider Yönetimi"],
@@ -329,6 +336,20 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
   const [editing, setEditing] = useState<Slide | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<"desktop" | "mobile" | null>(null);
+  const [images, setImages] = useState<SliderImage[]>([]);
+
+  async function loadImages() {
+    const response = await fetch(`/api/admin/slides/images?t=${Date.now()}`, { cache: "no-store" });
+    const result = await response.json();
+    if (response.ok) setImages(result.images || []);
+  }
+
+  useEffect(() => {
+    fetch(`/api/admin/slides/images?t=${Date.now()}`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => setImages(result.images || []))
+      .catch(() => undefined);
+  }, []);
 
   async function persist(nextSlides: Slide[]) {
     setSaving(true);
@@ -390,7 +411,23 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
       return;
     }
     setEditing((current) => current ? { ...current, [kind === "desktop" ? "desktopImage" : "mobileImage"]: result.url } : current);
+    await loadImages();
     showToast("Görsel başarıyla yüklendi.");
+  }
+
+  async function deleteImage(image: SliderImage) {
+    const response = await fetch("/api/admin/slides/images", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: image.path }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      showToast(result.error || "Görsel silinemedi.");
+      return;
+    }
+    setImages((current) => current.filter((item) => item.path !== image.path));
+    showToast("Görsel kalıcı olarak silindi.");
   }
 
   return (
@@ -415,6 +452,34 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
             </div>
           </article>
         ))}
+      </section>
+
+      <section className={styles.mediaLibrary}>
+        <div className={styles.mediaLibraryHeading}>
+          <div><span>MEDYA YÖNETİMİ</span><h2>Görsel Kütüphanesi</h2><p>Slider için yüklediğiniz bütün görselleri burada görebilir ve kullanılmayanları silebilirsiniz.</p></div>
+          <b>{images.length} görsel</b>
+        </div>
+        {images.length === 0 ? (
+          <div className={styles.mediaEmpty}>Henüz bilgisayardan yüklenmiş slider görseli yok.</div>
+        ) : (
+          <div className={styles.mediaGrid}>
+            {images.map((image) => {
+              const inUse = slides.some((slide) => slide.desktopImage === image.url || slide.mobileImage === image.url);
+              return (
+                <article key={image.path}>
+                  <img src={image.url} alt="Yüklenmiş slider görseli" />
+                  <div>
+                    <span>{image.path.split("/").pop()}</span>
+                    <small>{image.size ? `${(image.size / 1024 / 1024).toFixed(2)} MB` : "Slider görseli"}</small>
+                  </div>
+                  {inUse
+                    ? <b>Kullanımda</b>
+                    : <button type="button" onClick={() => deleteImage(image)}>Sil</button>}
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {editing && (
