@@ -14,6 +14,7 @@ export default function AccountPage() {
     event.preventDefault();
     setMessage("");
     const form = new FormData(event.currentTarget);
+    const currentPassword = String(form.get("currentPassword") ?? "");
     const password = String(form.get("password") ?? "");
     const confirmation = String(form.get("confirmation") ?? "");
 
@@ -27,7 +28,28 @@ export default function AccountPage() {
     }
 
     setSaving(true);
-    const { error } = await createClient().auth.updateUser({ password });
+    const supabase = createClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const email = userData.user?.email;
+
+    if (userError || !email) {
+      setSaving(false);
+      setMessage("Oturum doğrulanamadı. Lütfen yeniden giriş yap.");
+      return;
+    }
+
+    const { error: passwordError } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+
+    if (passwordError) {
+      setSaving(false);
+      setMessage("Mevcut şifreniz yanlış.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
     setSaving(false);
     setMessage(error ? "Şifre değiştirilemedi. Lütfen tekrar dene." : "Şifren başarıyla değiştirildi.");
     if (!error) event.currentTarget.reset();
@@ -44,8 +66,9 @@ export default function AccountPage() {
         <form className={styles.form} onSubmit={changePassword}>
           <span className={styles.secure}>● GÜVENLİ HESAP</span>
           <h2>Şifre Değiştir</h2>
-          <p>Yeni yönetici şifreni oluştur.</p>
+          <p>Önce mevcut şifreni doğrula, ardından yeni şifreni oluştur.</p>
           {message && <div className={styles.error}>{message}</div>}
+          <label>Mevcut şifre<input name="currentPassword" type="password" autoComplete="current-password" required /></label>
           <label>Yeni şifre<input name="password" type="password" minLength={10} autoComplete="new-password" required /></label>
           <label>Yeni şifreyi tekrar yaz<input name="confirmation" type="password" minLength={10} autoComplete="new-password" required /></label>
           <button type="submit" disabled={saving}>{saving ? "Kaydediliyor..." : "Şifreyi Kaydet"} <span>→</span></button>
