@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
 import { defaultSlides, type Slide } from "../../../../lib/slides";
@@ -30,6 +29,14 @@ export async function PUT(request: Request) {
     description: String(slide.description || "").slice(0, 240),
     buttonText: String(slide.buttonText || "").slice(0, 40),
     buttonLink: String(slide.buttonLink || "#projeler").slice(0, 200),
+    buttonEnabled: slide.buttonEnabled !== false,
+    desktopButtonPosition: String(slide.desktopButtonPosition || "bottom-left"),
+    mobileButtonPosition: String(slide.mobileButtonPosition || "bottom-center"),
+    buttonStyle: String(slide.buttonStyle || "rounded"),
+    buttonSize: String(slide.buttonSize || "medium"),
+    buttonFont: String(slide.buttonFont || "sans"),
+    buttonColor: /^#[0-9a-f]{6}$/i.test(String(slide.buttonColor)) ? String(slide.buttonColor) : "#128465",
+    buttonTextColor: /^#[0-9a-f]{6}$/i.test(String(slide.buttonTextColor)) ? String(slide.buttonTextColor) : "#ffffff",
     desktopImage: String(slide.desktopImage || "").slice(0, 1000),
     mobileImage: String(slide.mobileImage || slide.desktopImage || "").slice(0, 1000),
     active: Boolean(slide.active),
