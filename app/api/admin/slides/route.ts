@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "../../../../lib/supabase/server";
 import { defaultSlides, type Slide } from "../../../../lib/slides";
 
@@ -43,6 +44,8 @@ export async function PUT(request: Request) {
   })) : [];
   const { error } = await supabase.from("site_settings").upsert({ key: "homepage_slides", value: slides });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/");
+  revalidatePath("/api/slides");
   return NextResponse.json({ slides });
 }
 
