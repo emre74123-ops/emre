@@ -1,6 +1,33 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type Slide = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  highlight: string;
+  description: string;
+  buttonText: string;
+  buttonLink: string;
+  desktopImage: string;
+  mobileImage: string;
+  active: boolean;
+};
+
+const fallbackSlide: Slide = {
+  id: "iyilik",
+  eyebrow: "İyiliğin adresi belli",
+  title: "Bir iyilik,",
+  highlight: "bir hayatı değiştirir.",
+  description: "İhtiyacı, iyilik yapmak isteyenlerle şeffaf ve güvenilir bir zeminde buluşturuyoruz.",
+  buttonText: "İyiliğe Ortak Ol",
+  buttonLink: "#destek",
+  desktopImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2200&q=90",
+  mobileImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&h=1400&q=88",
+  active: true,
+};
 
 const projects = [
   {
@@ -42,6 +69,23 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState("Genel Destek");
   const [demoComplete, setDemoComplete] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
+  const [slides, setSlides] = useState<Slide[]>([fallbackSlide]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/slides").then((response) => response.json()).then((result) => {
+      const activeSlides = (result.slides || []).filter((slide: Slide) => slide.active);
+      if (activeSlides.length) setSlides(activeSlides);
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (slides.length < 2) return;
+    const timer = window.setInterval(() => setCurrentSlide((current) => (current + 1) % slides.length), 6500);
+    return () => window.clearInterval(timer);
+  }, [slides.length]);
+
+  const slide = slides[currentSlide] || slides[0] || fallbackSlide;
 
   function openDonation(project = "Genel Destek") {
     setSelectedProject(project);
@@ -77,18 +121,31 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="hero">
-        <div className="hero-image" role="img" aria-label="Dayanışma içinde gülümseyen çocuklar">
+      <section className="hero" aria-roledescription="carousel" aria-label="İyilik Adresim duyuruları">
+        <div className="hero-image">
+          <picture className="hero-media">
+            <source media="(max-width: 760px)" srcSet={slide.mobileImage} />
+            <img src={slide.desktopImage} alt="" key={slide.id} />
+          </picture>
           <div className="hero-shade" />
-          <div className="hero-content">
-            <span className="hero-kicker">İyiliğin adresi belli</span>
-            <h1>Bir iyilik,<br /><em>bir hayatı</em> değiştirir.</h1>
-            <p>İhtiyacı, iyilik yapmak isteyenlerle şeffaf ve güvenilir bir zeminde buluşturuyoruz.</p>
+          <div className="hero-content" key={`content-${slide.id}`} aria-live="polite">
+            <span className="hero-kicker">{slide.eyebrow}</span>
+            <h1>{slide.title}<br /><em>{slide.highlight}</em></h1>
+            <p>{slide.description}</p>
             <div className="hero-buttons">
-              <button className="donate-button" type="button" onClick={() => openDonation()}>İyiliğe Ortak Ol <span>↗</span></button>
+              {slide.buttonLink === "#destek"
+                ? <button className="donate-button" type="button" onClick={() => openDonation()}>{slide.buttonText} <span>↗</span></button>
+                : <a className="donate-button" href={slide.buttonLink}>{slide.buttonText} <span>↗</span></a>}
               <a className="ghost-button" href="#projeler">Projeleri Keşfet <span>↓</span></a>
             </div>
           </div>
+          {slides.length > 1 && (
+            <div className="slider-controls">
+              <button type="button" aria-label="Önceki slayt" onClick={() => setCurrentSlide((current) => (current - 1 + slides.length) % slides.length)}>←</button>
+              <div>{slides.map((item, index) => <button type="button" aria-label={`${index + 1}. slayta git`} aria-current={index === currentSlide} key={item.id} onClick={() => setCurrentSlide(index)}><span /></button>)}</div>
+              <button type="button" aria-label="Sonraki slayt" onClick={() => setCurrentSlide((current) => (current + 1) % slides.length)}>→</button>
+            </div>
+          )}
           <div className="hero-proof">
             <div className="proof-icon">✓</div>
             <div><small>Şeffaf süreç</small><strong>Her adımda bilgilendirme</strong></div>
