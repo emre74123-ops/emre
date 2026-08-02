@@ -88,7 +88,7 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    fetch("/api/slides").then((response) => response.json()).then((result) => {
+    fetch(`/api/slides?t=${Date.now()}`, { cache: "no-store" }).then((response) => response.json()).then((result) => {
       const activeSlides = (result.slides || []).filter((slide: Slide) => slide.active);
       if (activeSlides.length) setSlides(activeSlides);
     }).catch(() => undefined);
