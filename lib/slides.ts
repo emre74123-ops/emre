@@ -1,4 +1,3 @@
-
 export type Slide = {
   id: string;
   eyebrow: string;
@@ -7,6 +6,14 @@ export type Slide = {
   description: string;
   buttonText: string;
   buttonLink: string;
+  buttonEnabled: boolean;
+  desktopButtonPosition: string;
+  mobileButtonPosition: string;
+  buttonStyle: string;
+  buttonSize: string;
+  buttonFont: string;
+  buttonColor: string;
+  buttonTextColor: string;
   desktopImage: string;
   mobileImage: string;
   active: boolean;
@@ -21,6 +28,14 @@ export const defaultSlides: Slide[] = [
     description: "İhtiyacı, iyilik yapmak isteyenlerle şeffaf ve güvenilir bir zeminde buluşturuyoruz.",
     buttonText: "İyiliğe Ortak Ol",
     buttonLink: "#destek",
+    buttonEnabled: true,
+    desktopButtonPosition: "bottom-left",
+    mobileButtonPosition: "bottom-center",
+    buttonStyle: "rounded",
+    buttonSize: "medium",
+    buttonFont: "sans",
+    buttonColor: "#128465",
+    buttonTextColor: "#ffffff",
     desktopImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2200&q=90",
     mobileImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&h=1050&q=88",
     active: true,
@@ -33,6 +48,14 @@ export const defaultSlides: Slide[] = [
     description: "Eğitim desteğiyle çocukların hayallerine uzanan yolu birlikte açıyoruz.",
     buttonText: "Projeleri Keşfet",
     buttonLink: "#projeler",
+    buttonEnabled: true,
+    desktopButtonPosition: "bottom-left",
+    mobileButtonPosition: "bottom-center",
+    buttonStyle: "pill",
+    buttonSize: "medium",
+    buttonFont: "sans",
+    buttonColor: "#ed7048",
+    buttonTextColor: "#ffffff",
     desktopImage: "https://images.unsplash.com/photo-1504159506876-f8338247a14a?auto=format&fit=crop&w=2200&q=90",
     mobileImage: "https://images.unsplash.com/photo-1504159506876-f8338247a14a?auto=format&fit=crop&w=900&h=1050&q=88",
     active: true,
@@ -45,6 +68,14 @@ export const defaultSlides: Slide[] = [
     description: "Kalıcı sosyal etki için güvenilir, ölçülebilir ve insan odaklı projeler geliştiriyoruz.",
     buttonText: "Bizi Tanıyın",
     buttonLink: "#hakkimizda",
+    buttonEnabled: true,
+    desktopButtonPosition: "bottom-left",
+    mobileButtonPosition: "bottom-center",
+    buttonStyle: "outline",
+    buttonSize: "medium",
+    buttonFont: "serif",
+    buttonColor: "#ffffff",
+    buttonTextColor: "#ffffff",
     desktopImage: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=2200&q=90",
     mobileImage: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=900&h=1050&q=88",
     active: true,
