@@ -137,7 +137,6 @@ export default function Home() {
             <source media="(max-width: 760px)" srcSet={slide.mobileImage} />
             <img src={slide.desktopImage} alt="" key={slide.id} />
           </picture>
-          <div className="hero-shade" />
           <div className={`hero-content hero-action desktop-pos-${slide.desktopButtonPosition || "bottom-left"} mobile-pos-${slide.mobileButtonPosition || "bottom-center"}`} key={`content-${slide.id}`}>
             <div className="hero-buttons">
               {slide.buttonEnabled !== false && (slide.buttonLink === "#destek"
