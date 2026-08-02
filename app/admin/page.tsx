@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -32,6 +31,14 @@ type Slide = {
   description: string;
   buttonText: string;
   buttonLink: string;
+  buttonEnabled?: boolean;
+  desktopButtonPosition?: string;
+  mobileButtonPosition?: string;
+  buttonStyle?: string;
+  buttonSize?: string;
+  buttonFont?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
   desktopImage: string;
   mobileImage: string;
   active: boolean;
@@ -355,6 +362,14 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
       description: "",
       buttonText: String(formData.get("buttonText") || ""),
       buttonLink: "#destek",
+      buttonEnabled: formData.get("buttonEnabled") === "on",
+      desktopButtonPosition: String(formData.get("desktopButtonPosition") || "bottom-left"),
+      mobileButtonPosition: String(formData.get("mobileButtonPosition") || "bottom-center"),
+      buttonStyle: String(formData.get("buttonStyle") || "rounded"),
+      buttonSize: String(formData.get("buttonSize") || "medium"),
+      buttonFont: String(formData.get("buttonFont") || "sans"),
+      buttonColor: String(formData.get("buttonColor") || "#128465"),
+      buttonTextColor: String(formData.get("buttonTextColor") || "#ffffff"),
       desktopImage: String(formData.get("desktopImage") || ""),
       mobileImage: String(formData.get("mobileImage") || ""),
       active: formData.get("active") === "on",
@@ -373,6 +388,14 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
       description: "",
       buttonText: "Detaylı Bilgi",
       buttonLink: "#projeler",
+      buttonEnabled: true,
+      desktopButtonPosition: "bottom-left",
+      mobileButtonPosition: "bottom-center",
+      buttonStyle: "rounded",
+      buttonSize: "medium",
+      buttonFont: "sans",
+      buttonColor: "#128465",
+      buttonTextColor: "#ffffff",
       desktopImage: "",
       mobileImage: "",
       active: true,
@@ -422,8 +445,25 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
         <div className={styles.modalBackdrop}>
           <form className={`${styles.modal} ${styles.slideModal}`} action={saveSlide}>
             <button className={styles.modalClose} type="button" onClick={() => setEditing(null)}>×</button>
-            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Görselleri ve slider üzerinde görünecek tek butonun yazısını belirleyebilirsiniz.</p>
-            <label>Buton yazısı<input name="buttonText" defaultValue={editing.buttonText} required /></label>
+            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Görselleri ve slider butonunu masaüstü ile mobil için ayrı ayrı tasarlayın.</p>
+            <section className={styles.buttonDesigner}>
+              <div className={styles.buttonDesignerTitle}><div><span>BUTON TASARIMI</span><strong>Slider butonu</strong></div><label><input name="buttonEnabled" type="checkbox" defaultChecked={editing.buttonEnabled !== false} /> Butonu göster</label></div>
+              <label>Buton yazısı<input name="buttonText" defaultValue={editing.buttonText} required /></label>
+              <div className={styles.buttonDesignGrid}>
+                <label>Hazır şekil<select name="buttonStyle" value={editing.buttonStyle || "rounded"} onChange={(event) => setEditing({ ...editing, buttonStyle: event.target.value })}><option value="rounded">Yuvarlatılmış</option><option value="pill">Kapsül</option><option value="square">Köşeli</option><option value="outline">Çerçeveli</option><option value="glass">Cam efekti</option><option value="heart">Kalp</option></select></label>
+                <label>Boyut<select name="buttonSize" value={editing.buttonSize || "medium"} onChange={(event) => setEditing({ ...editing, buttonSize: event.target.value })}><option value="small">Küçük</option><option value="medium">Orta</option><option value="large">Büyük</option></select></label>
+                <label>Yazı tipi<select name="buttonFont" value={editing.buttonFont || "sans"} onChange={(event) => setEditing({ ...editing, buttonFont: event.target.value })}><option value="sans">Modern</option><option value="serif">Klasik</option><option value="rounded">Yumuşak</option><option value="bold">Güçlü</option></select></label>
+              </div>
+              <div className={styles.colorGrid}>
+                <label>Buton rengi<span><input name="buttonColor" type="color" value={editing.buttonColor || "#128465"} onChange={(event) => setEditing({ ...editing, buttonColor: event.target.value })} /><input type="text" value={editing.buttonColor || "#128465"} readOnly /></span></label>
+                <label>Yazı rengi<span><input name="buttonTextColor" type="color" value={editing.buttonTextColor || "#ffffff"} onChange={(event) => setEditing({ ...editing, buttonTextColor: event.target.value })} /><input type="text" value={editing.buttonTextColor || "#ffffff"} readOnly /></span></label>
+              </div>
+              <div className={styles.positionSections}>
+                <PositionPicker name="desktopButtonPosition" title="Masaüstü buton konumu" defaultValue={editing.desktopButtonPosition || "bottom-left"} />
+                <PositionPicker name="mobileButtonPosition" title="Mobil buton konumu" defaultValue={editing.mobileButtonPosition || "bottom-center"} />
+              </div>
+              <div className={styles.buttonExample}><span>ÖNİZLEME</span><button className={styles[`preview${(editing.buttonStyle || "rounded").replace(/^./, (letter) => letter.toUpperCase())}`]} type="button" style={{ background: editing.buttonStyle === "outline" ? "transparent" : editing.buttonColor || "#128465", borderColor: editing.buttonColor || "#128465", color: editing.buttonTextColor || "#ffffff", fontFamily: editing.buttonFont === "serif" ? "Georgia, serif" : "Arial, sans-serif" }}>{editing.buttonText || "Buton"}</button></div>
+            </section>
             <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
             <section className={styles.desktopUploadSection}>
               <div><span>MASAÜSTÜ SLIDER</span><strong>1920 × 900 piksel</strong><small>Yatay görsel · Önerilen oran 16:7,5 · En fazla 5 MB</small></div>
@@ -446,6 +486,21 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
         </div>
       )}
     </>
+  );
+}
+
+const buttonPositions = [
+  ["top-left", "↖"], ["top-center", "↑"], ["top-right", "↗"],
+  ["center-left", "←"], ["center", "•"], ["center-right", "→"],
+  ["bottom-left", "↙"], ["bottom-center", "↓"], ["bottom-right", "↘"],
+];
+
+function PositionPicker({ name, title, defaultValue }: { name: string; title: string; defaultValue: string }) {
+  return (
+    <fieldset className={styles.positionPicker}>
+      <legend>{title}</legend>
+      <div>{buttonPositions.map(([value, icon]) => <label key={value} title={value}><input type="radio" name={name} value={value} defaultChecked={value === defaultValue} /><span>{icon}</span></label>)}</div>
+    </fieldset>
   );
 }
 
