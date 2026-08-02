@@ -367,10 +367,10 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
   function newSlide() {
     setEditing({
       id: crypto.randomUUID(),
-      eyebrow: "Yeni duyuru",
-      title: "İyiliği birlikte",
-      highlight: "büyütüyoruz.",
-      description: "Slider açıklamasını buraya yazın.",
+      eyebrow: "",
+      title: "",
+      highlight: "",
+      description: "",
       buttonText: "Detaylı Bilgi",
       buttonLink: "#projeler",
       desktopImage: "",
@@ -407,7 +407,6 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
           <article className={styles.slideCard} key={slide.id}>
             <div className={styles.slidePreview}>
               {slide.desktopImage ? <img src={slide.desktopImage} alt="" /> : <span>Görsel bekleniyor</span>}
-              <div><small>{slide.eyebrow}</small><strong>{slide.title} <em>{slide.highlight}</em></strong></div>
               <b>0{index + 1}</b>
             </div>
             <div className={styles.slideCardBody}>
@@ -423,18 +422,12 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
         <div className={styles.modalBackdrop}>
           <form className={`${styles.modal} ${styles.slideModal}`} action={saveSlide}>
             <button className={styles.modalClose} type="button" onClick={() => setEditing(null)}>×</button>
-            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Mobil ve masaüstü görsellerini ayrı ayrı belirleyebilirsiniz.</p>
+            <span>SLIDER AYARLARI</span><h2>Slaytı Düzenle</h2><p>Görselleri, buton yazısını ve buton bağlantısını belirleyebilirsiniz.</p>
             <div className={styles.modalRow}>
-              <label>Üst etiket<input name="eyebrow" defaultValue={editing.eyebrow} required /></label>
               <label>Buton yazısı<input name="buttonText" defaultValue={editing.buttonText} required /></label>
-            </div>
-            <label>Ana başlık<input name="title" defaultValue={editing.title} required /></label>
-            <label>Vurgulu başlık<input name="highlight" defaultValue={editing.highlight} required /></label>
-            <label>Açıklama<input name="description" defaultValue={editing.description} required /></label>
-            <div className={styles.modalRow}>
               <label>Buton bağlantısı<input name="buttonLink" defaultValue={editing.buttonLink} placeholder="#projeler" required /></label>
-              <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
             </div>
+            <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
             <section className={styles.desktopUploadSection}>
               <div><span>MASAÜSTÜ SLIDER</span><strong>1920 × 900 piksel</strong><small>Yatay görsel · Önerilen oran 16:7,5 · En fazla 5 MB</small></div>
               <label className={styles.uploadField}>Masaüstü görseli
@@ -443,7 +436,7 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
               {editing.desktopImage && <div className={styles.desktopImagePreview}><img src={editing.desktopImage} alt="Masaüstü slider önizlemesi" /></div>}
             </section>
             <section className={styles.mobileUploadSection}>
-              <div className={styles.mobileUploadCopy}><span>MOBİL SLIDER — AYRI GÖRSEL</span><strong>900 × 1400 piksel</strong><small>Dikey görsel · Önerilen oran 9:14 · Minimum 720×1120 · En fazla 5 MB</small><p>Önemli kişi veya nesneyi görselin orta bölümünde tutun. Başlık alt tarafta yer alacağı için görselin alt kısmını sade bırakın.</p></div>
+              <div className={styles.mobileUploadCopy}><span>MOBİL SLIDER — AYRI GÖRSEL</span><strong>900 × 1400 piksel</strong><small>Dikey görsel · Önerilen oran 9:14 · Minimum 720×1120 · En fazla 5 MB</small><p>Önemli kişi veya nesneyi görselin orta bölümünde tutun. Buton alt tarafta yer alacağı için görselin alt kısmını sade bırakın.</p></div>
               <div className={styles.mobileUploadGrid}>
                 <label className={styles.uploadField}>Mobil görseli
                   <span><input name="mobileImage" type="url" value={editing.mobileImage} onChange={(event) => setEditing({ ...editing, mobileImage: event.target.value })} placeholder="Mobil görsel adresi veya yükleme" required /><b>{uploading === "mobile" ? "Yükleniyor..." : "Mobil Görsel Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "mobile")} /></b></span>
