@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Slide = {
   id: string;
@@ -8,16 +8,6 @@ type Slide = {
   title: string;
   highlight: string;
   description: string;
-  buttonText: string;
-  buttonLink: string;
-  buttonEnabled?: boolean;
-  desktopButtonPosition?: string;
-  mobileButtonPosition?: string;
-  buttonStyle?: string;
-  buttonSize?: string;
-  buttonFont?: string;
-  buttonColor?: string;
-  buttonTextColor?: string;
   desktopImage: string;
   mobileImage: string;
   active: boolean;
@@ -29,16 +19,6 @@ const fallbackSlide: Slide = {
   title: "Bir iyilik,",
   highlight: "bir hayatı değiştirir.",
   description: "İhtiyacı, iyilik yapmak isteyenlerle şeffaf ve güvenilir bir zeminde buluşturuyoruz.",
-  buttonText: "İyiliğe Ortak Ol",
-  buttonLink: "#destek",
-  buttonEnabled: true,
-  desktopButtonPosition: "bottom-left",
-  mobileButtonPosition: "bottom-center",
-  buttonStyle: "rounded",
-  buttonSize: "medium",
-  buttonFont: "sans",
-  buttonColor: "#128465",
-  buttonTextColor: "#ffffff",
   desktopImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2200&q=90",
   mobileImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&h=1050&q=88",
   active: true,
@@ -137,22 +117,6 @@ export default function Home() {
             <source media="(max-width: 760px)" srcSet={slide.mobileImage} />
             <img src={slide.desktopImage} alt="" key={slide.id} />
           </picture>
-          <div className={`hero-content hero-action desktop-pos-${slide.desktopButtonPosition || "bottom-left"} mobile-pos-${slide.mobileButtonPosition || "bottom-center"}`} key={`content-${slide.id}`}>
-            <div className="hero-buttons">
-              {slide.buttonEnabled !== false && (slide.buttonLink === "#destek"
-                ? <button
-                    className={`slider-button button-${slide.buttonStyle || "rounded"} button-${slide.buttonSize || "medium"} font-${slide.buttonFont || "sans"}`}
-                    style={{ "--slider-button-bg": slide.buttonColor || "#128465", "--slider-button-text": slide.buttonTextColor || "#ffffff" } as CSSProperties}
-                    type="button"
-                    onClick={() => openDonation()}
-                  >{slide.buttonText}<span>↗</span></button>
-                : <a
-                    className={`slider-button button-${slide.buttonStyle || "rounded"} button-${slide.buttonSize || "medium"} font-${slide.buttonFont || "sans"}`}
-                    style={{ "--slider-button-bg": slide.buttonColor || "#128465", "--slider-button-text": slide.buttonTextColor || "#ffffff" } as CSSProperties}
-                    href={slide.buttonLink}
-                  >{slide.buttonText}<span>↗</span></a>)}
-            </div>
-          </div>
           {slides.length > 1 && (
             <div className="slider-controls">
               <button type="button" aria-label="Önceki slayt" onClick={() => setCurrentSlide((current) => (current - 1 + slides.length) % slides.length)}>←</button>
