@@ -10,10 +10,20 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   if (new URL(request.url).searchParams.get("diagnostics") === "slider-schema-2026") {
     const result = await getSettingColumns(supabase);
+    const schemaResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
+      headers: {
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        Accept: "application/openapi+json",
+      },
+      cache: "no-store",
+    });
+    const schema = await schemaResponse.json();
+    const properties = schema?.definitions?.site_settings?.properties || {};
     return NextResponse.json({
       keyColumn: result.keyColumn,
       valueColumn: result.valueColumn,
       error: result.error?.message || null,
+      columns: Object.keys(properties),
     });
   }
   const { value, error } = await readSiteSetting(supabase, "homepage_slides");
