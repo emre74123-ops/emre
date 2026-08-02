@@ -46,7 +46,7 @@ img { display: block; max-width: 100%; }
 
 .hero { position: relative; width: min(1360px, calc(100% - 40px)); margin: 0 auto 68px; }
 .hero-image { min-height: 458px; position: relative; display: flex; align-items: center; overflow: hidden; background:#183a32; cursor:grab; touch-action:pan-y; user-select:none; }
-.hero-image.is-dragging{cursor:grabbing}.hero-media{position:absolute;inset:0;pointer-events:none}.hero-media img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.hero-image.is-dragging{cursor:grabbing}.hero-track{position:absolute;inset:0;width:100%;height:100%;display:flex;will-change:transform}.hero-track.is-animated{transition:transform .5s cubic-bezier(.22,.61,.36,1)}.hero-media{position:relative;flex:0 0 100%;width:100%;height:100%;pointer-events:none}.hero-media img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
 .hero-content { position: relative; z-index: 2; width: min(1180px, calc(100% - 90px)); margin: auto; padding-bottom: 35px; color: white; }
 .hero-kicker, .section-label { display: inline-flex; align-items: center; gap: 11px; color: var(--orange); font-size: 10px; text-transform: uppercase; font-weight: 900; letter-spacing: 2.2px; }
 .hero-kicker::before, .section-label::before { content: ""; width: 25px; height: 2px; background: currentColor; }
@@ -255,4 +255,3 @@ footer { background: #071f1d; color: white; padding: 70px max(30px, calc((100% -
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
-
