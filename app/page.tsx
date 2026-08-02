@@ -13,17 +13,6 @@ type Slide = {
   active: boolean;
 };
 
-const fallbackSlide: Slide = {
-  id: "iyilik",
-  eyebrow: "İyiliğin adresi belli",
-  title: "Bir iyilik,",
-  highlight: "bir hayatı değiştirir.",
-  description: "İhtiyacı, iyilik yapmak isteyenlerle şeffaf ve güvenilir bir zeminde buluşturuyoruz.",
-  desktopImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2200&q=90",
-  mobileImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&h=1050&q=88",
-  active: true,
-};
-
 const projects = [
   {
     category: "Eğitim",
@@ -64,7 +53,7 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState("Genel Destek");
   const [demoComplete, setDemoComplete] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
-  const [slides, setSlides] = useState<Slide[]>([fallbackSlide]);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -80,7 +69,7 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [slides.length]);
 
-  const slide = slides[currentSlide] || slides[0] || fallbackSlide;
+  const slide = slides[currentSlide] || slides[0];
 
   function openDonation(project = "Genel Destek") {
     setSelectedProject(project);
@@ -113,11 +102,11 @@ export default function Home() {
 
       <section className="hero" aria-roledescription="carousel" aria-label="İyilik Adresim duyuruları">
         <div className="hero-image">
-          <picture className="hero-media">
+          {slide && <picture className="hero-media">
             <source media="(max-width: 760px)" srcSet={slide.mobileImage} />
-            <img src={slide.desktopImage} alt="" key={slide.id} />
-          </picture>
-          {slides.length > 1 && (
+            <img src={slide.desktopImage} alt="" />
+          </picture>}
+          {slide && slides.length > 1 && (
             <div className="slider-controls">
               <button type="button" aria-label="Önceki slayt" onClick={() => setCurrentSlide((current) => (current - 1 + slides.length) % slides.length)}>←</button>
               <div>{slides.map((item, index) => <button type="button" aria-label={`${index + 1}. slayta git`} aria-current={index === currentSlide} key={item.id} onClick={() => setCurrentSlide(index)}><span /></button>)}</div>
