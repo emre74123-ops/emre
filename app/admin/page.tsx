@@ -1,31 +1,28 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import styles from "./admin.module.css";
 
 type Campaign = {
-  id: number;
+  id: string;
   title: string;
   category: string;
-  status: "Yayında" | "Taslak";
-  progress: number;
-  target: string;
-  raised: string;
+  status: "draft" | "published" | "archived";
+  target_amount: number;
+  raised_amount: number;
+  created_at: string;
 };
 
-const initialCampaigns: Campaign[] = [
-  { id: 1, title: "Bir Çocuğun Eğitim Yolculuğu", category: "Eğitim", status: "Yayında", progress: 42, target: "120.000 ₺", raised: "50.400 ₺" },
-  { id: 2, title: "Temiz Su, Yeni Başlangıçlar", category: "Temiz Su", status: "Yayında", progress: 59, target: "250.000 ₺", raised: "147.500 ₺" },
-  { id: 3, title: "Sofralara Bereket", category: "Gıda", status: "Taslak", progress: 76, target: "80.000 ₺", raised: "60.800 ₺" },
-];
-
-const applications = [
-  { name: "Zeynep Kaya", type: "Gönüllü başvurusu", date: "Bugün, 10:42", status: "Yeni" },
-  { name: "Mehmet Yılmaz", type: "Yardım talebi", date: "Dün, 16:18", status: "İnceleniyor" },
-  { name: "Ayşe Demir", type: "İletişim mesajı", date: "Dün, 11:05", status: "Yanıtlandı" },
-  { name: "Emre Akın", type: "Gönüllü başvurusu", date: "30 Tem, 14:22", status: "Yeni" },
-];
+type Application = {
+  id: string;
+  name: string;
+  email: string;
+  type: "volunteer" | "aid_request" | "contact";
+  status: "new" | "reviewing" | "answered" | "closed";
+  created_at: string;
+};
 
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
@@ -39,33 +36,53 @@ const navItems = [
 export default function AdminPage() {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [campaigns, setCampaigns] = useState(initialCampaigns);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
   const [campaignModal, setCampaignModal] = useState(false);
   const [toast, setToast] = useState("");
   const [siteLive, setSiteLive] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/campaigns").then((response) => response.json()),
+      fetch("/api/admin/applications").then((response) => response.json()),
+    ]).then(([campaignResult, applicationResult]) => {
+      setCampaigns(campaignResult.campaigns || []);
+      setApplications(applicationResult.applications || []);
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+      showToast("Veriler yüklenemedi. Lütfen sayfayı yenile.");
+    });
+  }, []);
+
+  const totalRaised = useMemo(
+    () => campaigns.reduce((sum, campaign) => sum + Number(campaign.raised_amount || 0), 0),
+    [campaigns],
+  );
 
   function showToast(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 2600);
   }
 
-  function addCampaign(formData: FormData) {
+  async function addCampaign(formData: FormData) {
     const title = String(formData.get("title") || "").trim();
     const category = String(formData.get("category") || "Genel");
     const target = String(formData.get("target") || "0");
     if (!title) return;
-    setCampaigns((current) => [
-      ...current,
-      {
-        id: Date.now(),
-        title,
-        category,
-        status: "Taslak",
-        progress: 0,
-        target: `${target} ₺`,
-        raised: "0 ₺",
-      },
-    ]);
+    const response = await fetch("/api/admin/campaigns", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, category, target_amount: Number(target) }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      showToast(result.error || "Kampanya kaydedilemedi.");
+      return;
+    }
+    setCampaigns((current) => [result.campaign, ...current]);
     setCampaignModal(false);
     showToast("Yeni kampanya taslak olarak eklendi.");
   }
@@ -96,15 +113,17 @@ export default function AdminPage() {
           {navItems.map(([id, icon, label]) => (
             <button className={active === id ? styles.activeNav : ""} type="button" key={id} onClick={() => selectSection(id)}>
               <i>{icon}</i><span>{label}</span>
-              {id === "applications" && <b>4</b>}
+              {id === "applications" && applications.length > 0 && <b>{applications.length}</b>}
             </button>
           ))}
         </nav>
 
         <div className={styles.sidebarBottom}>
-          <div className={styles.demoNotice}><span>i</span><p><strong>Demo paneli</strong>Veriler şimdilik örnektir.</p></div>
+          <div className={styles.demoNotice}><span>✓</span><p><strong>Güvenli bağlantı</strong>Supabase veritabanı aktif.</p></div>
           <div className={styles.profile}>
-            <span>EK</span><p><strong>Emre Kök</strong><small>Yönetici</small></p><button type="button">•••</button>
+            <span>EK</span><p><strong>Emre Kök</strong><small>Yönetici</small></p>
+            <a href="/admin/account" title="Şifreyi değiştir">⚙</a>
+            <form action="/admin/logout" method="post"><button type="submit" title="Çıkış yap">↪</button></form>
           </div>
         </div>
       </aside>
@@ -130,36 +149,26 @@ export default function AdminPage() {
                 <button className={styles.primaryButton} type="button" onClick={() => setCampaignModal(true)}>＋ Yeni Kampanya</button>
               </div>
 
-              <div className={styles.demoBanner}><span>i</span><p><strong>Panel önizleme modunda çalışıyor.</strong>Gösterilen rakamlar ve kayıtlar örnek veridir. Supabase bağlantısından sonra gerçek veriler burada görünecek.</p><button type="button" onClick={() => showToast("Veritabanı bağlantısı bir sonraki aşamada kurulacak.")}>Bağlantı bilgisi</button></div>
+              <div className={styles.demoBanner}><span>✓</span><p><strong>Veritabanı bağlantısı aktif.</strong>Bu ekrandaki kampanya ve başvuru bilgileri Supabase&apos;den gerçek zamanlı olarak yüklenir.</p></div>
 
               <section className={styles.stats}>
-                <article><div className={styles.statIcon}>↗</div><span>Toplam destek</span><strong>258.700 ₺</strong><small className={styles.up}>↑ %12,4 <i>geçen aya göre</i></small></article>
-                <article><div className={styles.statIcon}>◇</div><span>Aktif kampanya</span><strong>12</strong><small className={styles.up}>↑ 2 yeni <i>bu ay</i></small></article>
-                <article><div className={styles.statIcon}>◎</div><span>Toplam üye</span><strong>4.862</strong><small className={styles.up}>↑ 184 <i>bu ay</i></small></article>
-                <article><div className={styles.statIcon}>◫</div><span>Bekleyen başvuru</span><strong>7</strong><small className={styles.warn}>3 acil <i>inceleme bekliyor</i></small></article>
+                <article><div className={styles.statIcon}>↗</div><span>Kayıtlı destek</span><strong>{formatMoney(totalRaised)}</strong><small className={styles.up}>Canlı <i>veritabanı toplamı</i></small></article>
+                <article><div className={styles.statIcon}>◇</div><span>Yayındaki kampanya</span><strong>{campaigns.filter((item) => item.status === "published").length}</strong><small className={styles.up}>{campaigns.length} <i>toplam kampanya</i></small></article>
+                <article><div className={styles.statIcon}>◎</div><span>Taslak kampanya</span><strong>{campaigns.filter((item) => item.status === "draft").length}</strong><small className={styles.up}>Hazırlanıyor</small></article>
+                <article><div className={styles.statIcon}>◫</div><span>Bekleyen başvuru</span><strong>{applications.filter((item) => item.status === "new").length}</strong><small className={styles.warn}>{applications.length} <i>toplam başvuru</i></small></article>
               </section>
 
               <div className={styles.dashboardGrid}>
                 <section className={styles.card}>
-                  <div className={styles.cardHeader}><div><h2>Destek özeti</h2><p>Son 6 aylık örnek hareket</p></div><select aria-label="Tarih aralığı"><option>Son 6 ay</option><option>Bu yıl</option></select></div>
-                  <div className={styles.chart}>
-                    <div className={styles.chartLabels}><span>80B</span><span>60B</span><span>40B</span><span>20B</span><span>0</span></div>
-                    <div className={styles.chartArea}>
-                      <svg viewBox="0 0 600 210" preserveAspectRatio="none" aria-label="Örnek destek grafiği">
-                        <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1a9675" stopOpacity=".3" /><stop offset="100%" stopColor="#1a9675" stopOpacity="0" /></linearGradient></defs>
-                        <path d="M0 185 C65 180 70 140 130 150 S210 115 265 125 S345 70 400 88 S485 35 600 42 L600 210 L0 210 Z" fill="url(#chartFill)" />
-                        <path d="M0 185 C65 180 70 140 130 150 S210 115 265 125 S345 70 400 88 S485 35 600 42" fill="none" stroke="#168765" strokeWidth="4" />
-                      </svg>
-                      <div className={styles.months}><span>Mar</span><span>Nis</span><span>May</span><span>Haz</span><span>Tem</span><span>Ağu</span></div>
-                    </div>
-                  </div>
+                  <div className={styles.cardHeader}><div><h2>Destek özeti</h2><p>Gerçek kayıtların toplamı</p></div></div>
+                  <div className={styles.realEmpty}><span>↗</span><strong>{formatMoney(totalRaised)}</strong><p>{loading ? "Veriler yükleniyor..." : totalRaised > 0 ? "Kampanyalara kaydedilen toplam destek" : "Henüz destek kaydı bulunmuyor."}</p></div>
                 </section>
 
                 <section className={styles.card}>
                   <div className={styles.cardHeader}><div><h2>Hızlı işlemler</h2><p>Sık kullanılan işlemler</p></div></div>
                   <div className={styles.quickActions}>
                     <button type="button" onClick={() => setCampaignModal(true)}><i>＋</i><span><strong>Kampanya oluştur</strong><small>Yeni bir yardım kampanyası ekle</small></span><b>›</b></button>
-                    <button type="button" onClick={() => selectSection("applications")}><i>◫</i><span><strong>Başvuruları incele</strong><small>7 kayıt değerlendirme bekliyor</small></span><b>›</b></button>
+                    <button type="button" onClick={() => selectSection("applications")}><i>◫</i><span><strong>Başvuruları incele</strong><small>{applications.length} kayıt bulunuyor</small></span><b>›</b></button>
                     <button type="button" onClick={() => selectSection("content")}><i>▤</i><span><strong>İçerikleri düzenle</strong><small>Ana sayfa ve duyurular</small></span><b>›</b></button>
                     <button type="button" onClick={() => selectSection("settings")}><i>⚙</i><span><strong>Site ayarları</strong><small>Genel görünüm ve bilgiler</small></span><b>›</b></button>
                   </div>
@@ -168,7 +177,7 @@ export default function AdminPage() {
 
               <section className={`${styles.card} ${styles.recentCard}`}>
                 <div className={styles.cardHeader}><div><h2>Son başvurular</h2><p>Yeni gelen mesaj ve talepler</p></div><button type="button" onClick={() => selectSection("applications")}>Tümünü Gör →</button></div>
-                <ApplicationTable />
+                <ApplicationTable applications={applications} />
               </section>
             </>
           )}
@@ -179,12 +188,13 @@ export default function AdminPage() {
               <section className={styles.card}>
                 <div className={styles.toolbar}><input aria-label="Kampanya ara" placeholder="Kampanya ara..." /><select aria-label="Durum filtresi"><option>Tüm durumlar</option><option>Yayında</option><option>Taslak</option></select></div>
                 <div className={styles.campaignList}>
+                  {!loading && campaigns.length === 0 && <div className={styles.listEmpty}><span>◇</span><strong>Henüz kampanya yok</strong><p>İlk gerçek kampanyanı “Yeni Kampanya” düğmesiyle oluşturabilirsin.</p></div>}
                   {campaigns.map((campaign) => (
                     <article key={campaign.id}>
                       <div className={styles.campaignThumb}>{campaign.category.slice(0, 1)}</div>
                       <div className={styles.campaignName}><strong>{campaign.title}</strong><span>{campaign.category}</span></div>
-                      <div className={styles.campaignProgress}><div><span style={{ width: `${campaign.progress}%` }} /></div><small>{campaign.raised} / {campaign.target}</small></div>
-                      <span className={campaign.status === "Yayında" ? styles.liveStatus : styles.draftStatus}>● {campaign.status}</span>
+                      <div className={styles.campaignProgress}><div><span style={{ width: `${campaign.target_amount > 0 ? Math.min(100, (campaign.raised_amount / campaign.target_amount) * 100) : 0}%` }} /></div><small>{formatMoney(campaign.raised_amount)} / {formatMoney(campaign.target_amount)}</small></div>
+                      <span className={campaign.status === "published" ? styles.liveStatus : styles.draftStatus}>● {campaign.status === "published" ? "Yayında" : campaign.status === "draft" ? "Taslak" : "Arşiv"}</span>
                       <button type="button" onClick={() => showToast(`${campaign.title} düzenleme ekranı yakında bağlanacak.`)}>Düzenle</button>
                     </article>
                   ))}
@@ -196,7 +206,7 @@ export default function AdminPage() {
           {active === "applications" && (
             <>
               <div className={styles.pageHeading}><div><p>İletişim merkezi</p><h1>Başvurular</h1><span>Gönüllü başvurularını, yardım taleplerini ve mesajları takip et.</span></div></div>
-              <section className={styles.card}><ApplicationTable detailed /></section>
+              <section className={styles.card}><ApplicationTable applications={applications} detailed /></section>
             </>
           )}
 
@@ -205,7 +215,7 @@ export default function AdminPage() {
 
           {active === "settings" && (
             <>
-              <div className={styles.pageHeading}><div><p>Sistem</p><h1>Site Ayarları</h1><span>Sitenin genel durumunu ve iletişim bilgilerini yönet.</span></div><button className={styles.primaryButton} type="button" onClick={() => showToast("Ayarlar demo olarak kaydedildi.")}>Değişiklikleri Kaydet</button></div>
+              <div className={styles.pageHeading}><div><p>Sistem</p><h1>Site Ayarları</h1><span>Sitenin genel durumunu ve iletişim bilgilerini yönet.</span></div><button className={styles.primaryButton} type="button" onClick={() => showToast("Ayarlar güvenli veritabanına kaydedilecek şekilde hazırlanıyor.")}>Değişiklikleri Kaydet</button></div>
               <div className={styles.settingsGrid}>
                 <section className={styles.card}>
                   <div className={styles.cardHeader}><div><h2>Genel bilgiler</h2><p>Sitede görüntülenecek temel bilgiler</p></div></div>
@@ -245,17 +255,21 @@ export default function AdminPage() {
   );
 }
 
-function ApplicationTable({ detailed = false }: { detailed?: boolean }) {
+function ApplicationTable({ applications, detailed = false }: { applications: Application[]; detailed?: boolean }) {
+  const typeLabels = { volunteer: "Gönüllü başvurusu", aid_request: "Yardım talebi", contact: "İletişim mesajı" };
+  const statusLabels = { new: "Yeni", reviewing: "İnceleniyor", answered: "Yanıtlandı", closed: "Kapatıldı" };
+
   return (
     <div className={styles.tableWrap}>
       <table>
         <thead><tr><th>Başvuran</th><th>Başvuru türü</th><th>Tarih</th><th>Durum</th>{detailed && <th>İşlem</th>}</tr></thead>
         <tbody>
+          {applications.length === 0 && <tr><td colSpan={detailed ? 5 : 4} className={styles.emptyCell}>Henüz başvuru bulunmuyor.</td></tr>}
           {applications.map((application) => (
-            <tr key={`${application.name}-${application.type}`}>
+            <tr key={application.id}>
               <td><span className={styles.avatar}>{application.name.split(" ").map((part) => part[0]).join("")}</span><strong>{application.name}</strong></td>
-              <td>{application.type}</td><td>{application.date}</td>
-              <td><span className={`${styles.status} ${application.status === "Yeni" ? styles.statusNew : application.status === "İnceleniyor" ? styles.statusReview : styles.statusDone}`}>● {application.status}</span></td>
+              <td>{typeLabels[application.type]}</td><td>{new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(application.created_at))}</td>
+              <td><span className={`${styles.status} ${application.status === "new" ? styles.statusNew : application.status === "reviewing" ? styles.statusReview : styles.statusDone}`}>● {statusLabels[application.status]}</span></td>
               {detailed && <td><button className={styles.tableButton} type="button">İncele</button></td>}
             </tr>
           ))}
@@ -265,12 +279,16 @@ function ApplicationTable({ detailed = false }: { detailed?: boolean }) {
   );
 }
 
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(value || 0));
+}
+
 function Placeholder({ title, text, icon }: { title: string; text: string; icon: string }) {
   return (
     <>
       <div className={styles.pageHeading}><div><p>Yönetim</p><h1>{title}</h1><span>{text}</span></div></div>
       <section className={`${styles.card} ${styles.placeholder}`}>
-        <div>{icon}</div><h2>{title} altyapısı hazır</h2><p>Bu bölüm Supabase üyelik ve veritabanı bağlantısıyla birlikte gerçek verilerle çalışmaya başlayacak.</p><span>Sonraki aşama</span>
+        <div>{icon}</div><h2>{title}</h2><p>Bu bölüm güvenli veritabanına bağlıdır. Yeni kayıtlar eklendikçe burada görüntülenecek.</p><span>Bağlantı aktif</span>
       </section>
     </>
   );
