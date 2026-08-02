@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "../../../../lib/supabase/server";
 import { defaultSlides, type Slide } from "../../../../lib/slides";
+import { readSiteSetting, writeSiteSetting } from "../../../../lib/site-settings";
 
 async function getAdminClient() {
   const supabase = await createClient();
@@ -14,13 +15,9 @@ async function getAdminClient() {
 export async function GET() {
   const supabase = await getAdminClient();
   if (!supabase) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-  const { data, error } = await supabase
-    .from("site_settings")
-    .select("setting_value")
-    .eq("setting_key", "homepage_slides")
-    .maybeSingle();
+  const { value, error } = await readSiteSetting(supabase, "homepage_slides");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ slides: Array.isArray(data?.setting_value) ? data.setting_value : defaultSlides });
+  return NextResponse.json({ slides: Array.isArray(value) ? value : defaultSlides });
 }
 
 export async function PUT(request: Request) {
@@ -47,12 +44,7 @@ export async function PUT(request: Request) {
     mobileImage: String(slide.mobileImage || slide.desktopImage || "").slice(0, 1000),
     active: Boolean(slide.active),
   })) : [];
-  const { error } = await supabase
-    .from("site_settings")
-    .upsert(
-      { setting_key: "homepage_slides", setting_value: slides },
-      { onConflict: "setting_key" },
-    );
+  const { error } = await writeSiteSetting(supabase, "homepage_slides", slides);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/");
   revalidatePath("/api/slides");
