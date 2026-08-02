@@ -21,10 +21,6 @@ button { cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
 
-.notice-bar { min-height: 34px; background: var(--navy); color: #dce8e4; padding: 7px max(24px, calc((100% - 1240px) / 2)); display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
-.notice-bar p { margin: 0; }
-.notice-bar p span { color: #72c7a7; margin-right: 8px; }
-.notice-bar a { border-bottom: 1px solid #78938d; }
 .site-header { min-height: 88px; width: min(1240px, calc(100% - 48px)); margin: auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 40px; position: relative; z-index: 50; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-symbol { width: 46px; height: 46px; position: relative; display: block; }
@@ -217,8 +213,6 @@ footer { background: #071f1d; color: white; padding: 70px max(30px, calc((100% -
 }
 
 @media (max-width: 780px) {
-  .notice-bar { justify-content: center; text-align: center; }
-  .notice-bar a { display: none; }
   .site-header { min-height: 75px; width: calc(100% - 30px); }
   .brand-symbol { width: 40px; height: 40px; }
   .hero { width: 100%; margin-bottom: 45px; }
