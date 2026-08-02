@@ -1,0 +1,41 @@
+
+import { NextResponse } from "next/server";
+import { createClient } from "../../../../lib/supabase/server";
+import { defaultSlides, type Slide } from "../../../../lib/slides";
+
+async function getAdminClient() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: admin } = await supabase.from("admins").select("role").eq("user_id", user.id).maybeSingle();
+  return admin ? supabase : null;
+}
+
+export async function GET() {
+  const supabase = await getAdminClient();
+  if (!supabase) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  const { data } = await supabase.from("site_settings").select("value").eq("key", "homepage_slides").maybeSingle();
+  return NextResponse.json({ slides: Array.isArray(data?.value) ? data.value : defaultSlides });
+}
+
+export async function PUT(request: Request) {
+  const supabase = await getAdminClient();
+  if (!supabase) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  const body = await request.json();
+  const slides = Array.isArray(body.slides) ? body.slides.slice(0, 8).map((slide: Slide) => ({
+    id: String(slide.id || crypto.randomUUID()),
+    eyebrow: String(slide.eyebrow || "").slice(0, 60),
+    title: String(slide.title || "").slice(0, 90),
+    highlight: String(slide.highlight || "").slice(0, 90),
+    description: String(slide.description || "").slice(0, 240),
+    buttonText: String(slide.buttonText || "").slice(0, 40),
+    buttonLink: String(slide.buttonLink || "#projeler").slice(0, 200),
+    desktopImage: String(slide.desktopImage || "").slice(0, 1000),
+    mobileImage: String(slide.mobileImage || slide.desktopImage || "").slice(0, 1000),
+    active: Boolean(slide.active),
+  })) : [];
+  const { error } = await supabase.from("site_settings").upsert({ key: "homepage_slides", value: slides });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ slides });
+}
+
