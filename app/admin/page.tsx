@@ -400,7 +400,7 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
         <div><p>Ana sayfa</p><h1>Slider Yönetimi</h1><span>Masaüstü ve mobil ziyaretçiler için ayrı görsellerle profesyonel duyurular hazırlayın.</span></div>
         <button className={styles.primaryButton} type="button" onClick={newSlide}>＋ Yeni Slayt</button>
       </div>
-      <div className={styles.sliderInfo}><span>i</span><p><strong>Önerilen görsel ölçüleri</strong>Masaüstü: 1920×900 piksel · Mobil: 900×1400 piksel. En fazla 8 slayt kullanabilirsiniz.</p></div>
+      <div className={styles.sliderInfo}><span>i</span><p><strong>İki ayrı görünüm kullanılır</strong>Masaüstü ve mobil görsellerini ayrı ayrı yükleyin. Böylece kırpılma olmadan her ekranda profesyonel sonuç alınır.</p></div>
       <section className={styles.slideManager}>
         {slides.length === 0 && <div className={styles.listEmpty}><span>▣</span><strong>Henüz slayt yok</strong><p>İlk slaytı ekleyerek ana sayfanızı canlandırın.</p></div>}
         {slides.map((slide, index) => (
@@ -435,12 +435,22 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
               <label>Buton bağlantısı<input name="buttonLink" defaultValue={editing.buttonLink} placeholder="#projeler" required /></label>
               <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
             </div>
-            <label className={styles.uploadField}>Masaüstü görseli
-              <span><input name="desktopImage" type="url" value={editing.desktopImage} onChange={(event) => setEditing({ ...editing, desktopImage: event.target.value })} placeholder="Görsel adresi veya yükleme" required /><b>{uploading === "desktop" ? "Yükleniyor..." : "Bilgisayardan Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "desktop")} /></b></span>
-            </label>
-            <label className={styles.uploadField}>Mobil görseli
-              <span><input name="mobileImage" type="url" value={editing.mobileImage} onChange={(event) => setEditing({ ...editing, mobileImage: event.target.value })} placeholder="Görsel adresi veya yükleme" required /><b>{uploading === "mobile" ? "Yükleniyor..." : "Bilgisayardan Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "mobile")} /></b></span>
-            </label>
+            <section className={styles.desktopUploadSection}>
+              <div><span>MASAÜSTÜ SLIDER</span><strong>1920 × 900 piksel</strong><small>Yatay görsel · Önerilen oran 16:7,5 · En fazla 5 MB</small></div>
+              <label className={styles.uploadField}>Masaüstü görseli
+                <span><input name="desktopImage" type="url" value={editing.desktopImage} onChange={(event) => setEditing({ ...editing, desktopImage: event.target.value })} placeholder="Görsel adresi veya yükleme" required /><b>{uploading === "desktop" ? "Yükleniyor..." : "Bilgisayardan Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "desktop")} /></b></span>
+              </label>
+              {editing.desktopImage && <div className={styles.desktopImagePreview}><img src={editing.desktopImage} alt="Masaüstü slider önizlemesi" /></div>}
+            </section>
+            <section className={styles.mobileUploadSection}>
+              <div className={styles.mobileUploadCopy}><span>MOBİL SLIDER — AYRI GÖRSEL</span><strong>900 × 1400 piksel</strong><small>Dikey görsel · Önerilen oran 9:14 · Minimum 720×1120 · En fazla 5 MB</small><p>Önemli kişi veya nesneyi görselin orta bölümünde tutun. Başlık alt tarafta yer alacağı için görselin alt kısmını sade bırakın.</p></div>
+              <div className={styles.mobileUploadGrid}>
+                <label className={styles.uploadField}>Mobil görseli
+                  <span><input name="mobileImage" type="url" value={editing.mobileImage} onChange={(event) => setEditing({ ...editing, mobileImage: event.target.value })} placeholder="Mobil görsel adresi veya yükleme" required /><b>{uploading === "mobile" ? "Yükleniyor..." : "Mobil Görsel Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "mobile")} /></b></span>
+                </label>
+                <div className={styles.phonePreview}>{editing.mobileImage ? <img src={editing.mobileImage} alt="Mobil slider önizlemesi" /> : <span>Mobil<br />önizleme</span>}<i /></div>
+              </div>
+            </section>
             <div className={styles.modalActions}><button type="button" onClick={() => setEditing(null)}>Vazgeç</button><button type="submit" disabled={saving}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button></div>
           </form>
         </div>
