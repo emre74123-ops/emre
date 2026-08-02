@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import styles from "./admin.module.css";
+import { defaultSlides } from "../../lib/slides";
 
 type Campaign = {
   id: string;
@@ -59,7 +60,7 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [slides, setSlides] = useState<Slide[]>([]);
+  const [slides, setSlides] = useState<Slide[]>(defaultSlides);
   const [loading, setLoading] = useState(true);
   const [campaignModal, setCampaignModal] = useState(false);
   const [toast, setToast] = useState("");
@@ -70,11 +71,16 @@ export default function AdminPage() {
     Promise.all([
       fetch("/api/admin/campaigns").then((response) => response.json()),
       fetch("/api/admin/applications").then((response) => response.json()),
-      fetch("/api/admin/slides").then((response) => response.json()),
+      fetch("/api/admin/slides").then(async (response) => {
+        const result = await response.json();
+        if (response.ok && Array.isArray(result.slides) && result.slides.length) return result;
+        const fallbackResponse = await fetch(`/api/slides?t=${Date.now()}`, { cache: "no-store" });
+        return fallbackResponse.json();
+      }),
     ]).then(([campaignResult, applicationResult, slideResult]) => {
       setCampaigns(campaignResult.campaigns || []);
       setApplications(applicationResult.applications || []);
-      setSlides(slideResult.slides || []);
+      setSlides(Array.isArray(slideResult.slides) && slideResult.slides.length ? slideResult.slides : defaultSlides);
       setLoading(false);
     }).catch(() => {
       setLoading(false);
