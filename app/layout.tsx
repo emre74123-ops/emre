@@ -6,9 +6,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Ä°yilik Adresim | Ä°yiliÄŸin GÃ¼venilir Adresi",
-  description: "DoÄŸrulanmÄ±ÅŸ yardÄ±m Ã§aÄŸrÄ±larÄ±nÄ± destekÃ§ilerle buluÅŸturan ÅŸeffaf dayanÄ±ÅŸma platformu.",
-  keywords: ["baÄŸÄ±ÅŸ", "yardÄ±m", "dayanÄ±ÅŸma", "sosyal yardÄ±m", "Ä°yilik Adresim"],
+  title: "İyilik Adresim | İyiliğin Güvenilir Adresi",
+  description: "Doğrulanmış yardım çağrılarını destekçilerle buluşturan şeffaf dayanışma platformu.",
+  keywords: ["bağış", "yardım", "dayanışma", "sosyal yardım", "İyilik Adresim"],
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
