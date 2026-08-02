@@ -54,29 +54,59 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
   const [demoComplete, setDemoComplete] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
   const [slides] = useState<Slide[]>(initialSlides);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [sliderPosition, setSliderPosition] = useState(slides.length > 1 ? 1 : 0);
+  const [dragOffset, setDragOffset] = useState(0);
   const [draggingSlider, setDraggingSlider] = useState(false);
+  const [sliderAnimated, setSliderAnimated] = useState(true);
+  const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (slides.length < 2) return;
-    const timer = window.setInterval(() => setCurrentSlide((current) => (current + 1) % slides.length), 6500);
-    return () => window.clearInterval(timer);
-  }, [slides.length]);
+    if (slides.length < 2 || draggingSlider) return;
+    const timer = window.setTimeout(() => {
+      setSliderAnimated(true);
+      setSliderPosition((position) => position + 1);
+    }, 6500);
+    return () => window.clearTimeout(timer);
+  }, [slides.length, sliderPosition, draggingSlider, timerReset]);
 
-  const slide = slides[currentSlide] || slides[0];
+  const currentSlide = slides.length
+    ? (sliderPosition - 1 + slides.length) % slides.length
+    : 0;
+  const trackSlides = slides.length > 1
+    ? [slides[slides.length - 1], ...slides, slides[0]]
+    : slides;
+
+  function moveSlider(amount: number) {
+    setSliderAnimated(true);
+    setDragOffset(0);
+    setSliderPosition((position) => position + amount);
+    setTimerReset((value) => value + 1);
+  }
+
+  function goToSlide(index: number) {
+    setSliderAnimated(true);
+    setDragOffset(0);
+    setSliderPosition(index + 1);
+    setTimerReset((value) => value + 1);
+  }
 
   function startSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
     if (slides.length < 2) return;
+    if ((event.target as HTMLElement).closest(".slider-controls")) return;
     dragStart.current = { x: event.clientX, y: event.clientY };
+    setSliderAnimated(false);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function moveSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
     if (!dragStart.current) return;
-    const horizontal = Math.abs(event.clientX - dragStart.current.x);
-    const vertical = Math.abs(event.clientY - dragStart.current.y);
-    if (horizontal > 8 && horizontal > vertical) setDraggingSlider(true);
+    const horizontal = event.clientX - dragStart.current.x;
+    const vertical = event.clientY - dragStart.current.y;
+    if (Math.abs(horizontal) > 8 && Math.abs(horizontal) > Math.abs(vertical)) {
+      setDraggingSlider(true);
+      setDragOffset(horizontal);
+    }
   }
 
   function finishSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
@@ -86,10 +116,32 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     if (!start || slides.length < 2) return;
     const horizontal = event.clientX - start.x;
     const vertical = event.clientY - start.y;
-    if (Math.abs(horizontal) < 45 || Math.abs(horizontal) <= Math.abs(vertical)) return;
-    setCurrentSlide((current) => horizontal < 0
-      ? (current + 1) % slides.length
-      : (current - 1 + slides.length) % slides.length);
+    const threshold = Math.max(50, event.currentTarget.clientWidth * 0.12);
+    setSliderAnimated(true);
+    setDragOffset(0);
+    if (Math.abs(horizontal) >= threshold && Math.abs(horizontal) > Math.abs(vertical)) {
+      setSliderPosition((position) => position + (horizontal < 0 ? 1 : -1));
+    }
+    setTimerReset((value) => value + 1);
+  }
+
+  function cancelSliderDrag() {
+    dragStart.current = null;
+    setDraggingSlider(false);
+    setSliderAnimated(true);
+    setDragOffset(0);
+    setTimerReset((value) => value + 1);
+  }
+
+  function finishSliderTransition() {
+    if (slides.length < 2) return;
+    if (sliderPosition === 0) {
+      setSliderAnimated(false);
+      setSliderPosition(slides.length);
+    } else if (sliderPosition === slides.length + 1) {
+      setSliderAnimated(false);
+      setSliderPosition(1);
+    }
   }
 
   function openDonation(project = "Genel Destek") {
@@ -127,17 +179,25 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
           onPointerDown={startSliderDrag}
           onPointerMove={moveSliderDrag}
           onPointerUp={finishSliderDrag}
-          onPointerCancel={() => { dragStart.current = null; setDraggingSlider(false); }}
+          onPointerCancel={cancelSliderDrag}
         >
-          {slide && <picture className="hero-media">
-            <source media="(max-width: 760px)" srcSet={slide.mobileImage} />
-            <img src={slide.desktopImage} alt="" />
-          </picture>}
-          {slide && slides.length > 1 && (
-            <div className="slider-controls">
-              <button type="button" aria-label="Önceki slayt" onClick={() => setCurrentSlide((current) => (current - 1 + slides.length) % slides.length)}>←</button>
-              <div>{slides.map((item, index) => <button type="button" aria-label={`${index + 1}. slayta git`} aria-current={index === currentSlide} key={item.id} onClick={() => setCurrentSlide(index)}><span /></button>)}</div>
-              <button type="button" aria-label="Sonraki slayt" onClick={() => setCurrentSlide((current) => (current + 1) % slides.length)}>→</button>
+          <div
+            className={`hero-track${sliderAnimated ? " is-animated" : ""}`}
+            style={{ transform: `translate3d(calc(${-sliderPosition * 100}% + ${dragOffset}px), 0, 0)` }}
+            onTransitionEnd={finishSliderTransition}
+          >
+            {trackSlides.map((item, index) => (
+              <picture className="hero-media" key={`${item.id}-${index}`}>
+                <source media="(max-width: 760px)" srcSet={item.mobileImage} />
+                <img src={item.desktopImage} alt="" draggable={false} />
+              </picture>
+            ))}
+          </div>
+          {slides.length > 1 && (
+            <div className="slider-controls" onPointerDown={(event) => event.stopPropagation()}>
+              <button type="button" aria-label="Önceki slayt" onClick={() => moveSlider(-1)}>←</button>
+              <div>{slides.map((item, index) => <button type="button" aria-label={`${index + 1}. slayta git`} aria-current={index === currentSlide} key={item.id} onClick={() => goToSlide(index)}><span /></button>)}</div>
+              <button type="button" aria-label="Sonraki slayt" onClick={() => moveSlider(1)}>→</button>
             </div>
           )}
         </div>
@@ -324,4 +384,3 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     </main>
   );
 }
-
