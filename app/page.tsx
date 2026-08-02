@@ -123,15 +123,11 @@ export default function Home() {
             <img src={slide.desktopImage} alt="" key={slide.id} />
           </picture>
           <div className="hero-shade" />
-          <div className="hero-content" key={`content-${slide.id}`} aria-live="polite">
-            <span className="hero-kicker">{slide.eyebrow}</span>
-            <h1>{slide.title}<br /><em>{slide.highlight}</em></h1>
-            <p>{slide.description}</p>
+          <div className="hero-content hero-action" key={`content-${slide.id}`}>
             <div className="hero-buttons">
               {slide.buttonLink === "#destek"
                 ? <button className="donate-button" type="button" onClick={() => openDonation()}>{slide.buttonText} <span>↗</span></button>
                 : <a className="donate-button" href={slide.buttonLink}>{slide.buttonText} <span>↗</span></a>}
-              <a className="ghost-button" href="#projeler">Projeleri Keşfet <span>↓</span></a>
             </div>
           </div>
           {slides.length > 1 && (
@@ -141,10 +137,6 @@ export default function Home() {
               <button type="button" aria-label="Sonraki slayt" onClick={() => setCurrentSlide((current) => (current + 1) % slides.length)}>→</button>
             </div>
           )}
-          <div className="hero-proof">
-            <div className="proof-icon">✓</div>
-            <div><small>Şeffaf süreç</small><strong>Her adımda bilgilendirme</strong></div>
-          </div>
         </div>
 
         <div className="quick-support">
