@@ -325,6 +325,7 @@ function ApplicationTable({ applications, detailed = false }: { applications: Ap
 function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setSlides: (slides: Slide[]) => void; showToast: (message: string) => void }) {
   const [editing, setEditing] = useState<Slide | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<"desktop" | "mobile" | null>(null);
 
   async function persist(nextSlides: Slide[]) {
     setSaving(true);
@@ -378,6 +379,21 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
     });
   }
 
+  async function uploadImage(file: File, kind: "desktop" | "mobile") {
+    setUploading(kind);
+    const form = new FormData();
+    form.set("file", file);
+    const response = await fetch("/api/admin/slides/upload", { method: "POST", body: form });
+    const result = await response.json();
+    setUploading(null);
+    if (!response.ok) {
+      showToast(result.error || "Görsel yüklenemedi.");
+      return;
+    }
+    setEditing((current) => current ? { ...current, [kind === "desktop" ? "desktopImage" : "mobileImage"]: result.url } : current);
+    showToast("Görsel başarıyla yüklendi.");
+  }
+
   return (
     <>
       <div className={styles.pageHeading}>
@@ -419,8 +435,12 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
               <label>Buton bağlantısı<input name="buttonLink" defaultValue={editing.buttonLink} placeholder="#projeler" required /></label>
               <label className={styles.checkLabel}><input name="active" type="checkbox" defaultChecked={editing.active} /> Bu slayt yayında</label>
             </div>
-            <label>Masaüstü görsel adresi<input name="desktopImage" type="url" defaultValue={editing.desktopImage} placeholder="https://..." required /></label>
-            <label>Mobil görsel adresi<input name="mobileImage" type="url" defaultValue={editing.mobileImage} placeholder="https://..." required /></label>
+            <label className={styles.uploadField}>Masaüstü görseli
+              <span><input name="desktopImage" type="url" value={editing.desktopImage} onChange={(event) => setEditing({ ...editing, desktopImage: event.target.value })} placeholder="Görsel adresi veya yükleme" required /><b>{uploading === "desktop" ? "Yükleniyor..." : "Bilgisayardan Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "desktop")} /></b></span>
+            </label>
+            <label className={styles.uploadField}>Mobil görseli
+              <span><input name="mobileImage" type="url" value={editing.mobileImage} onChange={(event) => setEditing({ ...editing, mobileImage: event.target.value })} placeholder="Görsel adresi veya yükleme" required /><b>{uploading === "mobile" ? "Yükleniyor..." : "Bilgisayardan Seç"}<input type="file" accept="image/*" disabled={Boolean(uploading)} onChange={(event) => event.target.files?.[0] && uploadImage(event.target.files[0], "mobile")} /></b></span>
+            </label>
             <div className={styles.modalActions}><button type="button" onClick={() => setEditing(null)}>Vazgeç</button><button type="submit" disabled={saving}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button></div>
           </form>
         </div>
