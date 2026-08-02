@@ -25,7 +25,7 @@ const fallbackSlide: Slide = {
   buttonText: "İyiliğe Ortak Ol",
   buttonLink: "#destek",
   desktopImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2200&q=90",
-  mobileImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&h=1400&q=88",
+  mobileImage: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=900&h=1050&q=88",
   active: true,
 };
 
