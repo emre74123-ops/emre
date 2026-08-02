@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "../../../../lib/supabase/server";
-import { defaultSlides, type Slide } from "../../../../lib/slides";
-import { readSiteSetting, writeSiteSetting } from "../../../../lib/site-settings";
+import { type Slide } from "../../../../lib/slides";
+import { readStoredSlides, writeStoredSlides } from "../../../../lib/slider-storage";
 
 async function getAdminClient() {
   const supabase = await createClient();
@@ -15,9 +15,8 @@ async function getAdminClient() {
 export async function GET() {
   const supabase = await getAdminClient();
   if (!supabase) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-  const { value, error } = await readSiteSetting(supabase, "homepage_slides");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ slides: Array.isArray(value) ? value : defaultSlides });
+  const slides = await readStoredSlides();
+  return NextResponse.json({ slides });
 }
 
 export async function PUT(request: Request) {
@@ -44,7 +43,7 @@ export async function PUT(request: Request) {
     mobileImage: String(slide.mobileImage || slide.desktopImage || "").slice(0, 1000),
     active: Boolean(slide.active),
   })) : [];
-  const { error } = await writeSiteSetting(supabase, "homepage_slides", slides);
+  const { error } = await writeStoredSlides(slides);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/");
   revalidatePath("/api/slides");
