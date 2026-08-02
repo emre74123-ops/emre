@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [campaignModal, setCampaignModal] = useState(false);
   const [toast, setToast] = useState("");
   const [siteLive, setSiteLive] = useState(true);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -122,8 +123,31 @@ export default function AdminPage() {
           <div className={styles.demoNotice}><span>✓</span><p><strong>Güvenli bağlantı</strong>Supabase veritabanı aktif.</p></div>
           <div className={styles.profile}>
             <span>EK</span><p><strong>Emre Kök</strong><small>Yönetici</small></p>
-            <a href="/admin/account" title="Şifreyi değiştir">⚙</a>
-            <form action="/admin/logout" method="post"><button type="submit" title="Çıkış yap">↪</button></form>
+            <button
+              className={styles.accountMenuButton}
+              type="button"
+              aria-label="Hesap menüsünü aç"
+              aria-expanded={accountMenuOpen}
+              onClick={() => setAccountMenuOpen((open) => !open)}
+            >⚙</button>
+            {accountMenuOpen && (
+              <>
+                <button className={styles.accountMenuOverlay} type="button" aria-label="Hesap menüsünü kapat" onClick={() => setAccountMenuOpen(false)} />
+                <div className={styles.accountMenu}>
+                  <div className={styles.accountMenuHeader}>
+                    <span>EK</span>
+                    <p><strong>Emre Kök</strong><small>Güvenli yönetici oturumu</small><em>Yönetici hesabı</em></p>
+                  </div>
+                  <nav aria-label="Hesap işlemleri">
+                    <a href="/admin/account"><i>⚿</i><span><strong>Şifre değiştir</strong><small>Hesabının şifresini güncelle</small></span><b>›</b></a>
+                    <a href="/" target="_blank" rel="noreferrer"><i>↗</i><span><strong>Siteyi görüntüle</strong><small>Canlı siteyi yeni sekmede aç</small></span><b>›</b></a>
+                  </nav>
+                  <form action="/admin/logout" method="post">
+                    <button type="submit"><i>↪</i><span><strong>Güvenli çıkış yap</strong><small>Yönetici oturumunu kapat</small></span></button>
+                  </form>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </aside>
