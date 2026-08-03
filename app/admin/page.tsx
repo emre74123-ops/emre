@@ -486,43 +486,41 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/admin/header?t=${Date.now()}`, { cache: "no-store" })
-      .then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        setSettings(result.settings);
+    Promise.all([
+      fetch(`/api/admin/header?t=${Date.now()}`, { cache: "no-store" }),
+      fetch(`/api/admin/pages?t=${Date.now()}`, { cache: "no-store" }),
+    ])
+      .then(async ([headerResponse, pagesResponse]) => {
+        const [headerResult, pagesResult] = await Promise.all([headerResponse.json(), pagesResponse.json()]);
+        if (!headerResponse.ok) throw new Error(headerResult.error);
+        const nextPages: ManagedPage[] = pagesResult.pages || defaultManagedPages;
+        const hasRealPages = headerResult.settings.mobileMenuItems.some((item: HeaderSettings["mobileMenuItems"][number]) => item.sourcePageId);
+        setManagedPages(nextPages);
+        setSettings({
+          ...headerResult.settings,
+          mobileMenuItems: hasRealPages ? headerResult.settings.mobileMenuItems : nextPages.filter((page) => !page.parentId && page.enabled).map((page) => ({
+            id: crypto.randomUUID(),
+            label: page.title,
+            href: page.menuType === "direct" ? `/${page.slug}` : "#",
+            enabled: true,
+            newTab: false,
+            sourcePageId: page.id,
+          })),
+        });
       })
       .catch(() => showToast("Mobil menü ayarları yüklenemedi."))
       .finally(() => setLoadingMenu(false));
   }, []);
 
-  useEffect(() => {
-    fetch(`/api/admin/pages?t=${Date.now()}`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((result) => result.pages && setManagedPages(result.pages))
-      .catch(() => undefined);
-  }, []);
-
   async function save() {
     setSaving(true);
-    const response = await fetch("/api/admin/header", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
+    const cleanMobileSettings = { ...settings, mobileMenuItems: settings.mobileMenuItems.filter((item) => item.sourcePageId) };
+    const response = await fetch("/api/admin/header", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cleanMobileSettings) });
     const result = await response.json();
     setSaving(false);
     if (!response.ok) return showToast(result.error || "Mobil menü kaydedilemedi.");
     setSettings(result.settings);
     showToast("Mobil menü canlı siteye kaydedildi.");
-  }
-
-  function updateItem(index: number, patch: Partial<HeaderSettings["mobileMenuItems"][number]>) {
-    setSettings((current) => ({ ...current, mobileMenuItems: current.mobileMenuItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item) }));
-  }
-
-  function moveItem(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= settings.mobileMenuItems.length) return;
-    const items = [...settings.mobileMenuItems];
-    [items[index], items[target]] = [items[target], items[index]];
-    setSettings({ ...settings, mobileMenuItems: items });
   }
 
   function toggleWebPage(page: ManagedPage) {
@@ -539,7 +537,7 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
 
   if (loadingMenu) return <section className={`${styles.card} ${styles.placeholder}`}><div>☰</div><h2>Mobil menü yükleniyor</h2><p>Güncel ayarlar güvenli depolama alanından alınıyor.</p></section>;
 
-  const visibleItems = settings.mobileMenuItems.filter((item) => item.enabled);
+  const visibleItems = settings.mobileMenuItems.filter((item) => item.enabled && item.sourcePageId);
   return (
     <>
       <div className={styles.pageHeading}>
@@ -584,12 +582,6 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
             const childCount = managedPages.filter((item) => item.parentId === page.id && item.enabled).length;
             return <button className={selected ? styles.mobilePageSelected : ""} type="button" key={page.id} onClick={() => toggleWebPage(page)}><i>{selected ? "✓" : "+"}</i><span><strong>{page.title}</strong><small>{page.menuType === "dropdown" ? `${childCount} alt sayfalı açılır menü` : "Doğrudan sayfa"}</small></span><b>{selected ? "Mobilde gösteriliyor" : "Mobile ekle"}</b></button>;
           })}
-        </div>
-      </section>
-      <section className={`${styles.card} ${styles.headerSection}`}>
-        <div className={styles.cardHeader}><div><h2>Mobil menü sırası ve özel bağlantılar</h2><p>Webden eklenen sayfaları sırala veya yalnızca mobile özel bağlantı ekle.</p></div><button type="button" onClick={() => setSettings({ ...settings, mobileMenuItems: [...settings.mobileMenuItems, { id: crypto.randomUUID(), label: "Yeni Özel Bağlantı", href: "#", enabled: true, newTab: false }] })}>＋ Özel Bağlantı Ekle</button></div>
-        <div className={styles.menuEditor}>
-          {settings.mobileMenuItems.map((item, index) => <article key={item.id}><span>{index + 1}</span><label>Menü adı<input value={item.label} onChange={(event) => updateItem(index, { label: event.target.value })} /></label><label>Bağlantı<input value={item.href} onChange={(event) => updateItem(index, { href: event.target.value })} /></label><label className={styles.tinyCheck}><input type="checkbox" checked={item.enabled} onChange={(event) => updateItem(index, { enabled: event.target.checked })} /> Göster</label><label className={styles.tinyCheck}><input type="checkbox" checked={item.newTab} onChange={(event) => updateItem(index, { newTab: event.target.checked })} /> Yeni sekme</label><div><button type="button" onClick={() => moveItem(index, -1)}>↑</button><button type="button" onClick={() => moveItem(index, 1)}>↓</button><button type="button" onClick={() => setSettings({ ...settings, mobileMenuItems: settings.mobileMenuItems.filter((_, itemIndex) => itemIndex !== index) })}>Sil</button></div></article>)}
         </div>
       </section>
       <div className={styles.headerSettingsGrid}>
