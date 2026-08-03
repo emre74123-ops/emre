@@ -56,6 +56,17 @@ const navItems = [
   ["settings", "⚙", "Site Ayarları"],
 ];
 
+const mobileIconOptions = [
+  ["home", "⌂", "Ana sayfa"],
+  ["building", "▥", "Kurum / Bina"],
+  ["heart", "♥", "Yardım / Kalp"],
+  ["news", "▤", "Haber / Medya"],
+  ["users", "●", "Topluluk"],
+  ["phone", "☎", "İletişim"],
+  ["book", "▧", "Eğitim / Kitap"],
+  ["droplet", "◉", "Su / Damla"],
+];
+
 export default function AdminPage() {
   const [active, setActive] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -504,7 +515,9 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
             href: page.menuType === "direct" ? `/${page.slug}` : "#",
             enabled: true,
             newTab: false,
-            sourcePageId: page.id,
+          sourcePageId: page.id,
+          mobileIcon: page.id === "projects" ? "heart" : page.id === "about" ? "building" : page.id === "stories" ? "news" : page.id === "contact" ? "phone" : "home",
+          mobileIconBg: "#4f86df",
           })),
         });
       })
@@ -530,9 +543,13 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
         ...current,
         mobileMenuItems: exists
           ? current.mobileMenuItems.filter((item) => item.sourcePageId !== page.id)
-          : [...current.mobileMenuItems, { id: crypto.randomUUID(), label: page.title, href: page.menuType === "direct" ? `/${page.slug}` : "#", enabled: true, newTab: false, sourcePageId: page.id }],
+          : [...current.mobileMenuItems, { id: crypto.randomUUID(), label: page.title, href: page.menuType === "direct" ? `/${page.slug}` : "#", enabled: true, newTab: false, sourcePageId: page.id, mobileIcon: page.id === "projects" ? "heart" : page.id === "about" ? "building" : page.id === "stories" ? "news" : page.id === "contact" ? "phone" : "home", mobileIconBg: "#4f86df" }],
       };
     });
+  }
+
+  function updateMobileIcon(itemId: string, patch: Partial<HeaderSettings["mobileMenuItems"][number]>) {
+    setSettings((current) => ({ ...current, mobileMenuItems: current.mobileMenuItems.map((item) => item.id === itemId ? { ...item, ...patch } : item) }));
   }
 
   if (loadingMenu) return <section className={`${styles.card} ${styles.placeholder}`}><div>☰</div><h2>Mobil menü yükleniyor</h2><p>Güncel ayarlar güvenli depolama alanından alınıyor.</p></section>;
@@ -550,7 +567,7 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
           <div className={styles.phoneScreen} style={{ background: settings.mobileMenuBackgroundColor, color: settings.mobileMenuTextColor }}>
             <header><strong>MEVCUT HEADER</strong><b>×</b></header>
             <nav>
-              {visibleItems.map((item, index) => <span key={item.id} style={{ fontSize: Math.min(18, settings.mobileMenuFontSize * .62), fontWeight: settings.mobileMenuFontWeight }}>{settings.mobileMenuShowNumbers && <small style={{ color: settings.mobileMenuAccentColor }}>{String(index + 1).padStart(2, "0")}</small>}{item.label}<b>›</b></span>)}
+              {visibleItems.map((item) => <span key={item.id} style={{ fontSize: Math.min(18, settings.mobileMenuFontSize * .62), fontWeight: settings.mobileMenuFontWeight }}><small className={styles.phoneIconPreview} style={{ background: item.mobileIconBg || "#4f86df" }}>{mobileIconOptions.find((icon) => icon[0] === item.mobileIcon)?.[1] || "⌂"}</small>{managedPages.find((page) => page.id === item.sourcePageId)?.title || item.label}<b>›</b></span>)}
             </nav>
             <div className={styles.phoneMenuButtons}>{settings.mobileMenuShowAccount && <span>{settings.accountLabel}</span>}{settings.mobileMenuShowSupport && <b style={{ background: settings.mobileMenuAccentColor }}>{settings.supportLabel}</b>}</div>
             <footer><p>{settings.mobileMenuDescription}</p>{settings.mobileMenuShowContact && <small>{settings.phone || settings.email || "İletişim bilgileri"}</small>}</footer>
@@ -568,7 +585,6 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
               <label>Yazı boyutu <b>{settings.mobileMenuFontSize} px</b><input type="range" min="18" max="40" value={settings.mobileMenuFontSize} onChange={(event) => setSettings({ ...settings, mobileMenuFontSize: Number(event.target.value) })} /></label>
               <label>Yazı kalınlığı<select value={settings.mobileMenuFontWeight} onChange={(event) => setSettings({ ...settings, mobileMenuFontWeight: Number(event.target.value) })}><option value="400">Normal</option><option value="500">Orta</option><option value="600">Yarı kalın</option><option value="700">Kalın</option><option value="800">Çok kalın</option><option value="900">En kalın</option></select></label>
               <label>Menü aralığı <b>{settings.mobileMenuGap} px</b><input type="range" min="0" max="25" value={settings.mobileMenuGap} onChange={(event) => setSettings({ ...settings, mobileMenuGap: Number(event.target.value) })} /></label>
-              <label className={styles.headerCheck}><input type="checkbox" checked={settings.mobileMenuShowNumbers} onChange={(event) => setSettings({ ...settings, mobileMenuShowNumbers: event.target.checked })} /> Menülerin yanında sıra numarası göster</label>
             </div>
           </section>
           <section className={styles.card}><div className={styles.cardHeader}><div><h2>Sade header bağlantısı</h2><p>Menü mevcut mobil header&apos;ın altından açılır; ikinci logo veya arama alanı kullanılmaz.</p></div></div><div className={styles.headerForm}><label className={styles.fullField}>Menü alt açıklaması<input value={settings.mobileMenuDescription} onChange={(event) => setSettings({ ...settings, mobileMenuDescription: event.target.value })} /></label></div></section>
@@ -581,6 +597,15 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
             const selected = settings.mobileMenuItems.some((item) => item.sourcePageId === page.id);
             const childCount = managedPages.filter((item) => item.parentId === page.id && item.enabled).length;
             return <button className={selected ? styles.mobilePageSelected : ""} type="button" key={page.id} onClick={() => toggleWebPage(page)}><i>{selected ? "✓" : "+"}</i><span><strong>{page.title}</strong><small>{page.menuType === "dropdown" ? `${childCount} alt sayfalı açılır menü` : "Doğrudan sayfa"}</small></span><b>{selected ? "Mobilde gösteriliyor" : "Mobile ekle"}</b></button>;
+          })}
+        </div>
+      </section>
+      <section className={`${styles.card} ${styles.headerSection}`}>
+        <div className={styles.cardHeader}><div><h2>Mobil menü ikonları</h2><p>Her sayfanın ikonunu ve ikon kutusunun arka plan rengini ayrı ayrı seç.</p></div></div>
+        <div className={styles.mobileIconEditor}>
+          {visibleItems.map((item) => {
+            const page = managedPages.find((managedPage) => managedPage.id === item.sourcePageId);
+            return <article key={item.id}><i style={{ background: item.mobileIconBg || "#4f86df" }}>{mobileIconOptions.find((icon) => icon[0] === item.mobileIcon)?.[1] || "⌂"}</i><strong>{page?.title || item.label}</strong><label>İkon<select value={item.mobileIcon || "home"} onChange={(event) => updateMobileIcon(item.id, { mobileIcon: event.target.value })}>{mobileIconOptions.map(([value, glyph, label]) => <option value={value} key={value}>{glyph} {label}</option>)}</select></label><label>Arka plan<span className={styles.colorField}><input type="color" value={item.mobileIconBg || "#4f86df"} onChange={(event) => updateMobileIcon(item.id, { mobileIconBg: event.target.value })} /><input value={item.mobileIconBg || "#4f86df"} onChange={(event) => updateMobileIcon(item.id, { mobileIconBg: event.target.value })} /></span></label></article>;
           })}
         </div>
       </section>
