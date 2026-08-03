@@ -35,7 +35,6 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
         href: safeLink(item.href),
         enabled: Boolean(item.enabled),
         newTab: Boolean(item.newTab),
-        sourcePageId: item.sourcePageId ? String(item.sourcePageId).slice(0, 80) : undefined,
       }))
     : defaultHeaderSettings.menuItems;
   const mobileMenuItems = Array.isArray(input.mobileMenuItems)
@@ -45,6 +44,9 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
         href: safeLink(item.href),
         enabled: Boolean(item.enabled),
         newTab: Boolean(item.newTab),
+        sourcePageId: item.sourcePageId ? String(item.sourcePageId).slice(0, 80) : undefined,
+        mobileIcon: String(item.mobileIcon || "home").slice(0, 30),
+        mobileIconBg: safeColor(item.mobileIconBg, "#4f86df"),
       }))
     : defaultHeaderSettings.mobileMenuItems;
 
