@@ -39,6 +39,24 @@ export type HeaderSettings = {
   supportLabel: string;
   supportHref: string;
   menuItems: HeaderMenuItem[];
+  mobileMenuItems: HeaderMenuItem[];
+  mobileMenuLayout: "fullscreen" | "drawer";
+  mobileMenuAnimation: "slide" | "fade";
+  mobileMenuLogoUrl: string;
+  mobileMenuBackgroundColor: string;
+  mobileMenuTextColor: string;
+  mobileMenuAccentColor: string;
+  mobileMenuFontSize: number;
+  mobileMenuFontWeight: number;
+  mobileMenuGap: number;
+  mobileMenuShowNumbers: boolean;
+  mobileMenuShowAccount: boolean;
+  mobileMenuShowSupport: boolean;
+  mobileMenuShowContact: boolean;
+  mobileMenuDescription: string;
+  mobileMenuInstagram: string;
+  mobileMenuFacebook: string;
+  mobileMenuX: string;
 };
 
 export const defaultHeaderSettings: HeaderSettings = {
@@ -80,4 +98,28 @@ export const defaultHeaderSettings: HeaderSettings = {
     { id: "stories", label: "İyilik Hikâyeleri", href: "#hikayeler", enabled: true, newTab: false },
     { id: "contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false },
   ],
+  mobileMenuItems: [
+    { id: "mobile-projects", label: "Projelerimiz", href: "#projeler", enabled: true, newTab: false },
+    { id: "mobile-about", label: "Biz Kimiz?", href: "#hakkimizda", enabled: true, newTab: false },
+    { id: "mobile-transparency", label: "Şeffaflık", href: "#seffaflik", enabled: true, newTab: false },
+    { id: "mobile-stories", label: "İyilik Hikâyeleri", href: "#hikayeler", enabled: true, newTab: false },
+    { id: "mobile-contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false },
+  ],
+  mobileMenuLayout: "fullscreen",
+  mobileMenuAnimation: "slide",
+  mobileMenuLogoUrl: "",
+  mobileMenuBackgroundColor: "#0b2926",
+  mobileMenuTextColor: "#ffffff",
+  mobileMenuAccentColor: "#ed7048",
+  mobileMenuFontSize: 28,
+  mobileMenuFontWeight: 600,
+  mobileMenuGap: 9,
+  mobileMenuShowNumbers: true,
+  mobileMenuShowAccount: true,
+  mobileMenuShowSupport: true,
+  mobileMenuShowContact: true,
+  mobileMenuDescription: "İyiliğin güvenilir ve şeffaf adresi.",
+  mobileMenuInstagram: "",
+  mobileMenuFacebook: "",
+  mobileMenuX: "",
 };
