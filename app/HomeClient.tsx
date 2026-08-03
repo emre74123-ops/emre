@@ -64,6 +64,11 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
   const autoplayTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
+  useEffect(() => {
     if (autoplayTimer.current !== null) {
       window.clearTimeout(autoplayTimer.current);
       autoplayTimer.current = null;
@@ -230,6 +235,12 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
           "--menu-active": headerSettings.menuActiveColor,
           "--menu-underline": headerSettings.menuUnderlineColor,
           "--menu-underline-thickness": `${headerSettings.menuUnderlineThickness}px`,
+          "--mobile-menu-bg": headerSettings.mobileMenuBackgroundColor,
+          "--mobile-menu-text": headerSettings.mobileMenuTextColor,
+          "--mobile-menu-accent": headerSettings.mobileMenuAccentColor,
+          "--mobile-menu-size": `${headerSettings.mobileMenuFontSize}px`,
+          "--mobile-menu-weight": headerSettings.mobileMenuFontWeight,
+          "--mobile-menu-gap": `${headerSettings.mobileMenuGap}px`,
         } as CSSProperties}
       >
         {headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) && (
@@ -255,7 +266,7 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
           <button className="menu-toggle" type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
             <span /><span /><span />
           </button>
-          <nav className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Ana menü">
+          <nav className="main-nav" aria-label="Ana menü">
             {headerSettings.menuItems.filter((item) => item.enabled).map((item) => (
               <a href={item.href} key={item.id} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>{item.label}</a>
             ))}
@@ -273,6 +284,42 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
             )}
           </div>
         </header>
+        <div
+          className={`mobile-menu-overlay ${menuOpen ? "is-open" : ""} ${headerSettings.mobileMenuLayout === "drawer" ? "is-drawer" : "is-fullscreen"} ${headerSettings.mobileMenuAnimation === "fade" ? "is-fade" : "is-slide"}`}
+          aria-hidden={!menuOpen}
+        >
+          <div className="mobile-menu-head">
+            <a href="#top" onClick={() => setMenuOpen(false)} aria-label="Ana sayfa">
+              {(headerSettings.mobileMenuLogoUrl || headerSettings.logoUrl)
+                ? <img src={headerSettings.mobileMenuLogoUrl || headerSettings.logoUrl} alt={headerSettings.logoAlt} />
+                : <><span className="mobile-menu-mark">ia</span><strong>{headerSettings.brandName} <em>{headerSettings.brandTagline}</em></strong></>}
+            </a>
+            <button type="button" aria-label="Mobil menüyü kapat" onClick={() => setMenuOpen(false)}>×</button>
+          </div>
+          <div className="mobile-menu-body">
+            <nav aria-label="Mobil menü">
+              {headerSettings.mobileMenuItems.filter((item) => item.enabled).map((item, index) => (
+                <a href={item.href} key={item.id} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>
+                  {headerSettings.mobileMenuShowNumbers && <small>{String(index + 1).padStart(2, "0")}</small>}
+                  <span>{item.label}</span><b>↗</b>
+                </a>
+              ))}
+            </nav>
+            <div className="mobile-menu-actions">
+              {headerSettings.mobileMenuShowAccount && headerSettings.accountEnabled && (
+                <button type="button" onClick={() => { setMenuOpen(false); setAccountOpen(true); }}>{headerSettings.accountLabel}</button>
+              )}
+              {headerSettings.mobileMenuShowSupport && headerSettings.supportEnabled && (
+                <button type="button" onClick={() => { setMenuOpen(false); openDonation(); }}>{headerSettings.supportLabel} <span>↗</span></button>
+              )}
+            </div>
+          </div>
+          <div className="mobile-menu-footer">
+            <p>{headerSettings.mobileMenuDescription}</p>
+            {headerSettings.mobileMenuShowContact && <div>{headerSettings.phone && <a href={`tel:${headerSettings.phone.replace(/\s/g, "")}`}>{headerSettings.phone}</a>}{headerSettings.email && <a href={`mailto:${headerSettings.email}`}>{headerSettings.email}</a>}</div>}
+            <nav aria-label="Sosyal medya">{headerSettings.mobileMenuInstagram && <a href={headerSettings.mobileMenuInstagram}>Instagram</a>}{headerSettings.mobileMenuFacebook && <a href={headerSettings.mobileMenuFacebook}>Facebook</a>}{headerSettings.mobileMenuX && <a href={headerSettings.mobileMenuX}>X</a>}</nav>
+          </div>
+        </div>
       </div>
 
       <section className="hero" aria-roledescription="carousel" aria-label="İyilik Adresim duyuruları">
