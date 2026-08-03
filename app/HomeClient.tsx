@@ -86,6 +86,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
     sourcePageId: page.id,
     mobileIcon: page.id === "projects" ? "heart" : page.id === "about" ? "building" : page.id === "stories" ? "news" : page.id === "contact" ? "phone" : "home",
     mobileIconBg: "#4f86df",
+    mobileDescription: "",
   }));
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
@@ -334,12 +335,12 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
                     {children.length ? (
                       <button type="button" onClick={() => setOpenMobileMenuId((current) => current === item.id ? null : item.id)}>
                         <i className="mobile-card-icon" style={{ background: item.mobileIconBg || "#4f86df" }}><MobileMenuIcon name={item.mobileIcon} /></i>
-                        <span>{mobileLabel}</span><b>{openMobileMenuId === item.id ? "−" : "+"}</b>
+                        <span className="mobile-card-copy"><strong>{mobileLabel}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</span><b>{openMobileMenuId === item.id ? "−" : "+"}</b>
                       </button>
                     ) : (
                       <a href={mobileHref} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>
                         <i className="mobile-card-icon" style={{ background: item.mobileIconBg || "#4f86df" }}><MobileMenuIcon name={item.mobileIcon} /></i>
-                        <span>{mobileLabel}</span><b>›</b>
+                        <span className="mobile-card-copy"><strong>{mobileLabel}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</span><b>›</b>
                       </a>
                     )}
                     {children.length > 0 && openMobileMenuId === item.id && <div className="mobile-submenu">{children.map((child) => <a href={`/${child.slug}`} key={child.id} onClick={() => setMenuOpen(false)}>{child.title}</a>)}</div>}
