@@ -47,6 +47,7 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
         sourcePageId: item.sourcePageId ? String(item.sourcePageId).slice(0, 80) : undefined,
         mobileIcon: String(item.mobileIcon || "home").slice(0, 30),
         mobileIconBg: safeColor(item.mobileIconBg, "#4f86df"),
+        mobileDescription: String(item.mobileDescription || "").trim().slice(0, 100),
       }))
     : defaultHeaderSettings.mobileMenuItems;
 
