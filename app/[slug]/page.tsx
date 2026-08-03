@@ -7,7 +7,7 @@ import { readManagedPages } from "../../lib/page-storage";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const page = (await readManagedPages()).find((item) => item.slug === slug && item.enabled);
-  return page ? { title: `${page.title} | Ä°yilik Adresim`, description: `${page.title} - Ä°yilik Adresim` } : {};
+  return page ? { title: `${page.title} | İyilik Adresim`, description: `${page.title} - İyilik Adresim` } : {};
 }
 
 export default async function ManagedPage({ params }: { params: Promise<{ slug: string }> }) {
