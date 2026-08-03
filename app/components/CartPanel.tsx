@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { cartTotal, formatTry, type CartItem } from "../../lib/cart";
-import { createClient } from "../../lib/supabase/browser";
+import { createMemberClient } from "../../lib/supabase/member-browser";
 
 export default function CartPanel({
   open,
@@ -22,7 +22,7 @@ export default function CartPanel({
   onClear: () => void;
   onOpenAccount: () => void;
 }) {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createMemberClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutReady, setCheckoutReady] = useState(false);
