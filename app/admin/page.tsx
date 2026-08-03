@@ -48,8 +48,7 @@ type Member = {
   id: string;
   name: string;
   email: string;
-  provider: string;
-  providers: string[];
+  phone: string;
   emailConfirmed: boolean;
   createdAt: string;
   lastSignInAt: string | null;
@@ -1000,11 +999,11 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
 
 function MemberManager({ members, loading }: { members: Member[]; loading: boolean }) {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "confirmed" | "social">("all");
+  const [filter, setFilter] = useState<"all" | "confirmed" | "phone">("all");
   const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
   const visibleMembers = members.filter((member) => {
-    const matchesQuery = !normalizedQuery || `${member.name} ${member.email}`.toLocaleLowerCase("tr-TR").includes(normalizedQuery);
-    const matchesFilter = filter === "all" || (filter === "confirmed" ? member.emailConfirmed : member.provider !== "email");
+    const matchesQuery = !normalizedQuery || `${member.name} ${member.email} ${member.phone}`.toLocaleLowerCase("tr-TR").includes(normalizedQuery);
+    const matchesFilter = filter === "all" || (filter === "confirmed" ? member.emailConfirmed : Boolean(member.phone));
     return matchesQuery && matchesFilter;
   });
 
@@ -1016,26 +1015,26 @@ function MemberManager({ members, loading }: { members: Member[]; loading: boole
       <section className={styles.memberStats}>
         <article><span>Toplam ziyaretçi üye</span><strong>{members.length}</strong><small>Yönetici hesapları hariç</small></article>
         <article><span>E-postası doğrulanan</span><strong>{members.filter((member) => member.emailConfirmed).length}</strong><small>Güvenli hesap</small></article>
-        <article><span>Sosyal giriş kullanan</span><strong>{members.filter((member) => member.provider !== "email").length}</strong><small>Google veya Facebook</small></article>
+        <article><span>Telefonu kayıtlı</span><strong>{members.filter((member) => member.phone).length}</strong><small>İletişim bilgisi bulunan</small></article>
       </section>
       <section className={styles.card}>
         <div className={styles.memberToolbar}>
           <div><strong>Üye listesi</strong><span>{visibleMembers.length} kayıt gösteriliyor</span></div>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="İsim veya e-posta ara..." aria-label="Üye ara" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="İsim, e-posta veya telefon ara..." aria-label="Üye ara" />
           <select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} aria-label="Üye filtresi">
             <option value="all">Tüm üyeler</option>
             <option value="confirmed">Doğrulanmış hesaplar</option>
-            <option value="social">Sosyal giriş kullananlar</option>
+            <option value="phone">Telefonu kayıtlı üyeler</option>
           </select>
         </div>
         <div className={styles.memberTableWrap}>
           <table className={styles.memberTable}>
-            <thead><tr><th>Üye</th><th>Giriş yöntemi</th><th>Durum</th><th>Kayıt tarihi</th><th>Son giriş</th></tr></thead>
+            <thead><tr><th>Üye</th><th>Telefon</th><th>Durum</th><th>Kayıt tarihi</th><th>Son giriş</th></tr></thead>
             <tbody>
               {visibleMembers.map((member) => (
                 <tr key={member.id}>
                   <td><i>{(member.name || member.email || "Ü").slice(0, 1).toLocaleUpperCase("tr-TR")}</i><span><strong>{member.name || "İsimsiz üye"}</strong><small>{member.email}</small></span></td>
-                  <td><b className={styles.providerBadge}>{member.provider === "google" ? "Google" : member.provider === "facebook" ? "Facebook" : "E-posta"}</b></td>
+                  <td><b className={styles.providerBadge}>{member.phone || "Belirtilmemiş"}</b></td>
                   <td><b className={member.emailConfirmed ? styles.memberConfirmed : styles.memberPending}>{member.emailConfirmed ? "✓ Doğrulandı" : "Doğrulama bekliyor"}</b></td>
                   <td>{formatDate(member.createdAt)}</td>
                   <td>{member.lastSignInAt ? formatDate(member.lastSignInAt) : "Henüz giriş yok"}</td>
