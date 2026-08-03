@@ -46,6 +46,7 @@ type SliderImage = {
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
   ["header", "▰", "Header Yönetimi"],
+  ["mobileMenu", "☰", "Mobil Menü Yönetimi"],
   ["slider", "▣", "Slider Yönetimi"],
   ["campaigns", "◇", "Kampanyalar"],
   ["applications", "◫", "Başvurular"],
@@ -237,6 +238,7 @@ export default function AdminPage() {
 
           {active === "slider" && <SliderManager slides={slides} setSlides={setSlides} showToast={showToast} />}
           {active === "header" && <HeaderManager showToast={showToast} />}
+          {active === "mobileMenu" && <MobileMenuManager showToast={showToast} />}
 
           {active === "campaigns" && (
             <>
@@ -332,6 +334,127 @@ function ApplicationTable({ applications, detailed = false }: { applications: Ap
         </tbody>
       </table>
     </div>
+  );
+}
+
+function MobileMenuManager({ showToast }: { showToast: (message: string) => void }) {
+  const [settings, setSettings] = useState<HeaderSettings>(defaultHeaderSettings);
+  const [loadingMenu, setLoadingMenu] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/admin/header?t=${Date.now()}`, { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        setSettings(result.settings);
+      })
+      .catch(() => showToast("Mobil menü ayarları yüklenemedi."))
+      .finally(() => setLoadingMenu(false));
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    const response = await fetch("/api/admin/header", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
+    const result = await response.json();
+    setSaving(false);
+    if (!response.ok) return showToast(result.error || "Mobil menü kaydedilemedi.");
+    setSettings(result.settings);
+    showToast("Mobil menü canlı siteye kaydedildi.");
+  }
+
+  async function uploadLogo(file: File) {
+    setUploading(true);
+    const body = new FormData();
+    body.set("file", file);
+    const response = await fetch("/api/admin/header/upload", { method: "POST", body });
+    const result = await response.json();
+    setUploading(false);
+    if (!response.ok) return showToast(result.error || "Mobil logo yüklenemedi.");
+    setSettings((current) => ({ ...current, mobileMenuLogoUrl: result.url }));
+    showToast("Mobil logo yüklendi. Kaydet ve Yayınla düğmesine bas.");
+  }
+
+  function updateItem(index: number, patch: Partial<HeaderSettings["mobileMenuItems"][number]>) {
+    setSettings((current) => ({ ...current, mobileMenuItems: current.mobileMenuItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item) }));
+  }
+
+  function moveItem(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= settings.mobileMenuItems.length) return;
+    const items = [...settings.mobileMenuItems];
+    [items[index], items[target]] = [items[target], items[index]];
+    setSettings({ ...settings, mobileMenuItems: items });
+  }
+
+  if (loadingMenu) return <section className={`${styles.card} ${styles.placeholder}`}><div>☰</div><h2>Mobil menü yükleniyor</h2><p>Güncel ayarlar güvenli depolama alanından alınıyor.</p></section>;
+
+  const visibleItems = settings.mobileMenuItems.filter((item) => item.enabled);
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>Mobil görünüm</p><h1>Mobil Menü Yönetimi</h1><span>Telefonlarda açılan profesyonel menüyü masaüstünden bağımsız olarak düzenle.</span></div>
+        <button className={styles.primaryButton} type="button" onClick={save} disabled={saving}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+      </div>
+      <div className={styles.mobileMenuWorkspace}>
+        <aside className={styles.phoneMenuPreview}>
+          <div className={styles.phoneSpeaker} />
+          <div className={styles.phoneScreen} style={{ background: settings.mobileMenuBackgroundColor, color: settings.mobileMenuTextColor }}>
+            <header>
+              {(settings.mobileMenuLogoUrl || settings.logoUrl) ? <img src={settings.mobileMenuLogoUrl || settings.logoUrl} alt="" /> : <strong>İyilik <i style={{ color: settings.mobileMenuAccentColor }}>Adresim</i></strong>}
+              <b>×</b>
+            </header>
+            <nav>
+              {visibleItems.map((item, index) => <span key={item.id} style={{ fontSize: Math.min(20, settings.mobileMenuFontSize * .62), fontWeight: settings.mobileMenuFontWeight }}>{settings.mobileMenuShowNumbers && <small style={{ color: settings.mobileMenuAccentColor }}>{String(index + 1).padStart(2, "0")}</small>}{item.label}<b>↗</b></span>)}
+            </nav>
+            <div className={styles.phoneMenuButtons}>{settings.mobileMenuShowAccount && <span>{settings.accountLabel}</span>}{settings.mobileMenuShowSupport && <b style={{ background: settings.mobileMenuAccentColor }}>{settings.supportLabel}</b>}</div>
+            <footer><p>{settings.mobileMenuDescription}</p>{settings.mobileMenuShowContact && <small>{settings.phone || settings.email || "İletişim bilgileri"}</small>}</footer>
+          </div>
+        </aside>
+        <div className={styles.mobileMenuControls}>
+          <section className={styles.card}>
+            <div className={styles.cardHeader}><div><h2>Görünüm ve animasyon</h2><p>Menünün açılış biçimini ve renklerini belirle.</p></div></div>
+            <div className={styles.headerForm}>
+              <label>Menü biçimi<select value={settings.mobileMenuLayout} onChange={(event) => setSettings({ ...settings, mobileMenuLayout: event.target.value as HeaderSettings["mobileMenuLayout"] })}><option value="fullscreen">Tam ekran</option><option value="drawer">Sağdan açılan panel</option></select></label>
+              <label>Açılış animasyonu<select value={settings.mobileMenuAnimation} onChange={(event) => setSettings({ ...settings, mobileMenuAnimation: event.target.value as HeaderSettings["mobileMenuAnimation"] })}><option value="slide">Sağdan kayarak</option><option value="fade">Yumuşak belirme</option></select></label>
+              <label>Arka plan<span className={styles.colorField}><input type="color" value={settings.mobileMenuBackgroundColor} onChange={(event) => setSettings({ ...settings, mobileMenuBackgroundColor: event.target.value })} /><input value={settings.mobileMenuBackgroundColor} onChange={(event) => setSettings({ ...settings, mobileMenuBackgroundColor: event.target.value })} /></span></label>
+              <label>Yazı rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuTextColor: event.target.value })} /><input value={settings.mobileMenuTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuTextColor: event.target.value })} /></span></label>
+              <label>Vurgu rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuAccentColor} onChange={(event) => setSettings({ ...settings, mobileMenuAccentColor: event.target.value })} /><input value={settings.mobileMenuAccentColor} onChange={(event) => setSettings({ ...settings, mobileMenuAccentColor: event.target.value })} /></span></label>
+              <label>Yazı boyutu <b>{settings.mobileMenuFontSize} px</b><input type="range" min="18" max="40" value={settings.mobileMenuFontSize} onChange={(event) => setSettings({ ...settings, mobileMenuFontSize: Number(event.target.value) })} /></label>
+              <label>Yazı kalınlığı<select value={settings.mobileMenuFontWeight} onChange={(event) => setSettings({ ...settings, mobileMenuFontWeight: Number(event.target.value) })}><option value="400">Normal</option><option value="500">Orta</option><option value="600">Yarı kalın</option><option value="700">Kalın</option><option value="800">Çok kalın</option><option value="900">En kalın</option></select></label>
+              <label>Menü aralığı <b>{settings.mobileMenuGap} px</b><input type="range" min="0" max="25" value={settings.mobileMenuGap} onChange={(event) => setSettings({ ...settings, mobileMenuGap: Number(event.target.value) })} /></label>
+              <label className={styles.headerCheck}><input type="checkbox" checked={settings.mobileMenuShowNumbers} onChange={(event) => setSettings({ ...settings, mobileMenuShowNumbers: event.target.checked })} /> Menülerin yanında sıra numarası göster</label>
+            </div>
+          </section>
+          <section className={styles.card}>
+            <div className={styles.cardHeader}><div><h2>Mobil logo</h2><p>Boş bırakırsan masaüstü logosu kullanılır.</p></div></div>
+            <div className={styles.headerForm}>
+              <label className={styles.fullField}>Mobil logo adresi<span className={styles.logoUploadRow}><input value={settings.mobileMenuLogoUrl} onChange={(event) => setSettings({ ...settings, mobileMenuLogoUrl: event.target.value })} /><b>{uploading ? "Yükleniyor..." : "Logo Seç"}<input type="file" accept=".svg,.webp,.png" disabled={uploading} onChange={(event) => event.target.files?.[0] && uploadLogo(event.target.files[0])} /></b></span></label>
+              <label className={styles.fullField}>Alt açıklama<input value={settings.mobileMenuDescription} onChange={(event) => setSettings({ ...settings, mobileMenuDescription: event.target.value })} /></label>
+            </div>
+          </section>
+        </div>
+      </div>
+      <section className={`${styles.card} ${styles.headerSection}`}>
+        <div className={styles.cardHeader}><div><h2>Mobil menü bağlantıları</h2><p>Masaüstü menüsünden bağımsızdır.</p></div><button type="button" onClick={() => setSettings({ ...settings, mobileMenuItems: [...settings.mobileMenuItems, { id: crypto.randomUUID(), label: "Yeni Menü", href: "#", enabled: true, newTab: false }] })}>＋ Menü Ekle</button></div>
+        <div className={styles.menuEditor}>
+          {settings.mobileMenuItems.map((item, index) => <article key={item.id}><span>{index + 1}</span><label>Menü adı<input value={item.label} onChange={(event) => updateItem(index, { label: event.target.value })} /></label><label>Bağlantı<input value={item.href} onChange={(event) => updateItem(index, { href: event.target.value })} /></label><label className={styles.tinyCheck}><input type="checkbox" checked={item.enabled} onChange={(event) => updateItem(index, { enabled: event.target.checked })} /> Göster</label><label className={styles.tinyCheck}><input type="checkbox" checked={item.newTab} onChange={(event) => updateItem(index, { newTab: event.target.checked })} /> Yeni sekme</label><div><button type="button" onClick={() => moveItem(index, -1)}>↑</button><button type="button" onClick={() => moveItem(index, 1)}>↓</button><button type="button" onClick={() => setSettings({ ...settings, mobileMenuItems: settings.mobileMenuItems.filter((_, itemIndex) => itemIndex !== index) })}>Sil</button></div></article>)}
+        </div>
+      </section>
+      <div className={styles.headerSettingsGrid}>
+        <section className={styles.card}><div className={styles.cardHeader}><div><h2>Düğmeler ve iletişim</h2><p>Mobil menünün alt bölümünü düzenle.</p></div></div><div className={styles.headerForm}>
+          <label className={styles.headerCheck}><input type="checkbox" checked={settings.mobileMenuShowAccount} onChange={(event) => setSettings({ ...settings, mobileMenuShowAccount: event.target.checked })} /> Üye Girişi düğmesini göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={settings.mobileMenuShowSupport} onChange={(event) => setSettings({ ...settings, mobileMenuShowSupport: event.target.checked })} /> Destek Ol düğmesini göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={settings.mobileMenuShowContact} onChange={(event) => setSettings({ ...settings, mobileMenuShowContact: event.target.checked })} /> Telefon ve e-postayı göster</label>
+        </div></section>
+        <section className={styles.card}><div className={styles.cardHeader}><div><h2>Sosyal medya</h2><p>Boş bırakılan bağlantı gösterilmez.</p></div></div><div className={styles.headerForm}>
+          <label>Instagram<input value={settings.mobileMenuInstagram} onChange={(event) => setSettings({ ...settings, mobileMenuInstagram: event.target.value })} placeholder="https://instagram.com/..." /></label>
+          <label>Facebook<input value={settings.mobileMenuFacebook} onChange={(event) => setSettings({ ...settings, mobileMenuFacebook: event.target.value })} placeholder="https://facebook.com/..." /></label>
+          <label className={styles.fullField}>X / Twitter<input value={settings.mobileMenuX} onChange={(event) => setSettings({ ...settings, mobileMenuX: event.target.value })} placeholder="https://x.com/..." /></label>
+        </div></section>
+      </div>
+    </>
   );
 }
 
