@@ -94,11 +94,6 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   const autoplayTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [menuOpen]);
-
-  useEffect(() => {
     if (autoplayTimer.current !== null) {
       window.clearTimeout(autoplayTimer.current);
       autoplayTimer.current = null;
@@ -249,7 +244,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   return (
     <main id="top">
       <div
-        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}${headerSettings.menuUnderlineEnabled ? "" : " no-menu-underline"}${headerSettings.menuFontFamily === "serif" ? " menu-serif" : ""}`}
+        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}${headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) ? " has-contact-bar" : ""}${headerSettings.menuUnderlineEnabled ? "" : " no-menu-underline"}${headerSettings.menuFontFamily === "serif" ? " menu-serif" : ""}`}
         style={{
           "--header-bg": headerSettings.backgroundColor,
           "--header-text": headerSettings.textColor,
