@@ -424,7 +424,7 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
             {settings.logoUrl ? <img src={settings.logoUrl} alt="" /> : <b>ia</b>}
             {settings.showBrandText && <span><strong>{settings.brandName}</strong><small style={{ color: settings.accentColor }}>{settings.brandTagline}</small></span>}
           </div>
-          <nav>{settings.menuItems.filter((item) => item.enabled).map((item) => <span key={item.id}>{item.label}</span>)}</nav>
+          <nav style={{ gap: settings.menuGap, fontSize: settings.menuDesktopSize, fontWeight: settings.menuFontWeight, letterSpacing: settings.menuLetterSpacing, textTransform: settings.menuTextTransform, fontFamily: settings.menuFontFamily === "serif" ? "Georgia, serif" : "Arial, sans-serif", color: settings.textColor }}>{settings.menuItems.filter((item) => item.enabled).map((item) => <span key={item.id}>{item.label}</span>)}</nav>
           <div>{settings.accountEnabled && <span>{settings.accountLabel}</span>}{settings.supportEnabled && <b style={{ background: settings.accentColor }}>{settings.supportLabel}</b>}</div>
         </div>
       </section>
@@ -456,6 +456,22 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
 
       <section className={`${styles.card} ${styles.headerSection}`}>
         <div className={styles.cardHeader}><div><h2>Menü yönetimi</h2><p>Menüleri ekle, gizle, sırala ve bağlantılarını değiştir.</p></div><button type="button" onClick={addMenu}>＋ Menü Ekle</button></div>
+        <div className={styles.menuDesignPanel}>
+          <div><strong>MENÜ TASARIMI</strong><span>Masaüstü ve mobil yazı görünümünü profesyonel sınırlar içinde düzenle.</span></div>
+          <label>Masaüstü yazı boyutu <b>{settings.menuDesktopSize} px</b><input type="range" min="11" max="22" value={settings.menuDesktopSize} onChange={(event) => setSettings({ ...settings, menuDesktopSize: Number(event.target.value) })} /></label>
+          <label>Mobil yazı boyutu <b>{settings.menuMobileSize} px</b><input type="range" min="12" max="24" value={settings.menuMobileSize} onChange={(event) => setSettings({ ...settings, menuMobileSize: Number(event.target.value) })} /></label>
+          <label>Yazı kalınlığı<select value={settings.menuFontWeight} onChange={(event) => setSettings({ ...settings, menuFontWeight: Number(event.target.value) })}><option value="400">Normal</option><option value="500">Orta</option><option value="600">Yarı kalın</option><option value="700">Kalın</option><option value="800">Çok kalın</option><option value="900">En kalın</option></select></label>
+          <label>Yazı tipi<select value={settings.menuFontFamily} onChange={(event) => setSettings({ ...settings, menuFontFamily: event.target.value as HeaderSettings["menuFontFamily"] })}><option value="sans">Modern / Sade</option><option value="serif">Klasik / Kurumsal</option></select></label>
+          <label>Harf görünümü<select value={settings.menuTextTransform} onChange={(event) => setSettings({ ...settings, menuTextTransform: event.target.value as HeaderSettings["menuTextTransform"] })}><option value="none">Normal</option><option value="uppercase">Tümü büyük</option></select></label>
+          <label>Menü konumu<select value={settings.menuAlignment} onChange={(event) => setSettings({ ...settings, menuAlignment: event.target.value as HeaderSettings["menuAlignment"] })}><option value="start">Logoya yakın</option><option value="center">Ortada</option><option value="end">Düğmelere yakın</option></select></label>
+          <label>Menü aralığı <b>{settings.menuGap} px</b><input type="range" min="8" max="55" value={settings.menuGap} onChange={(event) => setSettings({ ...settings, menuGap: Number(event.target.value) })} /></label>
+          <label>Harf aralığı <b>{settings.menuLetterSpacing} px</b><input type="range" min="-1" max="4" step=".25" value={settings.menuLetterSpacing} onChange={(event) => setSettings({ ...settings, menuLetterSpacing: Number(event.target.value) })} /></label>
+          <label>Üzerine gelince<span className={styles.colorField}><input type="color" value={settings.menuHoverColor} onChange={(event) => setSettings({ ...settings, menuHoverColor: event.target.value })} /><input value={settings.menuHoverColor} onChange={(event) => setSettings({ ...settings, menuHoverColor: event.target.value })} /></span></label>
+          <label>Aktif menü rengi<span className={styles.colorField}><input type="color" value={settings.menuActiveColor} onChange={(event) => setSettings({ ...settings, menuActiveColor: event.target.value })} /><input value={settings.menuActiveColor} onChange={(event) => setSettings({ ...settings, menuActiveColor: event.target.value })} /></span></label>
+          <label>Alt çizgi rengi<span className={styles.colorField}><input type="color" value={settings.menuUnderlineColor} onChange={(event) => setSettings({ ...settings, menuUnderlineColor: event.target.value })} /><input value={settings.menuUnderlineColor} onChange={(event) => setSettings({ ...settings, menuUnderlineColor: event.target.value })} /></span></label>
+          <label>Alt çizgi kalınlığı <b>{settings.menuUnderlineThickness} px</b><input type="range" min="1" max="5" value={settings.menuUnderlineThickness} onChange={(event) => setSettings({ ...settings, menuUnderlineThickness: Number(event.target.value) })} /></label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={settings.menuUnderlineEnabled} onChange={(event) => setSettings({ ...settings, menuUnderlineEnabled: event.target.checked })} /> Menü alt çizgi efektini göster</label>
+        </div>
         <div className={styles.menuEditor}>
           {settings.menuItems.map((item, index) => (
             <article key={item.id}>
