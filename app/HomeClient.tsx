@@ -214,11 +214,22 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
   return (
     <main id="top">
       <div
-        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}`}
+        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.menuUnderlineEnabled ? "" : " no-menu-underline"}${headerSettings.menuFontFamily === "serif" ? " menu-serif" : ""}`}
         style={{
           "--header-bg": headerSettings.backgroundColor,
           "--header-text": headerSettings.textColor,
           "--header-accent": headerSettings.accentColor,
+          "--menu-desktop-size": `${headerSettings.menuDesktopSize}px`,
+          "--menu-mobile-size": `${headerSettings.menuMobileSize}px`,
+          "--menu-weight": headerSettings.menuFontWeight,
+          "--menu-gap": `${headerSettings.menuGap}px`,
+          "--menu-letter-spacing": `${headerSettings.menuLetterSpacing}px`,
+          "--menu-transform": headerSettings.menuTextTransform,
+          "--menu-alignment": headerSettings.menuAlignment,
+          "--menu-hover": headerSettings.menuHoverColor,
+          "--menu-active": headerSettings.menuActiveColor,
+          "--menu-underline": headerSettings.menuUnderlineColor,
+          "--menu-underline-thickness": `${headerSettings.menuUnderlineThickness}px`,
         } as CSSProperties}
       >
         {headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) && (
