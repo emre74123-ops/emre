@@ -100,6 +100,7 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
     mobileMenuActiveBorderColor: safeColor(input.mobileMenuActiveBorderColor, defaultHeaderSettings.mobileMenuActiveBorderColor),
     mobileMenuFontWeight: safeNumber(input.mobileMenuFontWeight, 400, 900, defaultHeaderSettings.mobileMenuFontWeight),
     mobileMenuGap: safeNumber(input.mobileMenuGap, 0, 25, defaultHeaderSettings.mobileMenuGap),
+    mobileHeaderSticky: input.mobileHeaderSticky !== false,
     mobileMenuShowNumbers: Boolean(input.mobileMenuShowNumbers),
     mobileMenuShowAccount: Boolean(input.mobileMenuShowAccount),
     mobileMenuShowSupport: Boolean(input.mobileMenuShowSupport),
