@@ -269,6 +269,12 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           "--mobile-menu-text": headerSettings.mobileMenuTextColor,
           "--mobile-menu-accent": headerSettings.mobileMenuAccentColor,
           "--mobile-menu-size": `${headerSettings.mobileMenuFontSize}px`,
+          "--mobile-title-color": headerSettings.mobileMenuTitleColor,
+          "--mobile-title-size": `${headerSettings.mobileMenuTitleSize}px`,
+          "--mobile-description-color": headerSettings.mobileMenuDescriptionColor,
+          "--mobile-description-size": `${headerSettings.mobileMenuDescriptionSize}px`,
+          "--mobile-active-text": headerSettings.mobileMenuActiveTextColor,
+          "--mobile-active-border": headerSettings.mobileMenuActiveBorderColor,
           "--mobile-menu-weight": headerSettings.mobileMenuFontWeight,
           "--mobile-menu-gap": `${headerSettings.mobileMenuGap}px`,
         } as CSSProperties}
