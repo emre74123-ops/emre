@@ -7,6 +7,7 @@ export type HeaderMenuItem = {
   sourcePageId?: string;
   mobileIcon?: string;
   mobileIconBg?: string;
+  mobileDescription?: string;
 };
 
 export type HeaderSettings = {
@@ -102,11 +103,11 @@ export const defaultHeaderSettings: HeaderSettings = {
     { id: "contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false },
   ],
   mobileMenuItems: [
-    { id: "mobile-projects", label: "Projelerimiz", href: "#projeler", enabled: true, newTab: false },
-    { id: "mobile-about", label: "Biz Kimiz?", href: "#hakkimizda", enabled: true, newTab: false },
-    { id: "mobile-transparency", label: "Şeffaflık", href: "#seffaflik", enabled: true, newTab: false },
-    { id: "mobile-stories", label: "İyilik Hikâyeleri", href: "#hikayeler", enabled: true, newTab: false },
-    { id: "mobile-contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false },
+    { id: "mobile-projects", label: "Projelerimiz", href: "#projeler", enabled: true, newTab: false, mobileDescription: "Yardım ve iyilik projelerimizi keşfedin" },
+    { id: "mobile-about", label: "Biz Kimiz?", href: "#hakkimizda", enabled: true, newTab: false, mobileDescription: "Bizi ve çalışma ilkelerimizi tanıyın" },
+    { id: "mobile-transparency", label: "Şeffaflık", href: "#seffaflik", enabled: true, newTab: false, mobileDescription: "Faaliyet ve şeffaflık bilgilerimiz" },
+    { id: "mobile-stories", label: "İyilik Hikâyeleri", href: "#hikayeler", enabled: true, newTab: false, mobileDescription: "İyiliğin umut veren hikâyeleri" },
+    { id: "mobile-contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false, mobileDescription: "Bizimle iletişime geçin" },
   ],
   mobileMenuLayout: "dropdown",
   mobileMenuAnimation: "slide",
