@@ -5,6 +5,8 @@ export type HeaderMenuItem = {
   enabled: boolean;
   newTab: boolean;
   sourcePageId?: string;
+  mobileIcon?: string;
+  mobileIconBg?: string;
 };
 
 export type HeaderSettings = {
