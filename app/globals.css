@@ -22,8 +22,8 @@ img { display: block; max-width: 100%; }
 
 .site-header-shell{position:relative;z-index:50;background:var(--header-bg,#fffdf8);color:var(--header-text,#173b35);border-bottom:1px solid rgba(23,59,53,.08)}.site-header-shell.is-sticky{position:sticky;top:0}.header-contact-bar{background:var(--header-text,#173b35);color:white}.header-contact-bar>div{width:min(1240px,calc(100% - 48px));min-height:32px;margin:auto;display:flex;align-items:center;justify-content:space-between;font-size:10px}.header-contact-bar p{display:flex;gap:22px;margin:0}.header-contact-bar a{color:inherit}
 .site-header { min-height: 88px; width: min(1240px, calc(100% - 48px)); margin: auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 40px; position: relative; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-logo{display:block;width:auto;height:60px;max-width:220px;object-fit:contain}
+.brand { display: flex; align-self: stretch; align-items: center; gap: 10px; overflow: visible; }
+.brand-logo{display:block;width:auto;height:88px;max-width:270px;object-fit:contain;transform:scale(1.04);transform-origin:left center}
 .brand-symbol { width: 46px; height: 46px; position: relative; display: block; }
 .brand-symbol::before, .brand-symbol::after { content: ""; position: absolute; border-radius: 50% 50% 45% 55%; }
 .brand-symbol::before { inset: 1px 13px 13px 1px; background: var(--green); transform: rotate(-12deg); }
@@ -206,7 +206,7 @@ footer { background: #071f1d; color: white; padding: 70px max(30px, calc((100% -
 
 @media (max-width: 780px) {
   .site-header { min-height: 75px; width: calc(100% - 30px); }
-  .brand-logo{height:50px;max-width:175px}.header-contact-bar>div{width:calc(100% - 30px);min-height:29px}.header-contact-bar>div>span{display:none}.header-contact-bar p{width:100%;justify-content:center;gap:14px;font-size:9px}
+  .brand-logo{height:72px;max-width:215px;transform:scale(1.03)}.header-contact-bar>div{width:calc(100% - 30px);min-height:29px}.header-contact-bar>div>span{display:none}.header-contact-bar p{width:100%;justify-content:center;gap:14px;font-size:9px}
   .brand-symbol { width: 40px; height: 40px; }
   .hero { width: 100%; margin-bottom: 45px; }
   .hero-image { min-height:0; aspect-ratio:6 / 7; align-items: flex-end; background-position: 60% center; }
