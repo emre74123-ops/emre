@@ -46,3 +46,34 @@ export async function GET() {
     },
   });
 }
+
+export async function DELETE(request: Request) {
+  if (!await isAdmin()) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+
+  const body = await request.json().catch(() => null);
+  const userId = typeof body?.userId === "string" ? body.userId.trim() : "";
+  if (!userId) {
+    return NextResponse.json({ error: "Silinecek üye belirtilmedi." }, { status: 400 });
+  }
+
+  const adminClient = createAdminClient();
+  const { data: adminRow, error: adminLookupError } = await adminClient
+    .from("admins")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (adminLookupError) {
+    return NextResponse.json({ error: adminLookupError.message }, { status: 500 });
+  }
+  if (adminRow) {
+    return NextResponse.json({ error: "Yönetici hesabı bu bölümden silinemez." }, { status: 403 });
+  }
+
+  const { error } = await adminClient.auth.admin.deleteUser(userId);
+  if (error) {
+    return NextResponse.json({ error: error.message || "Üyelik silinemedi." }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

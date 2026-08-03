@@ -294,7 +294,14 @@ export default function AdminPage() {
             </>
           )}
 
-          {active === "members" && <MemberManager members={members} loading={loading} />}
+          {active === "members" && (
+            <MemberManager
+              members={members}
+              loading={loading}
+              onMemberDeleted={(userId) => setMembers((current) => current.filter((member) => member.id !== userId))}
+              showToast={showToast}
+            />
+          )}
           {active === "content" && <Placeholder title="İçerik Yönetimi" text="Ana sayfa metinleri, duyurular, iyilik hikâyeleri ve sık sorulan sorular burada düzenlenecek." icon="▤" />}
 
           {active === "settings" && (
@@ -997,15 +1004,48 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
   );
 }
 
-function MemberManager({ members, loading }: { members: Member[]; loading: boolean }) {
+function MemberManager({
+  members,
+  loading,
+  onMemberDeleted,
+  showToast,
+}: {
+  members: Member[];
+  loading: boolean;
+  onMemberDeleted: (userId: string) => void;
+  showToast: (message: string) => void;
+}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "confirmed" | "phone">("all");
+  const [deletingId, setDeletingId] = useState("");
   const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
   const visibleMembers = members.filter((member) => {
     const matchesQuery = !normalizedQuery || `${member.name} ${member.email} ${member.phone}`.toLocaleLowerCase("tr-TR").includes(normalizedQuery);
     const matchesFilter = filter === "all" || (filter === "confirmed" ? member.emailConfirmed : Boolean(member.phone));
     return matchesQuery && matchesFilter;
   });
+
+  async function deleteMember(member: Member) {
+    const memberLabel = member.email || member.name || "Bu üye";
+    if (!window.confirm(`${memberLabel} üyeliği tamamen silinsin mi?\n\nBu işlem geri alınamaz.`)) return;
+
+    setDeletingId(member.id);
+    try {
+      const response = await fetch("/api/admin/members", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: member.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Üyelik silinemedi.");
+      onMemberDeleted(member.id);
+      showToast("Üyelik tamamen silindi. Aynı e-posta ile yeniden kayıt olunabilir.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Üyelik silinemedi.");
+    } finally {
+      setDeletingId("");
+    }
+  }
 
   return (
     <>
@@ -1029,7 +1069,7 @@ function MemberManager({ members, loading }: { members: Member[]; loading: boole
         </div>
         <div className={styles.memberTableWrap}>
           <table className={styles.memberTable}>
-            <thead><tr><th>Üye</th><th>Telefon</th><th>Durum</th><th>Kayıt tarihi</th><th>Son giriş</th></tr></thead>
+            <thead><tr><th>Üye</th><th>Telefon</th><th>Durum</th><th>Kayıt tarihi</th><th>Son giriş</th><th>İşlem</th></tr></thead>
             <tbody>
               {visibleMembers.map((member) => (
                 <tr key={member.id}>
@@ -1038,6 +1078,16 @@ function MemberManager({ members, loading }: { members: Member[]; loading: boole
                   <td><b className={member.emailConfirmed ? styles.memberConfirmed : styles.memberPending}>{member.emailConfirmed ? "✓ Doğrulandı" : "Doğrulama bekliyor"}</b></td>
                   <td>{formatDate(member.createdAt)}</td>
                   <td>{member.lastSignInAt ? formatDate(member.lastSignInAt) : "Henüz giriş yok"}</td>
+                  <td>
+                    <button
+                      className={styles.memberDeleteButton}
+                      type="button"
+                      disabled={deletingId === member.id}
+                      onClick={() => deleteMember(member)}
+                    >
+                      {deletingId === member.id ? "Siliniyor..." : "Üyeliği Sil"}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
