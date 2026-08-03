@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import styles from "./admin.module.css";
 import { defaultSlides } from "../../lib/slides";
@@ -588,7 +588,7 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
       <div className={styles.mobileMenuWorkspace}>
         <aside className={styles.phoneMenuPreview}>
           <div className={styles.phoneSpeaker} />
-          <div className={styles.phoneScreen} style={{ background: settings.mobileMenuBackgroundColor, color: settings.mobileMenuTextColor }}>
+          <div className={styles.phoneScreen} style={{ background: settings.mobileMenuBackgroundColor, color: settings.mobileMenuTextColor, "--preview-title-color": settings.mobileMenuTitleColor, "--preview-title-size": `${Math.min(16, settings.mobileMenuTitleSize)}px`, "--preview-description-color": settings.mobileMenuDescriptionColor, "--preview-description-size": `${Math.min(10, settings.mobileMenuDescriptionSize)}px` } as CSSProperties}>
             <header><strong>MEVCUT HEADER</strong><b>×</b></header>
             <nav>
               {visibleItems.map((item) => <span key={item.id}><small className={styles.phoneIconPreview} style={{ background: item.mobileIconBg || "#4f86df" }}>{mobileIconOptions.find((icon) => icon[0] === item.mobileIcon)?.[1] || "⌂"}</small><em><strong style={{ fontWeight: settings.mobileMenuFontWeight }}>{managedPages.find((page) => page.id === item.sourcePageId)?.title || item.label}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</em><b>›</b></span>)}
@@ -606,7 +606,12 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
               <label>Arka plan<span className={styles.colorField}><input type="color" value={settings.mobileMenuBackgroundColor} onChange={(event) => setSettings({ ...settings, mobileMenuBackgroundColor: event.target.value })} /><input value={settings.mobileMenuBackgroundColor} onChange={(event) => setSettings({ ...settings, mobileMenuBackgroundColor: event.target.value })} /></span></label>
               <label>Yazı rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuTextColor: event.target.value })} /><input value={settings.mobileMenuTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuTextColor: event.target.value })} /></span></label>
               <label>Vurgu rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuAccentColor} onChange={(event) => setSettings({ ...settings, mobileMenuAccentColor: event.target.value })} /><input value={settings.mobileMenuAccentColor} onChange={(event) => setSettings({ ...settings, mobileMenuAccentColor: event.target.value })} /></span></label>
-              <label>Yazı boyutu <b>{settings.mobileMenuFontSize} px</b><input type="range" min="18" max="40" value={settings.mobileMenuFontSize} onChange={(event) => setSettings({ ...settings, mobileMenuFontSize: Number(event.target.value) })} /></label>
+              <label>Sayfa başlığı rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuTitleColor} onChange={(event) => setSettings({ ...settings, mobileMenuTitleColor: event.target.value })} /><input value={settings.mobileMenuTitleColor} onChange={(event) => setSettings({ ...settings, mobileMenuTitleColor: event.target.value })} /></span></label>
+              <label>Sayfa başlığı boyutu <b>{settings.mobileMenuTitleSize} px</b><input type="range" min="12" max="24" value={settings.mobileMenuTitleSize} onChange={(event) => setSettings({ ...settings, mobileMenuTitleSize: Number(event.target.value) })} /></label>
+              <label>Açıklama rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuDescriptionColor} onChange={(event) => setSettings({ ...settings, mobileMenuDescriptionColor: event.target.value })} /><input value={settings.mobileMenuDescriptionColor} onChange={(event) => setSettings({ ...settings, mobileMenuDescriptionColor: event.target.value })} /></span></label>
+              <label>Açıklama boyutu <b>{settings.mobileMenuDescriptionSize} px</b><input type="range" min="9" max="18" value={settings.mobileMenuDescriptionSize} onChange={(event) => setSettings({ ...settings, mobileMenuDescriptionSize: Number(event.target.value) })} /></label>
+              <label>Seçili sayfa yazı rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuActiveTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuActiveTextColor: event.target.value })} /><input value={settings.mobileMenuActiveTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuActiveTextColor: event.target.value })} /></span></label>
+              <label>Seçili sayfa çerçeve rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuActiveBorderColor} onChange={(event) => setSettings({ ...settings, mobileMenuActiveBorderColor: event.target.value })} /><input value={settings.mobileMenuActiveBorderColor} onChange={(event) => setSettings({ ...settings, mobileMenuActiveBorderColor: event.target.value })} /></span></label>
               <label>Yazı kalınlığı<select value={settings.mobileMenuFontWeight} onChange={(event) => setSettings({ ...settings, mobileMenuFontWeight: Number(event.target.value) })}><option value="400">Normal</option><option value="500">Orta</option><option value="600">Yarı kalın</option><option value="700">Kalın</option><option value="800">Çok kalın</option><option value="900">En kalın</option></select></label>
               <label>Menü aralığı <b>{settings.mobileMenuGap} px</b><input type="range" min="0" max="25" value={settings.mobileMenuGap} onChange={(event) => setSettings({ ...settings, mobileMenuGap: Number(event.target.value) })} /></label>
             </div>
