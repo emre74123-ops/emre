@@ -59,6 +59,7 @@ export type HeaderSettings = {
   mobileMenuActiveBorderColor: string;
   mobileMenuFontWeight: number;
   mobileMenuGap: number;
+  mobileHeaderSticky: boolean;
   mobileMenuShowNumbers: boolean;
   mobileMenuShowAccount: boolean;
   mobileMenuShowSupport: boolean;
@@ -130,6 +131,7 @@ export const defaultHeaderSettings: HeaderSettings = {
   mobileMenuActiveBorderColor: "#128465",
   mobileMenuFontWeight: 600,
   mobileMenuGap: 9,
+  mobileHeaderSticky: true,
   mobileMenuShowNumbers: true,
   mobileMenuShowAccount: true,
   mobileMenuShowSupport: true,
