@@ -35,6 +35,7 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
         href: safeLink(item.href),
         enabled: Boolean(item.enabled),
         newTab: Boolean(item.newTab),
+        sourcePageId: item.sourcePageId ? String(item.sourcePageId).slice(0, 80) : undefined,
       }))
     : defaultHeaderSettings.menuItems;
   const mobileMenuItems = Array.isArray(input.mobileMenuItems)
@@ -81,7 +82,7 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
     supportHref: safeLink(input.supportHref, "#destek"),
     menuItems,
     mobileMenuItems,
-    mobileMenuLayout: input.mobileMenuLayout === "drawer" ? "drawer" : "fullscreen",
+    mobileMenuLayout: input.mobileMenuLayout === "drawer" ? "drawer" : "dropdown",
     mobileMenuAnimation: input.mobileMenuAnimation === "fade" ? "fade" : "slide",
     mobileMenuLogoUrl: safeLink(input.mobileMenuLogoUrl, ""),
     mobileMenuBackgroundColor: safeColor(input.mobileMenuBackgroundColor, defaultHeaderSettings.mobileMenuBackgroundColor),
