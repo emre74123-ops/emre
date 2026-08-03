@@ -22,6 +22,11 @@ function safeLink(value: unknown, fallback = "#") {
   return /^(#|\/(?!\/)|https?:\/\/|mailto:|tel:)/i.test(link) ? link : fallback;
 }
 
+function safeNumber(value: unknown, minimum: number, maximum: number, fallback: number) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(maximum, Math.max(minimum, number)) : fallback;
+}
+
 function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
   const menuItems = Array.isArray(input.menuItems)
     ? input.menuItems.slice(0, 10).map((item: HeaderMenuItem) => ({
@@ -43,6 +48,19 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
     backgroundColor: safeColor(input.backgroundColor, defaultHeaderSettings.backgroundColor),
     textColor: safeColor(input.textColor, defaultHeaderSettings.textColor),
     accentColor: safeColor(input.accentColor, defaultHeaderSettings.accentColor),
+    menuDesktopSize: safeNumber(input.menuDesktopSize, 11, 22, defaultHeaderSettings.menuDesktopSize),
+    menuMobileSize: safeNumber(input.menuMobileSize, 12, 24, defaultHeaderSettings.menuMobileSize),
+    menuFontWeight: safeNumber(input.menuFontWeight, 400, 900, defaultHeaderSettings.menuFontWeight),
+    menuGap: safeNumber(input.menuGap, 8, 55, defaultHeaderSettings.menuGap),
+    menuLetterSpacing: safeNumber(input.menuLetterSpacing, -1, 4, defaultHeaderSettings.menuLetterSpacing),
+    menuTextTransform: input.menuTextTransform === "uppercase" ? "uppercase" : "none",
+    menuFontFamily: input.menuFontFamily === "serif" ? "serif" : "sans",
+    menuAlignment: ["start", "center", "end"].includes(String(input.menuAlignment)) ? input.menuAlignment as HeaderSettings["menuAlignment"] : "center",
+    menuHoverColor: safeColor(input.menuHoverColor, defaultHeaderSettings.menuHoverColor),
+    menuActiveColor: safeColor(input.menuActiveColor, defaultHeaderSettings.menuActiveColor),
+    menuUnderlineEnabled: Boolean(input.menuUnderlineEnabled),
+    menuUnderlineColor: safeColor(input.menuUnderlineColor, defaultHeaderSettings.menuUnderlineColor),
+    menuUnderlineThickness: safeNumber(input.menuUnderlineThickness, 1, 5, defaultHeaderSettings.menuUnderlineThickness),
     topBarEnabled: Boolean(input.topBarEnabled),
     phone: String(input.phone || "").trim().slice(0, 30),
     email: String(input.email || "").trim().slice(0, 120),
@@ -69,5 +87,3 @@ export async function PUT(request: Request) {
   revalidatePath("/");
   return NextResponse.json({ settings });
 }
-
-
