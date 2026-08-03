@@ -37,6 +37,15 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
         newTab: Boolean(item.newTab),
       }))
     : defaultHeaderSettings.menuItems;
+  const mobileMenuItems = Array.isArray(input.mobileMenuItems)
+    ? input.mobileMenuItems.slice(0, 10).map((item: HeaderMenuItem) => ({
+        id: String(item.id || crypto.randomUUID()).slice(0, 80),
+        label: String(item.label || "Menü").trim().slice(0, 40),
+        href: safeLink(item.href),
+        enabled: Boolean(item.enabled),
+        newTab: Boolean(item.newTab),
+      }))
+    : defaultHeaderSettings.mobileMenuItems;
 
   return {
     logoUrl: safeLink(input.logoUrl, ""),
@@ -71,6 +80,24 @@ function cleanSettings(input: Partial<HeaderSettings>): HeaderSettings {
     supportLabel: String(input.supportLabel || "Destek Ol").trim().slice(0, 30),
     supportHref: safeLink(input.supportHref, "#destek"),
     menuItems,
+    mobileMenuItems,
+    mobileMenuLayout: input.mobileMenuLayout === "drawer" ? "drawer" : "fullscreen",
+    mobileMenuAnimation: input.mobileMenuAnimation === "fade" ? "fade" : "slide",
+    mobileMenuLogoUrl: safeLink(input.mobileMenuLogoUrl, ""),
+    mobileMenuBackgroundColor: safeColor(input.mobileMenuBackgroundColor, defaultHeaderSettings.mobileMenuBackgroundColor),
+    mobileMenuTextColor: safeColor(input.mobileMenuTextColor, defaultHeaderSettings.mobileMenuTextColor),
+    mobileMenuAccentColor: safeColor(input.mobileMenuAccentColor, defaultHeaderSettings.mobileMenuAccentColor),
+    mobileMenuFontSize: safeNumber(input.mobileMenuFontSize, 18, 40, defaultHeaderSettings.mobileMenuFontSize),
+    mobileMenuFontWeight: safeNumber(input.mobileMenuFontWeight, 400, 900, defaultHeaderSettings.mobileMenuFontWeight),
+    mobileMenuGap: safeNumber(input.mobileMenuGap, 0, 25, defaultHeaderSettings.mobileMenuGap),
+    mobileMenuShowNumbers: Boolean(input.mobileMenuShowNumbers),
+    mobileMenuShowAccount: Boolean(input.mobileMenuShowAccount),
+    mobileMenuShowSupport: Boolean(input.mobileMenuShowSupport),
+    mobileMenuShowContact: Boolean(input.mobileMenuShowContact),
+    mobileMenuDescription: String(input.mobileMenuDescription || "").trim().slice(0, 160),
+    mobileMenuInstagram: safeLink(input.mobileMenuInstagram, ""),
+    mobileMenuFacebook: safeLink(input.mobileMenuFacebook, ""),
+    mobileMenuX: safeLink(input.mobileMenuX, ""),
   };
 }
 
