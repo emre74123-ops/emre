@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { createClient } from "../../lib/supabase/browser";
+import { createMemberClient } from "../../lib/supabase/member-browser";
 
 type Mode = "login" | "register" | "reset";
 
 export default function AccountPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createMemberClient(), []);
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
