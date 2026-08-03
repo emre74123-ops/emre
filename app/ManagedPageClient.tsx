@@ -6,8 +6,9 @@ import type { HeaderSettings } from "../lib/header-settings";
 import type { ManagedPage } from "../lib/page-settings";
 
 export default function ManagedPageClient({ page, pages, headerSettings }: { page: ManagedPage; pages: ManagedPage[]; headerSettings: HeaderSettings }) {
-  const projects = pages.filter((item) => item.kind === "project" && item.enabled);
-  const standards = pages.filter((item) => item.kind === "standard" && item.enabled);
+  const menuPages = pages.filter((item) => !item.parentId && item.enabled);
+  const directPages = menuPages.filter((item) => item.menuType === "direct");
+  const childPages = pages.filter((item) => item.parentId && item.enabled);
 
   return (
     <main className="managed-page">
@@ -28,14 +29,15 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
             {headerSettings.showBrandText && <span className="brand-copy"><strong>{headerSettings.brandName}</strong><small>{headerSettings.brandTagline}</small></span>}
           </Link>
           <nav className="main-nav desktop-page-nav" aria-label="Ana menü">
-            <div className="desktop-dropdown">
-              <button type="button">Projelerimiz <span>⌄</span></button>
-              <div className="desktop-dropdown-panel">
-                <small>PROJELERİMİZ</small>
-                {projects.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}<span>→</span></Link>)}
+            {menuPages.map((item) => item.menuType === "dropdown" ? (
+              <div className="desktop-dropdown" key={item.id}>
+                <button type="button">{item.title} <span>⌄</span></button>
+                <div className="desktop-dropdown-panel">
+                  <small>{item.title.toLocaleUpperCase("tr-TR")}</small>
+                  {pages.filter((child) => child.parentId === item.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}<span>→</span></Link>)}
+                </div>
               </div>
-            </div>
-            {standards.map((item) => <Link className={item.slug === page.slug ? "is-current" : ""} href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}
+            ) : <Link className={item.slug === page.slug ? "is-current" : ""} href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}
           </nav>
           <div className="header-actions">
             {headerSettings.accountEnabled && <a className="account-button" href={headerSettings.accountHref}><span>○</span> {headerSettings.accountLabel}</a>}
@@ -56,8 +58,8 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
             <Link className="brand inverted" href="/"><span className="brand-symbol"><i>i</i><b>a</b></span><span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span></Link>
             <p>İyiliğin güvenilir ve şeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a>
           </div>
-          <div><strong>Kurumsal</strong>{standards.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}</div>
-          <div><strong>Projeler</strong>{projects.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}</div>
+          <div><strong>Kurumsal</strong>{directPages.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}</div>
+          <div><strong>Alt Sayfalar</strong>{childPages.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}</div>
           <div><strong>Bilgilendirme</strong><a href="#">Sık Sorulanlar</a><a href="#">KVKK</a><a href="#">Gizlilik</a></div>
         </div>
         <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small></div>
