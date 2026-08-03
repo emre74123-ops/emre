@@ -18,23 +18,23 @@ type Slide = {
 
 const projects = [
   {
-    category: "EÄŸitim",
-    title: "Bir Ã§ocuÄŸun eÄŸitim yolculuÄŸuna eÅŸlik ol",
-    description: "KÄ±rtasiye, okul kÄ±yafeti ve eÄŸitim materyali desteÄŸiyle geleceÄŸe umut taÅŸÄ±.",
+    category: "Eğitim",
+    title: "Bir çocuğun eğitim yolculuğuna eşlik ol",
+    description: "Kırtasiye, okul kıyafeti ve eğitim materyali desteğiyle geleceğe umut taşı.",
     image: "https://images.unsplash.com/photo-1504159506876-f8338247a14a?auto=format&fit=crop&w=1200&q=85",
     accent: "orange",
   },
   {
     category: "Temiz Su",
-    title: "Bir damla su, binlerce yeni baÅŸlangÄ±Ã§",
-    description: "Temiz suya eriÅŸimi olmayan bÃ¶lgelerde kalÄ±cÄ± su projelerine destek ver.",
+    title: "Bir damla su, binlerce yeni başlangıç",
+    description: "Temiz suya erişimi olmayan bölgelerde kalıcı su projelerine destek ver.",
     image: "https://images.unsplash.com/photo-1542810634-71277d95dcbb?auto=format&fit=crop&w=1200&q=85",
     accent: "blue",
   },
   {
-    category: "GÄ±da",
-    title: "Sofralara bereket, ailelere dayanÄ±ÅŸma",
-    description: "Temel gÄ±da paketlerinin ihtiyaÃ§ sahibi ailelere ulaÅŸmasÄ±na katkÄ±da bulun.",
+    category: "Gıda",
+    title: "Sofralara bereket, ailelere dayanışma",
+    description: "Temel gıda paketlerinin ihtiyaç sahibi ailelere ulaşmasına katkıda bulun.",
     image: "https://images.unsplash.com/photo-1594708767771-a7502209ff51?auto=format&fit=crop&w=1200&q=85",
     accent: "green",
   },
@@ -43,9 +43,9 @@ const projects = [
 const supportAmounts = ["250", "500", "1.000", "2.500"];
 
 const faqs = [
-  ["YardÄ±mlar nasÄ±l doÄŸrulanÄ±yor?", "BaÅŸvurular belge ve saha kontrolleriyle incelenir. Bu sitedeki kampanyalar ÅŸu an Ã¶rnek iÃ§eriktir; gerÃ§ek doÄŸrulama sistemi yÃ¶netim paneliyle birlikte kurulacaktÄ±r."],
-  ["DesteÄŸimin sonucunu gÃ¶rebilecek miyim?", "Ãœyelik sistemi tamamlandÄ±ÄŸÄ±nda destek geÃ§miÅŸi, kampanya gÃ¼ncellemeleri ve etki raporlarÄ± kiÅŸisel hesabÄ±nÄ±zda gÃ¶rÃ¼ntÃ¼lenecektir."],
-  ["Åu anda gerÃ§ek Ã¶deme alÄ±nÄ±yor mu?", "HayÄ±r. Mevcut akÄ±ÅŸ gÃ¼venli bir demodur; kart bilgisi istemez ve herhangi bir Ã¼cret tahsil etmez."],
+  ["Yardımlar nasıl doğrulanıyor?", "Başvurular belge ve saha kontrolleriyle incelenir. Bu sitedeki kampanyalar şu an örnek içeriktir; gerçek doğrulama sistemi yönetim paneliyle birlikte kurulacaktır."],
+  ["Desteğimin sonucunu görebilecek miyim?", "Üyelik sistemi tamamlandığında destek geçmişi, kampanya güncellemeleri ve etki raporları kişisel hesabınızda görüntülenecektir."],
+  ["Şu anda gerçek ödeme alınıyor mu?", "Hayır. Mevcut akış güvenli bir demodur; kart bilgisi istemez ve herhangi bir ücret tahsil etmez."],
 ];
 
 function MobileMenuIcon({ name }: { name?: string }) {
@@ -275,7 +275,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
         {headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) && (
           <div className="header-contact-bar">
             <div>
-              <span>Ä°yiliÄŸe birlikte ulaÅŸalÄ±m</span>
+              <span>İyiliğe birlikte ulaşalım</span>
               <p>
                 {headerSettings.phone && <a href={`tel:${headerSettings.phone.replace(/\s/g, "")}`}>{headerSettings.phone}</a>}
                 {headerSettings.email && <a href={`mailto:${headerSettings.email}`}>{headerSettings.email}</a>}
@@ -284,7 +284,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           </div>
         )}
         <header className="site-header">
-          <Link className="brand" href="/" aria-label="Ä°yilik Adresim ana sayfa">
+          <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
             {headerSettings.logoUrl
               ? <img className="brand-logo" src={headerSettings.logoUrl} alt={headerSettings.logoAlt} />
               : <span className="brand-symbol"><i>i</i><b>a</b></span>}
@@ -292,13 +292,13 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
               <span className="brand-copy"><strong>{headerSettings.brandName}</strong><small>{headerSettings.brandTagline}</small></span>
             )}
           </Link>
-          <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label="MenÃ¼yÃ¼ aÃ§ veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+          <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
             <span /><span /><span />
           </button>
-          <nav className="main-nav" aria-label="Ana menÃ¼">
+          <nav className="main-nav" aria-label="Ana menü">
             {desktopMenuPages.map((page) => page.menuType === "dropdown" ? (
               <div className="desktop-dropdown" key={page.id}>
-                <button type="button">{page.title} <span>âŒ„</span></button>
+                <button type="button">{page.title} <span>⌄</span></button>
                 <div className="desktop-dropdown-panel">
                   {managedPages.filter((child) => child.parentId === page.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}</Link>)}
                 </div>
@@ -308,13 +308,13 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           <div className="header-actions">
             {headerSettings.accountEnabled && (
               headerSettings.accountHref === "#uye-girisi"
-                ? <button className="account-button" type="button" onClick={() => setAccountOpen(true)}><span>â—‹</span> {headerSettings.accountLabel}</button>
-                : <a className="account-button" href={headerSettings.accountHref}><span>â—‹</span> {headerSettings.accountLabel}</a>
+                ? <button className="account-button" type="button" onClick={() => setAccountOpen(true)}><span>○</span> {headerSettings.accountLabel}</button>
+                : <a className="account-button" href={headerSettings.accountHref}><span>○</span> {headerSettings.accountLabel}</a>
             )}
             {headerSettings.supportEnabled && (
               headerSettings.supportHref === "#destek"
-                ? <button className="donate-button compact" type="button" onClick={() => openDonation()}>{headerSettings.supportLabel} <span>â†—</span></button>
-                : <a className="donate-button compact" href={headerSettings.supportHref}>{headerSettings.supportLabel} <span>â†—</span></a>
+                ? <button className="donate-button compact" type="button" onClick={() => openDonation()}>{headerSettings.supportLabel} <span>↗</span></button>
+                : <a className="donate-button compact" href={headerSettings.supportHref}>{headerSettings.supportLabel} <span>↗</span></a>
             )}
           </div>
         </header>
@@ -323,7 +323,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           aria-hidden={!menuOpen}
         >
           <div className="mobile-menu-body">
-            <nav aria-label="Mobil menÃ¼">
+            <nav aria-label="Mobil menü">
               {activeMobileItems.map((item) => {
                 const sourcePage = item.sourcePageId ? managedPages.find((page) => page.id === item.sourcePageId) : undefined;
                 const children = sourcePage?.menuType === "dropdown" ? managedPages.filter((page) => page.parentId === sourcePage.id && page.enabled) : [];
@@ -334,12 +334,12 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
                     {children.length ? (
                       <button type="button" onClick={() => setOpenMobileMenuId((current) => current === item.id ? null : item.id)}>
                         <i className="mobile-card-icon" style={{ background: item.mobileIconBg || "#4f86df" }}><MobileMenuIcon name={item.mobileIcon} /></i>
-                        <span>{mobileLabel}</span><b>{openMobileMenuId === item.id ? "âˆ’" : "+"}</b>
+                        <span>{mobileLabel}</span><b>{openMobileMenuId === item.id ? "−" : "+"}</b>
                       </button>
                     ) : (
                       <a href={mobileHref} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>
                         <i className="mobile-card-icon" style={{ background: item.mobileIconBg || "#4f86df" }}><MobileMenuIcon name={item.mobileIcon} /></i>
-                        <span>{mobileLabel}</span><b>â€º</b>
+                        <span>{mobileLabel}</span><b>›</b>
                       </a>
                     )}
                     {children.length > 0 && openMobileMenuId === item.id && <div className="mobile-submenu">{children.map((child) => <a href={`/${child.slug}`} key={child.id} onClick={() => setMenuOpen(false)}>{child.title}</a>)}</div>}
@@ -352,7 +352,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
                 <button type="button" onClick={() => { setMenuOpen(false); setAccountOpen(true); }}>{headerSettings.accountLabel}</button>
               )}
               {headerSettings.mobileMenuShowSupport && headerSettings.supportEnabled && (
-                <button type="button" onClick={() => { setMenuOpen(false); openDonation(); }}>{headerSettings.supportLabel} <span>â†—</span></button>
+                <button type="button" onClick={() => { setMenuOpen(false); openDonation(); }}>{headerSettings.supportLabel} <span>↗</span></button>
               )}
             </div>
           </div>
@@ -364,7 +364,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
         </div>
       </div>
 
-      <section className="hero" aria-roledescription="carousel" aria-label="Ä°yilik Adresim duyurularÄ±">
+      <section className="hero" aria-roledescription="carousel" aria-label="İyilik Adresim duyuruları">
         <div
           className={`hero-image${draggingSlider ? " is-dragging" : ""}`}
           onPointerDown={startSliderDrag}
@@ -386,46 +386,46 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           </div>
           {slides.length > 1 && (
             <div className="slider-controls" onPointerDown={(event) => event.stopPropagation()}>
-              <button type="button" aria-label="Ã–nceki slayt" onClick={() => moveSlider(-1)}>â†</button>
+              <button type="button" aria-label="Önceki slayt" onClick={() => moveSlider(-1)}>←</button>
               <div>{slides.map((item, index) => <button type="button" aria-label={`${index + 1}. slayta git`} aria-current={index === currentSlide} key={item.id} onClick={() => goToSlide(index)}><span /></button>)}</div>
-              <button type="button" aria-label="Sonraki slayt" onClick={() => moveSlider(1)}>â†’</button>
+              <button type="button" aria-label="Sonraki slayt" onClick={() => moveSlider(1)}>→</button>
             </div>
           )}
         </div>
 
         <div className="quick-support">
-          <div className="quick-title"><span>HÄ±zlÄ± Destek</span><small>3 kolay adÄ±mda</small></div>
+          <div className="quick-title"><span>Hızlı Destek</span><small>3 kolay adımda</small></div>
           <div className="quick-steps">
-            <label><b>1</b><span>Proje seÃ§</span>
+            <label><b>1</b><span>Proje seç</span>
               <select value={selectedProject} onChange={(event) => setSelectedProject(event.target.value)}>
-                <option>Genel Destek</option><option>EÄŸitim DesteÄŸi</option><option>Temiz Su Projesi</option><option>GÄ±da DesteÄŸi</option>
+                <option>Genel Destek</option><option>Eğitim Desteği</option><option>Temiz Su Projesi</option><option>Gıda Desteği</option>
               </select>
             </label>
             <label><b>2</b><span>Tutar belirle</span>
               <div className="quick-amounts">
                 {supportAmounts.slice(0, 3).map((amount) => (
-                  <button key={amount} className={selectedAmount === amount ? "active" : ""} type="button" onClick={() => setSelectedAmount(amount)}>{amount} â‚º</button>
+                  <button key={amount} className={selectedAmount === amount ? "active" : ""} type="button" onClick={() => setSelectedAmount(amount)}>{amount} ₺</button>
                 ))}
               </div>
             </label>
-            <button className="quick-submit" type="button" onClick={() => openDonation(selectedProject)}>DesteÄŸi Tamamla <span>â†’</span></button>
+            <button className="quick-submit" type="button" onClick={() => openDonation(selectedProject)}>Desteği Tamamla <span>→</span></button>
           </div>
-          <p>ğŸ”’ GÃ¼venli demo Â· Kart bilgisi istenmez</p>
+          <p>🔒 Güvenli demo · Kart bilgisi istenmez</p>
         </div>
       </section>
 
-      <section className="trust-band" aria-label="Platform deÄŸerleri">
-        <div><span>01</span><strong>DoÄŸrulanmÄ±ÅŸ ihtiyaÃ§lar</strong><small>Ä°nceleme ve onay sÃ¼reci</small></div>
-        <div><span>02</span><strong>Åeffaf bilgilendirme</strong><small>SÃ¼recin her adÄ±mÄ±nÄ± takip et</small></div>
-        <div><span>03</span><strong>KalÄ±cÄ± iyilik</strong><small>SÃ¼rdÃ¼rÃ¼lebilir sosyal etki</small></div>
-        <div><span>04</span><strong>GÃ¼venli altyapÄ±</strong><small>Verileriniz Ã¶zenle korunur</small></div>
+      <section className="trust-band" aria-label="Platform değerleri">
+        <div><span>01</span><strong>Doğrulanmış ihtiyaçlar</strong><small>İnceleme ve onay süreci</small></div>
+        <div><span>02</span><strong>Şeffaf bilgilendirme</strong><small>Sürecin her adımını takip et</small></div>
+        <div><span>03</span><strong>Kalıcı iyilik</strong><small>Sürdürülebilir sosyal etki</small></div>
+        <div><span>04</span><strong>Güvenli altyapı</strong><small>Verileriniz özenle korunur</small></div>
       </section>
 
       <section className="section projects" id="projeler">
         <div className="section-top">
-          <div><span className="section-label">GÃ¼ncel projelerimiz</span><h2>Ä°yiliÄŸin bir parÃ§asÄ± ol.</h2></div>
-          <p>Her destek, doÄŸru planlandÄ±ÄŸÄ±nda kalÄ±cÄ± bir deÄŸiÅŸime dÃ¶nÃ¼ÅŸÃ¼r. Sana yakÄ±n gelen iyilik alanÄ±nÄ± seÃ§.</p>
-          <a href="#projeler">TÃ¼m projeleri gÃ¶r <span>â†—</span></a>
+          <div><span className="section-label">Güncel projelerimiz</span><h2>İyiliğin bir parçası ol.</h2></div>
+          <p>Her destek, doğru planlandığında kalıcı bir değişime dönüşür. Sana yakın gelen iyilik alanını seç.</p>
+          <a href="#projeler">Tüm projeleri gör <span>↗</span></a>
         </div>
         <div className="project-grid">
           {projects.map((project, index) => (
@@ -437,8 +437,8 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
               <div className="project-body">
                 <h3>{project.title}</h3><p>{project.description}</p>
                 <div className="progress"><span style={{ width: `${42 + index * 17}%` }} /></div>
-                <div className="project-meta"><small>Ã–rnek ilerleme</small><strong>%{42 + index * 17}</strong></div>
-                <button type="button" onClick={() => openDonation(project.title)}>Projeyi Ä°ncele <span>â†’</span></button>
+                <div className="project-meta"><small>Örnek ilerleme</small><strong>%{42 + index * 17}</strong></div>
+                <button type="button" onClick={() => openDonation(project.title)}>Projeyi İncele <span>→</span></button>
               </div>
             </article>
           ))}
@@ -447,65 +447,65 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
 
       <section className="about-section" id="hakkimizda">
         <div className="about-image">
-          <img src="https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=1400&q=85" alt="DayanÄ±ÅŸma iÃ§in bir araya gelen gÃ¶nÃ¼llÃ¼ler" />
-          <div className="experience-stamp"><strong>Ä°YÄ°LÄ°K</strong><span>paylaÅŸtÄ±kÃ§a Ã§oÄŸalÄ±r</span></div>
+          <img src="https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=1400&q=85" alt="Dayanışma için bir araya gelen gönüllüler" />
+          <div className="experience-stamp"><strong>İYİLİK</strong><span>paylaştıkça çoğalır</span></div>
         </div>
         <div className="about-copy">
           <span className="section-label light-label">Biz kimiz?</span>
-          <h2>Ä°yiliÄŸi gÃ¼venle<br />buluÅŸturan bir adres.</h2>
-          <p className="lead">Ä°yilik Adresim; yardÄ±m etmek isteyenlerle desteÄŸe ihtiyaÃ§ duyanlar arasÄ±nda gÃ¼venilir, anlaÅŸÄ±lÄ±r ve insan odaklÄ± bir kÃ¶prÃ¼ kurmak iÃ§in tasarlandÄ±.</p>
+          <h2>İyiliği güvenle<br />buluşturan bir adres.</h2>
+          <p className="lead">İyilik Adresim; yardım etmek isteyenlerle desteğe ihtiyaç duyanlar arasında güvenilir, anlaşılır ve insan odaklı bir köprü kurmak için tasarlandı.</p>
           <div className="about-points">
-            <div><span>âœ“</span><p><strong>AÃ§Ä±k iletiÅŸim</strong>Her aÅŸamada sade ve dÃ¼zenli bilgilendirme.</p></div>
-            <div><span>âœ“</span><p><strong>Ä°nsan odaklÄ±</strong>Ä°htiyaca saygÄ±lÄ±, kapsayÄ±cÄ± yaklaÅŸÄ±m.</p></div>
-            <div><span>âœ“</span><p><strong>Ã–lÃ§Ã¼lebilir etki</strong>SonuÃ§larÄ±n raporlandÄ±ÄŸÄ± ÅŸeffaf sÃ¼reÃ§.</p></div>
+            <div><span>✓</span><p><strong>Açık iletişim</strong>Her aşamada sade ve düzenli bilgilendirme.</p></div>
+            <div><span>✓</span><p><strong>İnsan odaklı</strong>İhtiyaca saygılı, kapsayıcı yaklaşım.</p></div>
+            <div><span>✓</span><p><strong>Ölçülebilir etki</strong>Sonuçların raporlandığı şeffaf süreç.</p></div>
           </div>
-          <a className="dark-link" href="#seffaflik">HikÃ¢yemizi keÅŸfet <span>â†—</span></a>
+          <a className="dark-link" href="#seffaflik">Hikâyemizi keşfet <span>↗</span></a>
         </div>
       </section>
 
       <section className="impact-section" id="seffaflik">
         <div className="impact-copy">
-          <span className="section-label light-label">ÅeffaflÄ±k sÃ¶zÃ¼mÃ¼z</span>
-          <h2>Ä°yiliÄŸin her adÄ±mÄ±<br />gÃ¶rÃ¼nÃ¼r olmalÄ±.</h2>
-          <p>YardÄ±mÄ±n nereden baÅŸlayÄ±p nasÄ±l sonuca ulaÅŸtÄ±ÄŸÄ±nÄ± aÃ§Ä±kÃ§a gÃ¶stermeyi hedefliyoruz. AÅŸaÄŸÄ±daki rakamlar sistem tamamlanana kadar Ã¶rnek veridir.</p>
-          <a href="#sorular">NasÄ±l Ã§alÄ±ÅŸtÄ±ÄŸÄ±nÄ± Ã¶ÄŸren <span>â†’</span></a>
+          <span className="section-label light-label">Şeffaflık sözümüz</span>
+          <h2>İyiliğin her adımı<br />görünür olmalı.</h2>
+          <p>Yardımın nereden başlayıp nasıl sonuca ulaştığını açıkça göstermeyi hedefliyoruz. Aşağıdaki rakamlar sistem tamamlanana kadar örnek veridir.</p>
+          <a href="#sorular">Nasıl çalıştığını öğren <span>→</span></a>
         </div>
         <div className="impact-numbers">
-          <div><strong>4.800<sup>+</sup></strong><span>Ã–rnek destekÃ§i</span></div>
-          <div><strong>126</strong><span>Ã–rnek tamamlanan proje</span></div>
-          <div><strong>32</strong><span>Ã–rnek aktif Ã§alÄ±ÅŸma</span></div>
-          <div><strong>%100</strong><span>ÅeffaflÄ±k hedefi</span></div>
+          <div><strong>4.800<sup>+</sup></strong><span>Örnek destekçi</span></div>
+          <div><strong>126</strong><span>Örnek tamamlanan proje</span></div>
+          <div><strong>32</strong><span>Örnek aktif çalışma</span></div>
+          <div><strong>%100</strong><span>Şeffaflık hedefi</span></div>
         </div>
       </section>
 
       <section className="section stories" id="hikayeler">
         <div className="section-top simple">
-          <div><span className="section-label">Ä°yilik hikÃ¢yeleri</span><h2>Birlikte mÃ¼mkÃ¼n.</h2></div>
-          <p>YakÄ±nda saha Ã§alÄ±ÅŸmalarÄ±mÄ±zdan doÄŸrulanmÄ±ÅŸ gÃ¶rÃ¼ntÃ¼ ve hikÃ¢yeleri burada paylaÅŸacaÄŸÄ±z.</p>
+          <div><span className="section-label">İyilik hikâyeleri</span><h2>Birlikte mümkün.</h2></div>
+          <p>Yakında saha çalışmalarımızdan doğrulanmış görüntü ve hikâyeleri burada paylaşacağız.</p>
         </div>
         <div className="story-grid">
           <article className="story-main">
-            <div className="play-button">â–¶</div>
-            <div><span>YakÄ±nda</span><h3>Bir desteÄŸin yolculuÄŸu</h3><p>HazÄ±rlÄ±ktan teslimata, iyiliÄŸin tÃ¼m adÄ±mlarÄ±.</p></div>
+            <div className="play-button">▶</div>
+            <div><span>Yakında</span><h3>Bir desteğin yolculuğu</h3><p>Hazırlıktan teslimata, iyiliğin tüm adımları.</p></div>
           </article>
           <article className="quote-card">
-            <span className="quote-mark">â€œ</span>
-            <blockquote>GÃ¼ven, yalnÄ±zca sÃ¶zlerle deÄŸil; gÃ¶rÃ¼lebilen ve takip edilebilen bir sÃ¼reÃ§le kurulur.</blockquote>
-            <div><b>Ä°yilik Adresim</b><small>ÅeffaflÄ±k ilkesi</small></div>
+            <span className="quote-mark">“</span>
+            <blockquote>Güven, yalnızca sözlerle değil; görülebilen ve takip edilebilen bir süreçle kurulur.</blockquote>
+            <div><b>İyilik Adresim</b><small>Şeffaflık ilkesi</small></div>
           </article>
         </div>
       </section>
 
       <section className="faq-section" id="sorular">
         <div>
-          <span className="section-label">Merak ettikleriniz</span><h2>SÄ±kÃ§a sorulan<br />sorular.</h2>
-          <p>AradÄ±ÄŸÄ±n cevabÄ± bulamadÄ±n mÄ±?</p><a href="mailto:merhaba@iyilikadresim.org">Bize ulaÅŸ <span>â†—</span></a>
+          <span className="section-label">Merak ettikleriniz</span><h2>Sıkça sorulan<br />sorular.</h2>
+          <p>Aradığın cevabı bulamadın mı?</p><a href="mailto:merhaba@iyilikadresim.org">Bize ulaş <span>↗</span></a>
         </div>
         <div className="faq-list">
           {faqs.map(([question, answer], index) => (
             <article className={openFaq === index ? "open" : ""} key={question}>
               <button type="button" onClick={() => setOpenFaq(openFaq === index ? -1 : index)}>
-                <span>0{index + 1}</span>{question}<b>{openFaq === index ? "âˆ’" : "+"}</b>
+                <span>0{index + 1}</span>{question}<b>{openFaq === index ? "−" : "+"}</b>
               </button>
               {openFaq === index && <p>{answer}</p>}
             </article>
@@ -514,8 +514,8 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
       </section>
 
       <section className="final-cta">
-        <div><span>BugÃ¼n bir iyiliÄŸe yer aÃ§</span><h2>DeÄŸiÅŸim, bir kiÅŸinin<br /><em>â€œBen varÄ±mâ€</em> demesiyle baÅŸlar.</h2></div>
-        <button className="donate-button light" type="button" onClick={() => openDonation()}>Ä°yiliÄŸe Ortak Ol <span>â†—</span></button>
+        <div><span>Bugün bir iyiliğe yer aç</span><h2>Değişim, bir kişinin<br /><em>“Ben varım”</em> demesiyle başlar.</h2></div>
+        <button className="donate-button light" type="button" onClick={() => openDonation()}>İyiliğe Ortak Ol <span>↗</span></button>
       </section>
 
       <footer id="iletisim">
@@ -523,38 +523,38 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           <div className="footer-brand">
             <a className="brand inverted" href="#top">
               <span className="brand-symbol"><i>i</i><b>a</b></span>
-              <span className="brand-copy"><strong>Ä°yilik</strong><small>Adresim</small></span>
+              <span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span>
             </a>
-            <p>Ä°yiliÄŸin gÃ¼venilir ve ÅŸeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a>
+            <p>İyiliğin güvenilir ve şeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a>
           </div>
-          <div><strong>Kurumsal</strong><a href="#hakkimizda">HakkÄ±mÄ±zda</a><a href="#seffaflik">ÅeffaflÄ±k</a><a href="#iletisim">Ä°letiÅŸim</a></div>
-          <div><strong>Projeler</strong><a href="#projeler">EÄŸitim</a><a href="#projeler">Temiz Su</a><a href="#projeler">GÄ±da</a></div>
-          <div><strong>Bilgilendirme</strong><a href="#sorular">SÄ±k Sorulanlar</a><a href="#iletisim">KVKK</a><a href="#iletisim">Gizlilik</a></div>
+          <div><strong>Kurumsal</strong><a href="#hakkimizda">Hakkımızda</a><a href="#seffaflik">Şeffaflık</a><a href="#iletisim">İletişim</a></div>
+          <div><strong>Projeler</strong><a href="#projeler">Eğitim</a><a href="#projeler">Temiz Su</a><a href="#projeler">Gıda</a></div>
+          <div><strong>Bilgilendirme</strong><a href="#sorular">Sık Sorulanlar</a><a href="#iletisim">KVKK</a><a href="#iletisim">Gizlilik</a></div>
         </div>
-        <div className="footer-bottom"><small>Â© 2026 Ä°yilik Adresim. TÃ¼m haklarÄ± saklÄ±dÄ±r.</small><span>Demo proje Â· GerÃ§ek Ã¶deme alÄ±nmaz.</span></div>
+        <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small><span>Demo proje · Gerçek ödeme alınmaz.</span></div>
       </footer>
 
       {donationOpen && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setDonationOpen(false)}>
           <section className="support-modal" role="dialog" aria-modal="true" aria-labelledby="support-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" aria-label="Pencereyi kapat" onClick={() => setDonationOpen(false)}>Ã—</button>
+            <button className="modal-close" type="button" aria-label="Pencereyi kapat" onClick={() => setDonationOpen(false)}>×</button>
             {!demoComplete ? (
               <>
-                <span className="modal-badge">GÃœVENLÄ° DEMO</span><h2 id="support-title">Ä°yiliÄŸe ortak ol</h2>
+                <span className="modal-badge">GÜVENLİ DEMO</span><h2 id="support-title">İyiliğe ortak ol</h2>
                 <p className="selected-project">{selectedProject}</p>
-                <p>Bu ekran yalnÄ±zca baÄŸÄ±ÅŸ akÄ±ÅŸÄ±nÄ± gÃ¶stermek iÃ§indir. Kart bilgisi istenmez ve gerÃ§ek Ã¶deme alÄ±nmaz.</p>
-                <label>Ã–rnek destek tutarÄ±</label>
+                <p>Bu ekran yalnızca bağış akışını göstermek içindir. Kart bilgisi istenmez ve gerçek ödeme alınmaz.</p>
+                <label>Örnek destek tutarı</label>
                 <div className="modal-amounts">
-                  {supportAmounts.map((amount) => <button className={selectedAmount === amount ? "active" : ""} type="button" key={amount} onClick={() => setSelectedAmount(amount)}>{amount} â‚º</button>)}
+                  {supportAmounts.map((amount) => <button className={selectedAmount === amount ? "active" : ""} type="button" key={amount} onClick={() => setSelectedAmount(amount)}>{amount} ₺</button>)}
                 </div>
-                <button className="modal-submit" type="button" onClick={() => setDemoComplete(true)}>Demo adÄ±mÄ±nÄ± tamamla <span>â†’</span></button>
-                <small>CanlÄ± Ã¶deme, gerekli yasal ve gÃ¼venlik kontrolleri tamamlandÄ±ktan sonra baÄŸlanacaktÄ±r.</small>
+                <button className="modal-submit" type="button" onClick={() => setDemoComplete(true)}>Demo adımını tamamla <span>→</span></button>
+                <small>Canlı ödeme, gerekli yasal ve güvenlik kontrolleri tamamlandıktan sonra bağlanacaktır.</small>
               </>
             ) : (
               <div className="success-state">
-                <span>âœ“</span><h2 id="support-title">TeÅŸekkÃ¼rler!</h2>
-                <p>{selectedAmount} â‚º tutarÄ±ndaki Ã¶rnek desteÄŸin baÅŸarÄ±yla canlandÄ±rÄ±ldÄ±. Herhangi bir Ã¶deme yapÄ±lmadÄ±.</p>
-                <button className="modal-submit" type="button" onClick={() => setDonationOpen(false)}>Siteye dÃ¶n</button>
+                <span>✓</span><h2 id="support-title">Teşekkürler!</h2>
+                <p>{selectedAmount} ₺ tutarındaki örnek desteğin başarıyla canlandırıldı. Herhangi bir ödeme yapılmadı.</p>
+                <button className="modal-submit" type="button" onClick={() => setDonationOpen(false)}>Siteye dön</button>
               </div>
             )}
           </section>
@@ -564,11 +564,11 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
       {accountOpen && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setAccountOpen(false)}>
           <section className="support-modal account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" aria-label="Pencereyi kapat" onClick={() => setAccountOpen(false)}>Ã—</button>
-            <span className="modal-badge">Ã‡OK YAKINDA</span><h2 id="account-title">Ãœyelik sistemi</h2>
-            <p>GÃ¼venli Ã¼yelik, destek geÃ§miÅŸi ve kiÅŸisel bildirimler bir sonraki aÅŸamada bu ekrana baÄŸlanacak.</p>
-            <div className="coming-features"><span>âœ“ GÃ¼venli giriÅŸ</span><span>âœ“ Destek geÃ§miÅŸi</span><span>âœ“ Kampanya bildirimleri</span></div>
-            <button className="modal-submit" type="button" onClick={() => setAccountOpen(false)}>AnladÄ±m</button>
+            <button className="modal-close" type="button" aria-label="Pencereyi kapat" onClick={() => setAccountOpen(false)}>×</button>
+            <span className="modal-badge">ÇOK YAKINDA</span><h2 id="account-title">Üyelik sistemi</h2>
+            <p>Güvenli üyelik, destek geçmişi ve kişisel bildirimler bir sonraki aşamada bu ekrana bağlanacak.</p>
+            <div className="coming-features"><span>✓ Güvenli giriş</span><span>✓ Destek geçmişi</span><span>✓ Kampanya bildirimleri</span></div>
+            <button className="modal-submit" type="button" onClick={() => setAccountOpen(false)}>Anladım</button>
           </section>
         </div>
       )}
