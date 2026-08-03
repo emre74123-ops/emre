@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { AsYouType, getCountries, getCountryCallingCode, isPossiblePhoneNumber, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
+import { AsYouType, getCountries, getCountryCallingCode, getExampleNumber, isPossiblePhoneNumber, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
+import mobileExamples from "libphonenumber-js/examples.mobile.json";
 import { createMemberClient } from "../../lib/supabase/member-browser";
 
 type Mode = "login" | "register" | "reset";
@@ -18,6 +19,14 @@ const countries = getCountries()
 
 function flagUrl(iso: string) {
   return `https://flagcdn.com/w40/${iso.toLowerCase()}.png`;
+}
+
+function phonePlaceholder(iso: CountryCode, dial: string) {
+  const example = getExampleNumber(iso, mobileExamples);
+  const international = (example as unknown as { formatInternational?: () => string } | undefined)?.formatInternational?.();
+  if (international) return international.replace(dial, "").trim();
+  const digits = (mobileExamples as Record<string, string>)[iso];
+  return digits ? new AsYouType(iso).input(digits) : "123 456 789";
 }
 
 function formatPhoneDigits(value: string, iso: CountryCode) {
@@ -132,7 +141,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
                       inputMode="numeric"
                       autoComplete="tel-national"
                       aria-label="Telefon numarası"
-                      placeholder={countryIso === "TR" ? "501 234 56 78" : "Telefon Numarası"}
+                      placeholder={phonePlaceholder(countryIso, selectedCountry.dial)}
                       required
                       value={formatPhoneDigits(phoneDigits, countryIso)}
                       onChange={(event) => setPhoneDigits(event.target.value.replace(/\D/g, "").slice(0, 15))}
