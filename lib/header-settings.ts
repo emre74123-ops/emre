@@ -39,6 +39,12 @@ export type HeaderSettings = {
   accountEnabled: boolean;
   accountLabel: string;
   accountHref: string;
+  accountMenuDonationsEnabled: boolean;
+  accountMenuQurbanEnabled: boolean;
+  accountMenuSponsorshipsEnabled: boolean;
+  accountMenuWellsEnabled: boolean;
+  accountMenuProjectsEnabled: boolean;
+  accountPageAccentColor: string;
   supportEnabled: boolean;
   supportLabel: string;
   supportHref: string;
@@ -99,6 +105,12 @@ export const defaultHeaderSettings: HeaderSettings = {
   accountEnabled: true,
   accountLabel: "Üye Girişi",
   accountHref: "#uye-girisi",
+  accountMenuDonationsEnabled: true,
+  accountMenuQurbanEnabled: true,
+  accountMenuSponsorshipsEnabled: true,
+  accountMenuWellsEnabled: true,
+  accountMenuProjectsEnabled: true,
+  accountPageAccentColor: "#128465",
   supportEnabled: true,
   supportLabel: "Destek Ol",
   supportHref: "#destek",

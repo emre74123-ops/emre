@@ -62,6 +62,7 @@ const navItems = [
   ["campaigns", "◇", "Kampanyalar"],
   ["applications", "◫", "Başvurular"],
   ["members", "◎", "Üyeler"],
+  ["memberArea", "◉", "Üye Alanı Yönetimi"],
   ["content", "▤", "İçerik Yönetimi"],
   ["settings", "⚙", "Site Ayarları"],
 ];
@@ -302,6 +303,7 @@ export default function AdminPage() {
               showToast={showToast}
             />
           )}
+          {active === "memberArea" && <MemberAreaManager showToast={showToast} />}
           {active === "content" && <Placeholder title="İçerik Yönetimi" text="Ana sayfa metinleri, duyurular, iyilik hikâyeleri ve sık sorulan sorular burada düzenlenecek." icon="▤" />}
 
           {active === "settings" && (
@@ -1000,6 +1002,61 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
           </form>
         </div>
       )}
+    </>
+  );
+}
+
+function MemberAreaManager({ showToast }: { showToast: (message: string) => void }) {
+  const [settings, setSettings] = useState<HeaderSettings>(defaultHeaderSettings);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/header").then((response) => response.json()).then((result) => {
+      if (result.settings) setSettings({ ...defaultHeaderSettings, ...result.settings });
+    }).catch(() => showToast("Üye alanı ayarları yüklenemedi.")).finally(() => setLoading(false));
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    const response = await fetch("/api/admin/header", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    const result = await response.json();
+    setSaving(false);
+    showToast(response.ok ? "Üye alanı ayarları kaydedildi." : result.error || "Ayarlar kaydedilemedi.");
+  }
+
+  if (loading) return <section className={`${styles.card} ${styles.placeholder}`}><div>◉</div><h2>Üye alanı yükleniyor</h2></section>;
+
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>Üyelik deneyimi</p><h1>Üye Alanı Yönetimi</h1><span>Header hesap menüsünü ve Hesabım sayfasındaki bölümleri buradan yönet.</span></div>
+        <button className={styles.primaryButton} type="button" disabled={saving} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+      </div>
+      <div className={styles.headerSettingsGrid}>
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Header hesap alanı</h2><p>Giriş yapılmadığında gösterilecek metni ve hesap merkezinin rengini belirle.</p></div></div>
+          <div className={styles.headerForm}>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountEnabled} onChange={(event) => setSettings({ ...settings, accountEnabled: event.target.checked })} /> Üyelik alanını göster</label>
+            <label>Giriş düğmesi yazısı<input value={settings.accountLabel} onChange={(event) => setSettings({ ...settings, accountLabel: event.target.value })} /></label>
+            <label>Hesap merkezi rengi<input type="color" value={settings.accountPageAccentColor} onChange={(event) => setSettings({ ...settings, accountPageAccentColor: event.target.value })} /></label>
+          </div>
+        </section>
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Hesabım menüsü</h2><p>Kullanıcıların görebileceği işlem bölümlerini seç.</p></div></div>
+          <div className={styles.headerForm}>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountMenuDonationsEnabled} onChange={(event) => setSettings({ ...settings, accountMenuDonationsEnabled: event.target.checked })} /> Bağışlarım</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountMenuQurbanEnabled} onChange={(event) => setSettings({ ...settings, accountMenuQurbanEnabled: event.target.checked })} /> Kurban Bağışlarım</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountMenuSponsorshipsEnabled} onChange={(event) => setSettings({ ...settings, accountMenuSponsorshipsEnabled: event.target.checked })} /> Sponsorluklarım</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountMenuWellsEnabled} onChange={(event) => setSettings({ ...settings, accountMenuWellsEnabled: event.target.checked })} /> Su Kuyularım</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountMenuProjectsEnabled} onChange={(event) => setSettings({ ...settings, accountMenuProjectsEnabled: event.target.checked })} /> Projelerim</label>
+          </div>
+        </section>
+      </div>
     </>
   );
 }

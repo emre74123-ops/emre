@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { HeaderSettings } from "../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../lib/page-settings";
+import MemberAccountNav from "./components/MemberAccountNav";
 
 export default function ManagedPageClient({ page, pages, headerSettings }: { page: ManagedPage; pages: ManagedPage[]; headerSettings: HeaderSettings }) {
   const menuPages = pages.filter((item) => !item.parentId && item.enabled);
@@ -39,7 +40,7 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
             ) : <Link className={item.slug === page.slug ? "is-current" : ""} href={managedPageHref(item)} key={item.id}>{item.title}</Link>)}
           </nav>
           <div className="header-actions">
-            {headerSettings.accountEnabled && <a className="account-button" href={headerSettings.accountHref}><span>○</span> {headerSettings.accountLabel}</a>}
+            {headerSettings.accountEnabled && <MemberAccountNav signedOutLabel={headerSettings.accountLabel} settings={headerSettings} />}
             {headerSettings.supportEnabled && <a className="donate-button compact" href={headerSettings.supportHref}>{headerSettings.supportLabel} <span>↗</span></a>}
           </div>
         </header>

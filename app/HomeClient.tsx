@@ -7,6 +7,7 @@ import { managedPageHref, type ManagedPage } from "../lib/page-settings";
 import { readCart, writeCart, type CartItem } from "../lib/cart";
 import AccountPanel from "./components/AccountPanel";
 import CartPanel from "./components/CartPanel";
+import MemberAccountNav from "./components/MemberAccountNav";
 
 type Slide = {
   id: string;
@@ -98,6 +99,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
     const hydrationTimer = window.setTimeout(() => {
       setCartItems(readCart());
       setCartHydrated(true);
+      if (new URLSearchParams(window.location.search).get("giris") === "1") setAccountOpen(true);
     }, 0);
     return () => window.clearTimeout(hydrationTimer);
   }, []);
@@ -347,9 +349,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           </nav>
           <div className="header-actions">
             {headerSettings.accountEnabled && (
-              headerSettings.accountHref === "#uye-girisi"
-                ? <button className="account-button" type="button" onClick={() => setAccountOpen(true)}><span>○</span> {headerSettings.accountLabel}</button>
-                : <a className="account-button" href={headerSettings.accountHref}><span>○</span> {headerSettings.accountLabel}</a>
+              <MemberAccountNav signedOutLabel={headerSettings.accountLabel} settings={headerSettings} onSignIn={() => setAccountOpen(true)} />
             )}
             {headerSettings.supportEnabled && (
               headerSettings.supportHref === "#destek"
@@ -389,7 +389,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
             </nav>
             <div className="mobile-menu-actions">
               {headerSettings.mobileMenuShowAccount && headerSettings.accountEnabled && (
-                <button type="button" onClick={() => { setMenuOpen(false); setAccountOpen(true); }}>{headerSettings.accountLabel}</button>
+                <MemberAccountNav signedOutLabel={headerSettings.accountLabel} settings={headerSettings} onSignIn={() => { setMenuOpen(false); setAccountOpen(true); }} />
               )}
               {headerSettings.mobileMenuShowSupport && headerSettings.supportEnabled && (
                 <button type="button" onClick={() => { setMenuOpen(false); openDonation(); }}>{headerSettings.supportLabel} <span>↗</span></button>
