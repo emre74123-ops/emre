@@ -15,7 +15,16 @@ export async function readHeaderSettings(): Promise<HeaderSettings> {
 
   try {
     const parsed = JSON.parse(await data.text());
-    return { ...defaultHeaderSettings, ...parsed, menuItems: Array.isArray(parsed.menuItems) ? parsed.menuItems : defaultHeaderSettings.menuItems };
+    const legacyFullscreen = parsed.mobileMenuLayout === "fullscreen";
+    return {
+      ...defaultHeaderSettings,
+      ...parsed,
+      menuItems: Array.isArray(parsed.menuItems) ? parsed.menuItems : defaultHeaderSettings.menuItems,
+      mobileMenuItems: Array.isArray(parsed.mobileMenuItems) ? parsed.mobileMenuItems : defaultHeaderSettings.mobileMenuItems,
+      mobileMenuLayout: legacyFullscreen ? "dropdown" : parsed.mobileMenuLayout || defaultHeaderSettings.mobileMenuLayout,
+      mobileMenuBackgroundColor: legacyFullscreen ? "#f3f7f6" : parsed.mobileMenuBackgroundColor || defaultHeaderSettings.mobileMenuBackgroundColor,
+      mobileMenuTextColor: legacyFullscreen ? "#173b35" : parsed.mobileMenuTextColor || defaultHeaderSettings.mobileMenuTextColor,
+    };
   } catch {
     return defaultHeaderSettings;
   }
@@ -32,5 +41,3 @@ export async function writeHeaderSettings(settings: HeaderSettings) {
   });
   return { error };
 }
-
-
