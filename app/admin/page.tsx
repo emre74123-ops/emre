@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import styles from "./admin.module.css";
 import { defaultSlides } from "../../lib/slides";
+import { defaultHeaderSettings, type HeaderSettings } from "../../lib/header-settings";
 
 type Campaign = {
   id: string;
@@ -44,6 +45,7 @@ type SliderImage = {
 
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
+  ["header", "▰", "Header Yönetimi"],
   ["slider", "▣", "Slider Yönetimi"],
   ["campaigns", "◇", "Kampanyalar"],
   ["applications", "◫", "Başvurular"],
@@ -234,6 +236,7 @@ export default function AdminPage() {
           )}
 
           {active === "slider" && <SliderManager slides={slides} setSlides={setSlides} showToast={showToast} />}
+          {active === "header" && <HeaderManager showToast={showToast} />}
 
           {active === "campaigns" && (
             <>
@@ -329,6 +332,129 @@ function ApplicationTable({ applications, detailed = false }: { applications: Ap
         </tbody>
       </table>
     </div>
+  );
+}
+
+function HeaderManager({ showToast }: { showToast: (message: string) => void }) {
+  const [settings, setSettings] = useState<HeaderSettings>(defaultHeaderSettings);
+  const [loadingHeader, setLoadingHeader] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/admin/header?t=${Date.now()}`, { cache: "no-store" })
+      .then(…295 tokens truncated… setSettings((current) => ({ ...current, logoUrl: result.url }));
+    showToast("Logo yüklendi. Canlıya almak için ayarları kaydet.");
+  }
+
+  function updateMenu(index: number, patch: Partial<HeaderSettings["menuItems"][number]>) {
+    setSettings((current) => ({
+      ...current,
+      menuItems: current.menuItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item),
+    }));
+  }
+
+  function moveMenu(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= settings.menuItems.length) return;
+    const next = [...settings.menuItems];
+    [next[index], next[target]] = [next[target], next[index]];
+    setSettings({ ...settings, menuItems: next });
+  }
+
+  function addMenu() {
+    if (settings.menuItems.length >= 10) return showToast("En fazla 10 menü öğesi eklenebilir.");
+    setSettings({
+      ...settings,
+      menuItems: [...settings.menuItems, { id: crypto.randomUUID(), label: "Yeni Menü", href: "#", enabled: true, newTab: false }],
+    });
+  }
+
+  if (loadingHeader) return <section className={`${styles.card} ${styles.placeholder}`}><div>▰</div><h2>Header yükleniyor</h2><p>Güncel ayarlar güvenli depolama alanından alınıyor.</p></section>;
+
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>Site görünümü</p><h1>Header Yönetimi</h1><span>Logo, menüler, iletişim bilgileri, düğmeler ve header renklerini tek yerden yönet.</span></div>
+        <button className={styles.primaryButton} type="button" onClick={save} disabled={saving}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+      </div>
+
+      <section className={styles.headerPreviewCard}>
+        <div className={styles.previewLabel}>CANLI ÖNİZLEME</div>
+        {settings.topBarEnabled && <div className={styles.headerPreviewTop} style={{ background: settings.textColor }}><span>{settings.phone || "Telefon"}</span><span>{settings.email || "E-posta"}</span></div>}
+        <div className={styles.headerPreview} style={{ background: settings.backgroundColor, color: settings.textColor }}>
+          <div className={styles.headerPreviewBrand}>
+            {settings.logoUrl ? <img src={settings.logoUrl} alt="" /> : <b>ia</b>}
+            {settings.showBrandText && <span><strong>{settings.brandName}</strong><small style={{ color: settings.accentColor }}>{settings.brandTagline}</small></span>}
+          </div>
+          <nav>{settings.menuItems.filter((item) => item.enabled).map((item) => <span key={item.id}>{item.label}</span>)}</nav>
+          <div>{settings.accountEnabled && <span>{settings.accountLabel}</span>}{settings.supportEnabled && <b style={{ background: settings.accentColor }}>{settings.supportLabel}</b>}</div>
+        </div>
+      </section>
+
+      <div className={styles.headerSettingsGrid}>
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Logo ve marka</h2><p>Önerilen SVG, 360×120 oranı, en fazla 1 MB</p></div></div>
+          <div className={styles.headerForm}>
+            <label className={styles.fullField}>Logo adresi
+              <span className={styles.logoUploadRow}><input value={settings.logoUrl} onChange={(event) => setSettings({ ...settings, logoUrl: event.target.value })} placeholder="Logo yükleyin veya adres girin" /><b>{uploading ? "Yükleniyor..." : "Logo Seç"}<input type="file" accept=".svg,.webp,.png,image/svg+xml,image/webp,image/png" disabled={uploading} onChange={(event) => event.target.files?.[0] && uploadLogo(event.target.files[0])} /></b></span>
+            </label>
+            <label>Logo açıklaması<input value={settings.logoAlt} onChange={(event) => setSettings({ ...settings, logoAlt: event.target.value })} /></label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.showBrandText} onChange={(event) => setSettings({ ...settings, showBrandText: event.target.checked })} /> Logonun yanında marka yazısını göster</label>
+            <label>Marka adı<input value={settings.brandName} onChange={(event) => setSettings({ ...settings, brandName: event.target.value })} /></label>
+            <label>Alt marka yazısı<input value={settings.brandTagline} onChange={(event) => setSettings({ ...settings, brandTagline: event.target.value })} /></label>
+          </div>
+        </section>
+
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Görünüm ve renkler</h2><p>Header davranışı ve kurumsal renkler</p></div></div>
+          <div className={styles.headerForm}>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.sticky} onChange={(event) => setSettings({ ...settings, sticky: event.target.checked })} /> Sayfa kaydırılırken üstte sabit kalsın</label>
+            <label>Arka plan rengi<span className={styles.colorField}><input type="color" value={settings.backgroundColor} onChange={(event) => setSettings({ ...settings, backgroundColor: event.target.value })} /><input value={settings.backgroundColor} onChange={(event) => setSettings({ ...settings, backgroundColor: event.target.value })} /></span></label>
+            <label>Yazı rengi<span className={styles.colorField}><input type="color" value={settings.textColor} onChange={(event) => setSettings({ ...settings, textColor: event.target.value })} /><input value={settings.textColor} onChange={(event) => setSettings({ ...settings, textColor: event.target.value })} /></span></label>
+            <label>Vurgu rengi<span className={styles.colorField}><input type="color" value={settings.accentColor} onChange={(event) => setSettings({ ...settings, accentColor: event.target.value })} /><input value={settings.accentColor} onChange={(event) => setSettings({ ...settings, accentColor: event.target.value })} /></span></label>
+          </div>
+        </section>
+      </div>
+
+      <section className={`${styles.card} ${styles.headerSection}`}>
+        <div className={styles.cardHeader}><div><h2>Menü yönetimi</h2><p>Menüleri ekle, gizle, sırala ve bağlantılarını değiştir.</p></div><button type="button" onClick={addMenu}>＋ Menü Ekle</button></div>
+        <div className={styles.menuEditor}>
+          {settings.menuItems.map((item, index) => (
+            <article key={item.id}>
+              <span>{index + 1}</span>
+              <label>Menü adı<input value={item.label} onChange={(event) => updateMenu(index, { label: event.target.value })} /></label>
+              <label>Bağlantı<input value={item.href} onChange={(event) => updateMenu(index, { href: event.target.value })} /></label>
+              <label className={styles.tinyCheck}><input type="checkbox" checked={item.enabled} onChange={(event) => updateMenu(index, { enabled: event.target.checked })} /> Göster</label>
+              <label className={styles.tinyCheck}><input type="checkbox" checked={item.newTab} onChange={(event) => updateMenu(index, { newTab: event.target.checked })} /> Yeni sekme</label>
+              <div><button type="button" onClick={() => moveMenu(index, -1)} disabled={index === 0}>↑</button><button type="button" onClick={() => moveMenu(index, 1)} disabled={index === settings.menuItems.length - 1}>↓</button><button type="button" onClick={() => setSettings({ ...settings, menuItems: settings.menuItems.filter((_, itemIndex) => itemIndex !== index) })}>Sil</button></div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <div className={styles.headerSettingsGrid}>
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Header düğmeleri</h2><p>Üyelik ve destek çağrılarını yönet.</p></div></div>
+          <div className={styles.headerForm}>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.accountEnabled} onChange={(event) => setSettings({ ...settings, accountEnabled: event.target.checked })} /> Üye Girişi düğmesini göster</label>
+            <label>Düğme yazısı<input value={settings.accountLabel} onChange={(event) => setSettings({ ...settings, accountLabel: event.target.value })} /></label>
+            <label>Bağlantı<input value={settings.accountHref} onChange={(event) => setSettings({ ...settings, accountHref: event.target.value })} /></label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.supportEnabled} onChange={(event) => setSettings({ ...settings, supportEnabled: event.target.checked })} /> Destek Ol düğmesini göster</label>
+            <label>Düğme yazısı<input value={settings.supportLabel} onChange={(event) => setSettings({ ...settings, supportLabel: event.target.value })} /></label>
+            <label>Bağlantı<input value={settings.supportHref} onChange={(event) => setSettings({ ...settings, supportHref: event.target.value })} /></label>
+          </div>
+        </section>
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>İletişim üst şeridi</h2><p>Header üzerinde ince iletişim alanı.</p></div></div>
+          <div className={styles.headerForm}>
+            <label className={styles.headerCheck}><input type="checkbox" checked={settings.topBarEnabled} onChange={(event) => setSettings({ ...settings, topBarEnabled: event.target.checked })} /> Üst iletişim şeridini göster</label>
+            <label>Telefon<input value={settings.phone} onChange={(event) => setSettings({ ...settings, phone: event.target.value })} placeholder="+90 5xx xxx xx xx" /></label>
+            <label>E-posta<input type="email" value={settings.email} onChange={(event) => setSettings({ ...settings, email: event.target.value })} /></label>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 
