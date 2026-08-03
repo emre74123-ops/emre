@@ -62,6 +62,15 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   const [dragOffset, setDragOffset] = useState(0);
   const [draggingSlider, setDraggingSlider] = useState(false);
   const desktopMenuPages = managedPages.filter((page) => !page.parentId && page.enabled);
+  const configuredMobileItems = headerSettings.mobileMenuItems.filter((item) => item.enabled && item.sourcePageId);
+  const activeMobileItems = configuredMobileItems.length ? configuredMobileItems : desktopMenuPages.map((page) => ({
+    id: `mobile-${page.id}`,
+    label: page.title,
+    href: page.menuType === "direct" ? `/${page.slug}` : "#",
+    enabled: true,
+    newTab: false,
+    sourcePageId: page.id,
+  }));
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -299,7 +308,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
         >
           <div className="mobile-menu-body">
             <nav aria-label="Mobil menü">
-              {headerSettings.mobileMenuItems.filter((item) => item.enabled).map((item, index) => {
+              {activeMobileItems.map((item, index) => {
                 const sourcePage = item.sourcePageId ? managedPages.find((page) => page.id === item.sourcePageId) : undefined;
                 const children = sourcePage?.menuType === "dropdown" ? managedPages.filter((page) => page.parentId === sourcePage.id && page.enabled) : [];
                 const mobileLabel = sourcePage?.title || item.label;
