@@ -12,7 +12,7 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
 
   return (
     <main className="managed-page">
-      <div className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}`} style={{
+      <div className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}`} style={{
         "--header-bg": headerSettings.backgroundColor,
         "--header-text": headerSettings.textColor,
         "--header-accent": headerSettings.accentColor,
