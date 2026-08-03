@@ -79,15 +79,22 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setMessage(error ? error.message : "Giriş başarılı.");
     } else if (mode === "register") {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { full_name: name.trim(), phone: (parsedPhone as unknown as { number?: string } | undefined)?.number || `${selectedCountry.dial}${phoneDigits}` },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
         },
       });
-      setMessage(error ? error.message : "Kayıt oluşturuldu. E-posta doğrulama bağlantınızı kontrol edin.");
+      if (!error && data.session?.access_token) {
+        await fetch("/api/member/welcome", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${data.session.access_token}`,
+          },
+        }).catch(() => undefined);
+      }
+      setMessage(error ? error.message : "Kayıt tamamlandı. Hesabınız kullanıma hazır.");
     } else {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback?next=/`,
