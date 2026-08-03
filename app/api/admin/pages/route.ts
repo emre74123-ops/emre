@@ -24,6 +24,8 @@ function cleanPages(input: unknown): ManagedPage[] {
       title: String(page.title || "Yeni Sayfa").trim().slice(0, 80),
       slug,
       kind: page.kind === "project" ? "project" : "standard",
+      menuType: page.menuType === "dropdown" ? "dropdown" : "direct",
+      parentId: page.parentId ? String(page.parentId).slice(0, 80) : null,
       enabled: Boolean(page.enabled),
       locked: Boolean(page.locked),
     };
