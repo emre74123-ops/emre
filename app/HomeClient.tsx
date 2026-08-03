@@ -60,8 +60,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   const [sliderPosition, setSliderPosition] = useState(slides.length > 1 ? 1 : 0);
   const [dragOffset, setDragOffset] = useState(0);
   const [draggingSlider, setDraggingSlider] = useState(false);
-  const desktopProjects = managedPages.filter((page) => page.kind === "project" && page.enabled);
-  const desktopStandardPages = managedPages.filter((page) => page.kind === "standard" && page.enabled);
+  const desktopMenuPages = managedPages.filter((page) => !page.parentId && page.enabled);
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -271,14 +270,15 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
             <span /><span /><span />
           </button>
           <nav className="main-nav" aria-label="Ana menü">
-            <div className="desktop-dropdown">
-              <button type="button">Projelerimiz <span>⌄</span></button>
-              <div className="desktop-dropdown-panel">
-                <small>PROJELERİMİZ</small>
-                {desktopProjects.map((page) => <Link href={`/${page.slug}`} key={page.id}>{page.title}<span>→</span></Link>)}
+            {desktopMenuPages.map((page) => page.menuType === "dropdown" ? (
+              <div className="desktop-dropdown" key={page.id}>
+                <button type="button">{page.title} <span>⌄</span></button>
+                <div className="desktop-dropdown-panel">
+                  <small>{page.title.toLocaleUpperCase("tr-TR")}</small>
+                  {managedPages.filter((child) => child.parentId === page.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}<span>→</span></Link>)}
+                </div>
               </div>
-            </div>
-            {desktopStandardPages.map((page) => <Link href={`/${page.slug}`} key={page.id}>{page.title}</Link>)}
+            ) : <Link href={`/${page.slug}`} key={page.id}>{page.title}</Link>)}
           </nav>
           <div className="header-actions">
             {headerSettings.accountEnabled && (
