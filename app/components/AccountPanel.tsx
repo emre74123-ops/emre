@@ -122,7 +122,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
             <h2 id="customer-account-title">Hoş geldiniz</h2>
             <strong>{user.user_metadata?.full_name || "İyilik Adresim üyesi"}</strong>
             <p>{user.email}</p>
-            <div className="coming-features"><span>✓ Sepetiniz bu cihazda korunur</span><span>✓ Üyelik ödeme için zorunlu değildir</span><span>✓ Bağış geçmişi ödeme sistemiyle açılacak</span></div>
+            <p>Üyeliğiniz başarıyla tamamlanmıştır.</p>
             <button className="modal-submit account-secondary-submit" disabled={loading} type="button" onClick={signOut}>Çıkış yap</button>
           </div>
         ) : (
