@@ -249,7 +249,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   return (
     <main id="top">
       <div
-        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.menuUnderlineEnabled ? "" : " no-menu-underline"}${headerSettings.menuFontFamily === "serif" ? " menu-serif" : ""}`}
+        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}${headerSettings.menuUnderlineEnabled ? "" : " no-menu-underline"}${headerSettings.menuFontFamily === "serif" ? " menu-serif" : ""}`}
         style={{
           "--header-bg": headerSettings.backgroundColor,
           "--header-text": headerSettings.textColor,
