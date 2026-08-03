@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import type { HeaderSettings } from "../lib/header-settings";
+import type { ManagedPage } from "../lib/page-settings";
 
 type Slide = {
   id: string;
@@ -46,7 +48,7 @@ const faqs = [
   ["Şu anda gerçek ödeme alınıyor mu?", "Hayır. Mevcut akış güvenli bir demodur; kart bilgisi istemez ve herhangi bir ücret tahsil etmez."],
 ];
 
-export default function HomeClient({ initialSlides, headerSettings }: { initialSlides: Slide[]; headerSettings: HeaderSettings }) {
+export default function HomeClient({ initialSlides, headerSettings, managedPages }: { initialSlides: Slide[]; headerSettings: HeaderSettings; managedPages: ManagedPage[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [donationOpen, setDonationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -58,6 +60,8 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
   const [sliderPosition, setSliderPosition] = useState(slides.length > 1 ? 1 : 0);
   const [dragOffset, setDragOffset] = useState(0);
   const [draggingSlider, setDraggingSlider] = useState(false);
+  const desktopProjects = managedPages.filter((page) => page.kind === "project" && page.enabled);
+  const desktopStandardPages = managedPages.filter((page) => page.kind === "standard" && page.enabled);
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -255,21 +259,26 @@ export default function HomeClient({ initialSlides, headerSettings }: { initialS
           </div>
         )}
         <header className="site-header">
-          <a className="brand" href="#top" aria-label="İyilik Adresim ana sayfa">
+          <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
             {headerSettings.logoUrl
               ? <img className="brand-logo" src={headerSettings.logoUrl} alt={headerSettings.logoAlt} />
               : <span className="brand-symbol"><i>i</i><b>a</b></span>}
             {headerSettings.showBrandText && (
               <span className="brand-copy"><strong>{headerSettings.brandName}</strong><small>{headerSettings.brandTagline}</small></span>
             )}
-          </a>
+          </Link>
           <button className="menu-toggle" type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
             <span /><span /><span />
           </button>
           <nav className="main-nav" aria-label="Ana menü">
-            {headerSettings.menuItems.filter((item) => item.enabled).map((item) => (
-              <a href={item.href} key={item.id} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>{item.label}</a>
-            ))}
+            <div className="desktop-dropdown">
+              <button type="button">Projelerimiz <span>⌄</span></button>
+              <div className="desktop-dropdown-panel">
+                <small>PROJELERİMİZ</small>
+                {desktopProjects.map((page) => <Link href={`/${page.slug}`} key={page.id}>{page.title}<span>→</span></Link>)}
+              </div>
+            </div>
+            {desktopStandardPages.map((page) => <Link href={`/${page.slug}`} key={page.id}>{page.title}</Link>)}
           </nav>
           <div className="header-actions">
             {headerSettings.accountEnabled && (
