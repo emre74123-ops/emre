@@ -13,12 +13,12 @@ export type ManagedPage = {
 export const defaultManagedPages: ManagedPage[] = [
   { id: "projects", title: "Projelerimiz", slug: "projelerimiz", kind: "standard", menuType: "dropdown", parentId: null, enabled: true, locked: true, isHome: false },
   { id: "about", title: "Biz Kimiz?", slug: "biz-kimiz", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
-  { id: "transparency", title: "ÅeffaflÄ±k", slug: "seffaflik", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
-  { id: "stories", title: "Ä°yilik HikÃ¢yeleri", slug: "iyilik-hikayeleri", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
-  { id: "contact", title: "Ä°letiÅŸim", slug: "iletisim", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
-  { id: "project-education", title: "EÄŸitim DesteÄŸi", slug: "egitim-destegi", kind: "project", menuType: "direct", parentId: "projects", enabled: true, locked: false, isHome: false },
+  { id: "transparency", title: "Şeffaflık", slug: "seffaflik", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
+  { id: "stories", title: "İyilik Hikâyeleri", slug: "iyilik-hikayeleri", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
+  { id: "contact", title: "İletişim", slug: "iletisim", kind: "standard", menuType: "direct", parentId: null, enabled: true, locked: true, isHome: false },
+  { id: "project-education", title: "Eğitim Desteği", slug: "egitim-destegi", kind: "project", menuType: "direct", parentId: "projects", enabled: true, locked: false, isHome: false },
   { id: "project-water", title: "Temiz Su Projeleri", slug: "temiz-su-projeleri", kind: "project", menuType: "direct", parentId: "projects", enabled: true, locked: false, isHome: false },
-  { id: "project-food", title: "GÄ±da YardÄ±mlarÄ±", slug: "gida-yardimlari", kind: "project", menuType: "direct", parentId: "projects", enabled: true, locked: false, isHome: false },
+  { id: "project-food", title: "Gıda Yardımları", slug: "gida-yardimlari", kind: "project", menuType: "direct", parentId: "projects", enabled: true, locked: false, isHome: false },
 ];
 
 export function normalizeManagedPages(pages: Partial<ManagedPage>[]) {
@@ -49,7 +49,7 @@ export function normalizeSlug(value: string) {
     .toLocaleLowerCase("tr-TR")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/Ä±/g, "i")
+    .replace(/ı/g, "i")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
