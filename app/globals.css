@@ -206,7 +206,7 @@ footer { background: #071f1d; color: white; padding: 70px max(30px, calc((100% -
   .site-header { min-height: 75px; width: calc(100% - 30px); }
   .brand-symbol { width: 40px; height: 40px; }
   .hero { width: 100%; margin-bottom: 45px; }
-  .hero-image { min-height: 458px; aspect-ratio:auto; align-items: flex-end; background-position: 60% center; }
+  .hero-image { min-height:0; aspect-ratio:6 / 7; align-items: flex-end; background-position: 60% center; }
   .hero-content { width: calc(100% - 38px); padding-bottom: 82px; }
   .hero h1 { font-size: 55px; letter-spacing: -3px; }
   .hero-content > p { font-size: 15px; }
