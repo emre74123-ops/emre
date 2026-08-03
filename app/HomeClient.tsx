@@ -50,6 +50,7 @@ const faqs = [
 
 export default function HomeClient({ initialSlides, headerSettings, managedPages }: { initialSlides: Slide[]; headerSettings: HeaderSettings; managedPages: ManagedPage[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openMobileMenuId, setOpenMobileMenuId] = useState<string | null>(null);
   const [donationOpen, setDonationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState("500");
@@ -266,7 +267,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
               <span className="brand-copy"><strong>{headerSettings.brandName}</strong><small>{headerSettings.brandTagline}</small></span>
             )}
           </Link>
-          <button className="menu-toggle" type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+          <button className={`menu-toggle${menuOpen ? " is-open" : ""}`} type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
             <span /><span /><span />
           </button>
           <nav className="main-nav" aria-label="Ana menü">
@@ -293,25 +294,33 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           </div>
         </header>
         <div
-          className={`mobile-menu-overlay ${menuOpen ? "is-open" : ""} ${headerSettings.mobileMenuLayout === "drawer" ? "is-drawer" : "is-fullscreen"} ${headerSettings.mobileMenuAnimation === "fade" ? "is-fade" : "is-slide"}`}
+          className={`mobile-menu-overlay ${menuOpen ? "is-open" : ""} ${headerSettings.mobileMenuLayout === "drawer" ? "is-drawer" : "is-dropdown"} ${headerSettings.mobileMenuAnimation === "fade" ? "is-fade" : "is-slide"}`}
           aria-hidden={!menuOpen}
         >
-          <div className="mobile-menu-head">
-            <a href="#top" onClick={() => setMenuOpen(false)} aria-label="Ana sayfa">
-              {(headerSettings.mobileMenuLogoUrl || headerSettings.logoUrl)
-                ? <img src={headerSettings.mobileMenuLogoUrl || headerSettings.logoUrl} alt={headerSettings.logoAlt} />
-                : <><span className="mobile-menu-mark">ia</span><strong>{headerSettings.brandName} <em>{headerSettings.brandTagline}</em></strong></>}
-            </a>
-            <button type="button" aria-label="Mobil menüyü kapat" onClick={() => setMenuOpen(false)}>×</button>
-          </div>
           <div className="mobile-menu-body">
             <nav aria-label="Mobil menü">
-              {headerSettings.mobileMenuItems.filter((item) => item.enabled).map((item, index) => (
-                <a href={item.href} key={item.id} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>
-                  {headerSettings.mobileMenuShowNumbers && <small>{String(index + 1).padStart(2, "0")}</small>}
-                  <span>{item.label}</span><b>↗</b>
-                </a>
-              ))}
+              {headerSettings.mobileMenuItems.filter((item) => item.enabled).map((item, index) => {
+                const sourcePage = item.sourcePageId ? managedPages.find((page) => page.id === item.sourcePageId) : undefined;
+                const children = sourcePage?.menuType === "dropdown" ? managedPages.filter((page) => page.parentId === sourcePage.id && page.enabled) : [];
+                const mobileLabel = sourcePage?.title || item.label;
+                const mobileHref = sourcePage?.menuType === "direct" ? `/${sourcePage.slug}` : item.href;
+                return (
+                  <div className={`mobile-menu-card${openMobileMenuId === item.id ? " is-expanded" : ""}`} key={item.id}>
+                    {children.length ? (
+                      <button type="button" onClick={() => setOpenMobileMenuId((current) => current === item.id ? null : item.id)}>
+                        {headerSettings.mobileMenuShowNumbers && <small>{String(index + 1).padStart(2, "0")}</small>}
+                        <span>{mobileLabel}</span><b>{openMobileMenuId === item.id ? "−" : "+"}</b>
+                      </button>
+                    ) : (
+                      <a href={mobileHref} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>
+                        {headerSettings.mobileMenuShowNumbers && <small>{String(index + 1).padStart(2, "0")}</small>}
+                        <span>{mobileLabel}</span><b>›</b>
+                      </a>
+                    )}
+                    {children.length > 0 && openMobileMenuId === item.id && <div className="mobile-submenu">{children.map((child) => <a href={`/${child.slug}`} key={child.id} onClick={() => setMenuOpen(false)}>{child.title}</a>)}</div>}
+                  </div>
+                );
+              })}
             </nav>
             <div className="mobile-menu-actions">
               {headerSettings.mobileMenuShowAccount && headerSettings.accountEnabled && (
