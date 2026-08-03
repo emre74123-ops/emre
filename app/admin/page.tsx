@@ -47,7 +47,6 @@ type SliderImage = {
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
   ["header", "▰", "Header Yönetimi"],
-  ["pages", "▤", "Sayfa Yönetimi"],
   ["mobileMenu", "☰", "Mobil Menü Yönetimi"],
   ["slider", "▣", "Slider Yönetimi"],
   ["campaigns", "◇", "Kampanyalar"],
@@ -241,7 +240,6 @@ export default function AdminPage() {
 
           {active === "slider" && <SliderManager slides={slides} setSlides={setSlides} showToast={showToast} />}
           {active === "header" && <HeaderManager showToast={showToast} />}
-          {active === "pages" && <PageManager showToast={showToast} />}
           {active === "mobileMenu" && <MobileMenuManager showToast={showToast} />}
 
           {active === "campaigns" && (
@@ -341,11 +339,15 @@ function ApplicationTable({ applications, detailed = false }: { applications: Ap
   );
 }
 
-function PageManager({ showToast }: { showToast: (message: string) => void }) {
+function PageManager({ showToast, embedded = false, onPagesChange }: { showToast: (message: string) => void; embedded?: boolean; onPagesChange?: (pages: ManagedPage[]) => void }) {
   const [pages, setPages] = useState<ManagedPage[]>(defaultManagedPages);
   const [loadingPages, setLoadingPages] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onPagesChange?.(pages);
+  }, [pages, onPagesChange]);
 
   useEffect(() => {
     fetch(`/api/admin/pages?t=${Date.now()}`, { cache: "no-store" })
@@ -412,15 +414,23 @@ function PageManager({ showToast }: { showToast: (message: string) => void }) {
 
   return (
     <>
-      <div className={styles.pageHeading}>
-        <div><p>WEB SİTESİ</p><h1>Sayfa Yönetimi</h1><span>Her menüyü doğrudan sayfa veya alt sayfalı açılır menü olarak düzenle.</span></div>
-        <div className={styles.pageHeadingActions}><button type="button" onClick={addTopLevelPage}>＋ Yeni Sayfa Oluştur</button><button className={styles.primaryButton} type="button" disabled={saving} onClick={savePages}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button></div>
-      </div>
-
-      <div className={styles.pageStructureInfo}>
-        <div><i>▤</i><span><strong>Gerçek sayfa yapısı hazır</strong>Her sayfada şimdilik yalnızca header, boş içerik alanı ve footer bulunur.</span></div>
-        <a href="/biz-kimiz" target="_blank">Örnek sayfayı aç ↗</a>
-      </div>
+      {embedded ? (
+        <div className={styles.integratedPagesHeading}>
+          <div><p>HEADER MENÜ SAYFALARI</p><h2>Sayfalar ve Açılır Menüler</h2><span>Canlı önizlemede görünen bütün web menülerini buradan yönet.</span></div>
+          <div className={styles.pageHeadingActions}><button type="button" onClick={addTopLevelPage}>＋ Yeni Sayfa Oluştur</button><button className={styles.primaryButton} type="button" disabled={saving} onClick={savePages}>{saving ? "Kaydediliyor..." : "Sayfaları Kaydet"}</button></div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.pageHeading}>
+            <div><p>WEB SİTESİ</p><h1>Sayfa Yönetimi</h1><span>Her menüyü doğrudan sayfa veya alt sayfalı açılır menü olarak düzenle.</span></div>
+            <div className={styles.pageHeadingActions}><button type="button" onClick={addTopLevelPage}>＋ Yeni Sayfa Oluştur</button><button className={styles.primaryButton} type="button" disabled={saving} onClick={savePages}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button></div>
+          </div>
+          <div className={styles.pageStructureInfo}>
+            <div><i>▤</i><span><strong>Gerçek sayfa yapısı hazır</strong>Her sayfada şimdilik yalnızca header, boş içerik alanı ve footer bulunur.</span></div>
+            <a href="/biz-kimiz" target="_blank">Örnek sayfayı aç ↗</a>
+          </div>
+        </>
+      )}
 
       <div className={styles.menuTree}>
         {mainPages.map((page) => {
@@ -592,6 +602,7 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
 
 function HeaderManager({ showToast }: { showToast: (message: string) => void }) {
   const [settings, setSettings] = useState<HeaderSettings>(defaultHeaderSettings);
+  const [managedPages, setManagedPages] = useState<ManagedPage[]>(defaultManagedPages);
   const [loadingHeader, setLoadingHeader] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -605,6 +616,13 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
       })
       .catch(() => showToast("Header ayarları yüklenemedi."))
       .finally(() => setLoadingHeader(false));
+  }, []);
+
+  useEffect(() => {
+    fetch(`/api/admin/pages?t=${Date.now()}`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => result.pages && setManagedPages(result.pages))
+      .catch(() => undefined);
   }, []);
 
   async function save() {
@@ -639,29 +657,6 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
     showToast("Logo yüklendi. Canlıya almak için ayarları kaydet.");
   }
 
-  function updateMenu(index: number, patch: Partial<HeaderSettings["menuItems"][number]>) {
-    setSettings((current) => ({
-      ...current,
-      menuItems: current.menuItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item),
-    }));
-  }
-
-  function moveMenu(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= settings.menuItems.length) return;
-    const next = [...settings.menuItems];
-    [next[index], next[target]] = [next[target], next[index]];
-    setSettings({ ...settings, menuItems: next });
-  }
-
-  function addMenu() {
-    if (settings.menuItems.length >= 10) return showToast("En fazla 10 menü öğesi eklenebilir.");
-    setSettings({
-      ...settings,
-      menuItems: [...settings.menuItems, { id: crypto.randomUUID(), label: "Yeni Menü", href: "#", enabled: true, newTab: false }],
-    });
-  }
-
   if (loadingHeader) return <section className={`${styles.card} ${styles.placeholder}`}><div>▰</div><h2>Header yükleniyor</h2><p>Güncel ayarlar güvenli depolama alanından alınıyor.</p></section>;
 
   return (
@@ -679,7 +674,7 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
             {settings.logoUrl ? <img src={settings.logoUrl} alt="" /> : <b>ia</b>}
             {settings.showBrandText && <span><strong>{settings.brandName}</strong><small style={{ color: settings.accentColor }}>{settings.brandTagline}</small></span>}
           </div>
-          <nav style={{ gap: settings.menuGap, fontSize: settings.menuDesktopSize, fontWeight: settings.menuFontWeight, letterSpacing: settings.menuLetterSpacing, textTransform: settings.menuTextTransform, fontFamily: settings.menuFontFamily === "serif" ? "Georgia, serif" : "Arial, sans-serif", color: settings.textColor }}>{settings.menuItems.filter((item) => item.enabled).map((item) => <span key={item.id}>{item.label}</span>)}</nav>
+          <nav style={{ gap: settings.menuGap, fontSize: settings.menuDesktopSize, fontWeight: settings.menuFontWeight, letterSpacing: settings.menuLetterSpacing, textTransform: settings.menuTextTransform, fontFamily: settings.menuFontFamily === "serif" ? "Georgia, serif" : "Arial, sans-serif", color: settings.textColor }}>{managedPages.filter((page) => !page.parentId && page.enabled).map((page) => <span className={page.menuType === "dropdown" ? styles.previewDropdownItem : ""} key={page.id}>{page.title}{page.menuType === "dropdown" && <i>⌄</i>}</span>)}</nav>
           <div>{settings.accountEnabled && <span>{settings.accountLabel}</span>}{settings.supportEnabled && <b style={{ background: settings.accentColor }}>{settings.supportLabel}</b>}</div>
         </div>
       </section>
@@ -710,7 +705,7 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
       </div>
 
       <section className={`${styles.card} ${styles.headerSection}`}>
-        <div className={styles.cardHeader}><div><h2>Menü yönetimi</h2><p>Menüleri ekle, gizle, sırala ve bağlantılarını değiştir.</p></div><button type="button" onClick={addMenu}>＋ Menü Ekle</button></div>
+        <div className={styles.cardHeader}><div><h2>Menü tasarımı</h2><p>Header menülerinin yazı tipi, boyutu, konumu ve renklerini düzenle.</p></div></div>
         <div className={styles.menuDesignPanel}>
           <div><strong>MENÜ TASARIMI</strong><span>Masaüstü ve mobil yazı görünümünü profesyonel sınırlar içinde düzenle.</span></div>
           <label>Masaüstü yazı boyutu <b>{settings.menuDesktopSize} px</b><input type="range" min="11" max="22" value={settings.menuDesktopSize} onChange={(event) => setSettings({ ...settings, menuDesktopSize: Number(event.target.value) })} /></label>
@@ -727,19 +722,9 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
           <label>Alt çizgi kalınlığı <b>{settings.menuUnderlineThickness} px</b><input type="range" min="1" max="5" value={settings.menuUnderlineThickness} onChange={(event) => setSettings({ ...settings, menuUnderlineThickness: Number(event.target.value) })} /></label>
           <label className={styles.headerCheck}><input type="checkbox" checked={settings.menuUnderlineEnabled} onChange={(event) => setSettings({ ...settings, menuUnderlineEnabled: event.target.checked })} /> Menü alt çizgi efektini göster</label>
         </div>
-        <div className={styles.menuEditor}>
-          {settings.menuItems.map((item, index) => (
-            <article key={item.id}>
-              <span>{index + 1}</span>
-              <label>Menü adı<input value={item.label} onChange={(event) => updateMenu(index, { label: event.target.value })} /></label>
-              <label>Bağlantı<input value={item.href} onChange={(event) => updateMenu(index, { href: event.target.value })} /></label>
-              <label className={styles.tinyCheck}><input type="checkbox" checked={item.enabled} onChange={(event) => updateMenu(index, { enabled: event.target.checked })} /> Göster</label>
-              <label className={styles.tinyCheck}><input type="checkbox" checked={item.newTab} onChange={(event) => updateMenu(index, { newTab: event.target.checked })} /> Yeni sekme</label>
-              <div><button type="button" onClick={() => moveMenu(index, -1)} disabled={index === 0}>↑</button><button type="button" onClick={() => moveMenu(index, 1)} disabled={index === settings.menuItems.length - 1}>↓</button><button type="button" onClick={() => setSettings({ ...settings, menuItems: settings.menuItems.filter((_, itemIndex) => itemIndex !== index) })}>Sil</button></div>
-            </article>
-          ))}
-        </div>
       </section>
+
+      <PageManager showToast={showToast} embedded onPagesChange={setManagedPages} />
 
       <div className={styles.headerSettingsGrid}>
         <section className={styles.card}>
