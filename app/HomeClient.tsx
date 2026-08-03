@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import type { HeaderSettings } from "../lib/header-settings";
 
 type Slide = {
   id: string;
@@ -45,7 +46,7 @@ const faqs = [
   ["Şu anda gerçek ödeme alınıyor mu?", "Hayır. Mevcut akış güvenli bir demodur; kart bilgisi istemez ve herhangi bir ücret tahsil etmez."],
 ];
 
-export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }) {
+export default function HomeClient({ initialSlides, headerSettings }: { initialSlides: Slide[]; headerSettings: HeaderSettings }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [donationOpen, setDonationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -212,26 +213,56 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
 
   return (
     <main id="top">
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label="İyilik Adresim ana sayfa">
-          <span className="brand-symbol"><i>i</i><b>a</b></span>
-          <span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span>
-        </a>
-        <button className="menu-toggle" type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
-          <span /><span /><span />
-        </button>
-        <nav className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Ana menü">
-          <a href="#projeler" onClick={() => setMenuOpen(false)}>Projelerimiz</a>
-          <a href="#hakkimizda" onClick={() => setMenuOpen(false)}>Biz Kimiz?</a>
-          <a href="#seffaflik" onClick={() => setMenuOpen(false)}>Şeffaflık</a>
-          <a href="#hikayeler" onClick={() => setMenuOpen(false)}>İyilik Hikâyeleri</a>
-          <a href="#iletisim" onClick={() => setMenuOpen(false)}>İletişim</a>
-        </nav>
-        <div className="header-actions">
-          <button className="account-button" type="button" onClick={() => setAccountOpen(true)}><span>○</span> Üye Girişi</button>
-          <button className="donate-button compact" type="button" onClick={() => openDonation()}>Destek Ol <span>↗</span></button>
-        </div>
-      </header>
+      <div
+        className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}`}
+        style={{
+          "--header-bg": headerSettings.backgroundColor,
+          "--header-text": headerSettings.textColor,
+          "--header-accent": headerSettings.accentColor,
+        } as CSSProperties}
+      >
+        {headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) && (
+          <div className="header-contact-bar">
+            <div>
+              <span>İyiliğe birlikte ulaşalım</span>
+              <p>
+                {headerSettings.phone && <a href={`tel:${headerSettings.phone.replace(/\s/g, "")}`}>{headerSettings.phone}</a>}
+                {headerSettings.email && <a href={`mailto:${headerSettings.email}`}>{headerSettings.email}</a>}
+              </p>
+            </div>
+          </div>
+        )}
+        <header className="site-header">
+          <a className="brand" href="#top" aria-label="İyilik Adresim ana sayfa">
+            {headerSettings.logoUrl
+              ? <img className="brand-logo" src={headerSettings.logoUrl} alt={headerSettings.logoAlt} />
+              : <span className="brand-symbol"><i>i</i><b>a</b></span>}
+            {headerSettings.showBrandText && (
+              <span className="brand-copy"><strong>{headerSettings.brandName}</strong><small>{headerSettings.brandTagline}</small></span>
+            )}
+          </a>
+          <button className="menu-toggle" type="button" aria-label="Menüyü aç veya kapat" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+            <span /><span /><span />
+          </button>
+          <nav className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Ana menü">
+            {headerSettings.menuItems.filter((item) => item.enabled).map((item) => (
+              <a href={item.href} key={item.id} target={item.newTab ? "_blank" : undefined} rel={item.newTab ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>{item.label}</a>
+            ))}
+          </nav>
+          <div className="header-actions">
+            {headerSettings.accountEnabled && (
+              headerSettings.accountHref === "#uye-girisi"
+                ? <button className="account-button" type="button" onClick={() => setAccountOpen(true)}><span>○</span> {headerSettings.accountLabel}</button>
+                : <a className="account-button" href={headerSettings.accountHref}><span>○</span> {headerSettings.accountLabel}</a>
+            )}
+            {headerSettings.supportEnabled && (
+              headerSettings.supportHref === "#destek"
+                ? <button className="donate-button compact" type="button" onClick={() => openDonation()}>{headerSettings.supportLabel} <span>↗</span></button>
+                : <a className="donate-button compact" href={headerSettings.supportHref}>{headerSettings.supportLabel} <span>↗</span></a>
+            )}
+          </div>
+        </header>
+      </div>
 
       <section className="hero" aria-roledescription="carousel" aria-label="İyilik Adresim duyuruları">
         <div
