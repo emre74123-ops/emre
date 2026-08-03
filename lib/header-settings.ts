@@ -4,6 +4,7 @@ export type HeaderMenuItem = {
   href: string;
   enabled: boolean;
   newTab: boolean;
+  sourcePageId?: string;
 };
 
 export type HeaderSettings = {
@@ -40,7 +41,7 @@ export type HeaderSettings = {
   supportHref: string;
   menuItems: HeaderMenuItem[];
   mobileMenuItems: HeaderMenuItem[];
-  mobileMenuLayout: "fullscreen" | "drawer";
+  mobileMenuLayout: "dropdown" | "drawer";
   mobileMenuAnimation: "slide" | "fade";
   mobileMenuLogoUrl: string;
   mobileMenuBackgroundColor: string;
@@ -105,11 +106,11 @@ export const defaultHeaderSettings: HeaderSettings = {
     { id: "mobile-stories", label: "İyilik Hikâyeleri", href: "#hikayeler", enabled: true, newTab: false },
     { id: "mobile-contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false },
   ],
-  mobileMenuLayout: "fullscreen",
+  mobileMenuLayout: "dropdown",
   mobileMenuAnimation: "slide",
   mobileMenuLogoUrl: "",
-  mobileMenuBackgroundColor: "#0b2926",
-  mobileMenuTextColor: "#ffffff",
+  mobileMenuBackgroundColor: "#f3f7f6",
+  mobileMenuTextColor: "#173b35",
   mobileMenuAccentColor: "#ed7048",
   mobileMenuFontSize: 28,
   mobileMenuFontWeight: 600,
