@@ -15,10 +15,13 @@ async function isAdmin() {
 function cleanPages(input: unknown): ManagedPage[] {
   if (!Array.isArray(input)) return defaultManagedPages;
   const used = new Set<string>();
+  let homeAssigned = false;
   return input.slice(0, 50).map((page: Partial<ManagedPage>, index) => {
     let slug = normalizeSlug(String(page.slug || page.title || `sayfa-${index + 1}`)) || `sayfa-${index + 1}`;
     while (used.has(slug)) slug = `${slug}-${index + 1}`;
     used.add(slug);
+    const isHome = !page.parentId && !homeAssigned && (page.isHome === true || normalizeSlug(String(page.title || "")) === "anasayfa");
+    if (isHome) homeAssigned = true;
     return {
       id: String(page.id || crypto.randomUUID()).slice(0, 80),
       title: String(page.title || "Yeni Sayfa").trim().slice(0, 80),
@@ -28,6 +31,7 @@ function cleanPages(input: unknown): ManagedPage[] {
       parentId: page.parentId ? String(page.parentId).slice(0, 80) : null,
       enabled: Boolean(page.enabled),
       locked: Boolean(page.locked),
+      isHome,
     };
   });
 }
