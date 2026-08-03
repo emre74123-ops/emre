@@ -599,10 +599,8 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
         </aside>
         <div className={styles.mobileMenuControls}>
           <section className={styles.card}>
-            <div className={styles.cardHeader}><div><h2>Görünüm ve animasyon</h2><p>Menünün açılış biçimini ve renklerini belirle.</p></div></div>
+            <div className={styles.cardHeader}><div><h2>Mobil menü görünümü</h2><p>Menünün renklerini, yazılarını ve kart aralıklarını belirle.</p></div></div>
             <div className={styles.headerForm}>
-              <label>Menü biçimi<select value={settings.mobileMenuLayout} onChange={(event) => setSettings({ ...settings, mobileMenuLayout: event.target.value as HeaderSettings["mobileMenuLayout"] })}><option value="dropdown">Header altından açılan liste</option><option value="drawer">Sağdan açılan panel</option></select></label>
-              <label>Açılış animasyonu<select value={settings.mobileMenuAnimation} onChange={(event) => setSettings({ ...settings, mobileMenuAnimation: event.target.value as HeaderSettings["mobileMenuAnimation"] })}><option value="slide">Yumuşak kayma</option><option value="fade">Yumuşak belirme</option></select></label>
               <label>Arka plan<span className={styles.colorField}><input type="color" value={settings.mobileMenuBackgroundColor} onChange={(event) => setSettings({ ...settings, mobileMenuBackgroundColor: event.target.value })} /><input value={settings.mobileMenuBackgroundColor} onChange={(event) => setSettings({ ...settings, mobileMenuBackgroundColor: event.target.value })} /></span></label>
               <label>Yazı rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuTextColor: event.target.value })} /><input value={settings.mobileMenuTextColor} onChange={(event) => setSettings({ ...settings, mobileMenuTextColor: event.target.value })} /></span></label>
               <label>Vurgu rengi<span className={styles.colorField}><input type="color" value={settings.mobileMenuAccentColor} onChange={(event) => setSettings({ ...settings, mobileMenuAccentColor: event.target.value })} /><input value={settings.mobileMenuAccentColor} onChange={(event) => setSettings({ ...settings, mobileMenuAccentColor: event.target.value })} /></span></label>
