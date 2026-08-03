@@ -5,6 +5,7 @@ import Link from "next/link";
 import styles from "./admin.module.css";
 import { defaultSlides } from "../../lib/slides";
 import { defaultHeaderSettings, type HeaderSettings } from "../../lib/header-settings";
+import { defaultManagedPages, normalizeSlug, type ManagedPage } from "../../lib/page-settings";
 
 type Campaign = {
   id: string;
@@ -46,6 +47,7 @@ type SliderImage = {
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
   ["header", "▰", "Header Yönetimi"],
+  ["pages", "▤", "Sayfa Yönetimi"],
   ["mobileMenu", "☰", "Mobil Menü Yönetimi"],
   ["slider", "▣", "Slider Yönetimi"],
   ["campaigns", "◇", "Kampanyalar"],
@@ -169,7 +171,7 @@ export default function AdminPage() {
                     <p><strong>Emre Kök</strong><small>Güvenli yönetici oturumu</small><em>Yönetici hesabı</em></p>
                   </div>
                   <nav aria-label="Hesap işlemleri">
-                    <a href="/admin/account"><i>⚿</i><span><strong>Şifre değiştir</strong><small>Hesabının şifresini güncelle</small></span><b>›</b></a>
+                    <Link href="/admin/account"><i>⚿</i><span><strong>Şifre değiştir</strong><small>Hesabının şifresini güncelle</small></span><b>›</b></Link>
                     <a href="/" target="_blank" rel="noreferrer"><i>↗</i><span><strong>Siteyi görüntüle</strong><small>Canlı siteyi yeni sekmede aç</small></span><b>›</b></a>
                   </nav>
                   <form action="/admin/logout" method="post">
@@ -239,6 +241,7 @@ export default function AdminPage() {
 
           {active === "slider" && <SliderManager slides={slides} setSlides={setSlides} showToast={showToast} />}
           {active === "header" && <HeaderManager showToast={showToast} />}
+          {active === "pages" && <PageManager showToast={showToast} />}
           {active === "mobileMenu" && <MobileMenuManager showToast={showToast} />}
 
           {active === "campaigns" && (
@@ -335,6 +338,103 @@ function ApplicationTable({ applications, detailed = false }: { applications: Ap
         </tbody>
       </table>
     </div>
+  );
+}
+
+function PageManager({ showToast }: { showToast: (message: string) => void }) {
+  const [pages, setPages] = useState<ManagedPage[]>(defaultManagedPages);
+  const [loadingPages, setLoadingPages] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/admin/pages?t=${Date.now()}`, { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        setPages(result.pages);
+      })
+      .catch(() => showToast("Sayfalar yüklenemedi."))
+      .finally(() => setLoadingPages(false));
+  }, []);
+
+  function updatePage(id: string, patch: Partial<ManagedPage>) {
+    setPages((current) => current.map((page) => page.id === id ? { ...page, ...patch } : page));
+  }
+
+  function addProjectPage() {
+    const title = "Yeni Proje";
+    setPages((current) => [...current, {
+      id: crypto.randomUUID(),
+      title,
+      slug: `${normalizeSlug(title)}-${current.filter((page) => page.kind === "project").length + 1}`,
+      kind: "project",
+      enabled: true,
+      locked: false,
+    }]);
+  }
+
+  async function savePages() {
+    setSaving(true);
+    const response = await fetch("/api/admin/pages", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pages }),
+    });
+    const result = await response.json();
+    setSaving(false);
+    if (!response.ok) return showToast(result.error || "Sayfalar kaydedilemedi.");
+    setPages(result.pages);
+    showToast("Sayfalar kaydedildi ve yayınlandı.");
+  }
+
+  const standards = pages.filter((page) => page.kind === "standard");
+  const projects = pages.filter((page) => page.kind === "project");
+
+  if (loadingPages) return <div className={styles.realEmpty}><span>◌</span><strong>Sayfalar yükleniyor</strong></div>;
+
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>WEB SİTESİ</p><h1>Sayfa Yönetimi</h1><span>Gerçek sayfaları ve Projelerimiz açılır menüsünü buradan yönet.</span></div>
+        <button className={styles.primaryButton} type="button" disabled={saving} onClick={savePages}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+      </div>
+
+      <div className={styles.pageStructureInfo}>
+        <div><i>▤</i><span><strong>Gerçek sayfa yapısı hazır</strong>Her sayfada şimdilik yalnızca header, boş içerik alanı ve footer bulunur.</span></div>
+        <a href="/biz-kimiz" target="_blank">Örnek sayfayı aç ↗</a>
+      </div>
+
+      <section className={`${styles.card} ${styles.pageManagerSection}`}>
+        <div className={styles.cardHeader}><div><h2>Doğrudan açılan sayfalar</h2><p>Header&apos;da tıklandığında kendi adresinde açılır.</p></div></div>
+        <div className={styles.pageRows}>
+          {standards.map((page) => (
+            <article key={page.id}>
+              <span className={styles.pageTypeIcon}>▤</span>
+              <label>Sayfa adı<input value={page.title} onChange={(event) => updatePage(page.id, { title: event.target.value })} /></label>
+              <label>Sayfa adresi<span className={styles.slugInput}><b>/</b><input value={page.slug} onChange={(event) => updatePage(page.id, { slug: normalizeSlug(event.target.value) })} /></span></label>
+              <label className={styles.tinyCheck}><input type="checkbox" checked={page.enabled} onChange={(event) => updatePage(page.id, { enabled: event.target.checked })} /> Header&apos;da göster</label>
+              <a href={`/${page.slug}`} target="_blank">Görüntüle ↗</a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className={`${styles.card} ${styles.pageManagerSection}`}>
+        <div className={styles.cardHeader}><div><h2>Projelerimiz açılır menüsü</h2><p>Projelerimiz tıklanmaz; fareyle üzerine gelince bu alt sayfalar açılır.</p></div><button type="button" onClick={addProjectPage}>＋ Proje Sayfası Ekle</button></div>
+        <div className={styles.dropdownPreview}><strong>Projelerimiz <span>⌄</span></strong><div>{projects.filter((page) => page.enabled).map((page) => <span key={page.id}>{page.title}<b>→</b></span>)}</div></div>
+        <div className={styles.pageRows}>
+          {projects.map((page) => (
+            <article key={page.id}>
+              <span className={styles.pageTypeIcon}>◇</span>
+              <label>Proje sayfası adı<input value={page.title} onChange={(event) => updatePage(page.id, { title: event.target.value, slug: normalizeSlug(event.target.value) })} /></label>
+              <label>Sayfa adresi<span className={styles.slugInput}><b>/</b><input value={page.slug} onChange={(event) => updatePage(page.id, { slug: normalizeSlug(event.target.value) })} /></span></label>
+              <label className={styles.tinyCheck}><input type="checkbox" checked={page.enabled} onChange={(event) => updatePage(page.id, { enabled: event.target.checked })} /> Menüde göster</label>
+              <div><a href={`/${page.slug}`} target="_blank">Aç ↗</a><button type="button" onClick={() => setPages((current) => current.filter((item) => item.id !== page.id))}>Sil</button></div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 
