@@ -78,6 +78,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setMessage(error ? error.message : "Giriş başarılı.");
+      if (!error) window.location.href = "/hesabim?bolum=bagislarim";
     } else if (mode === "register") {
       const { data, error } = await supabase.auth.signUp({
         email,

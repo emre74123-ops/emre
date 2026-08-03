@@ -53,6 +53,7 @@ export default function MemberAccountNav({ signedOutLabel, onSignIn, settings }:
           {settings?.accountMenuSponsorshipsEnabled !== false && <Link href="/hesabim?bolum=sponsorluklar">Sponsorluklarım</Link>}
           {settings?.accountMenuWellsEnabled !== false && <Link href="/hesabim?bolum=su-kuyularim">Su Kuyularım</Link>}
           {settings?.accountMenuProjectsEnabled !== false && <Link href="/hesabim?bolum=projelerim">Projelerim</Link>}
+          <Link href="/hesabim?bolum=ayarlar">Ayarlar</Link>
           <button type="button" onClick={signOut}>ÇIKIŞ</button>
         </div>
       )}

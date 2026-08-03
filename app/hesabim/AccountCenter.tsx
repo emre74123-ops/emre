@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createMemberClient } from "../../lib/supabase/member-browser";
 import type { HeaderSettings } from "../../lib/header-settings";
+import { managedPageHref, type ManagedPage } from "../../lib/page-settings";
+import MemberAccountNav from "../components/MemberAccountNav";
 
-type Section = "hesabim" | "bagislarim" | "kurban" | "sponsorluklar" | "su-kuyularim" | "projelerim" | "guvenlik";
+type Section = "bagislarim" | "kurban" | "sponsorluklar" | "su-kuyularim" | "projelerim" | "ayarlar";
 type Profile = {
   full_name: string; phone: string; second_phone: string; birth_date: string; gender: string;
   occupation: string; blood_type: string; country: string; city: string; district: string;
@@ -25,14 +27,13 @@ const sections: { id: Section; label: string; icon: string }[] = [
   { id: "sponsorluklar", label: "Sponsorluklarım", icon: "◎" },
   { id: "su-kuyularim", label: "Su Kuyularım", icon: "◇" },
   { id: "projelerim", label: "Projelerim", icon: "▤" },
-  { id: "hesabim", label: "Hesabım", icon: "●" },
-  { id: "guvenlik", label: "Şifre ve Güvenlik", icon: "◆" },
+  { id: "ayarlar", label: "Ayarlar", icon: "◆" },
 ];
 
-export default function AccountCenter({ settings }: { settings: HeaderSettings }) {
+export default function AccountCenter({ settings, pages }: { settings: HeaderSettings; pages: ManagedPage[] }) {
   const supabase = useMemo(() => createMemberClient(), []);
   const [user, setUser] = useState<User | null>(null);
-  const [section, setSection] = useState<Section>("hesabim");
+  const [section, setSection] = useState<Section>("bagislarim");
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -67,11 +68,6 @@ export default function AccountCenter({ settings }: { settings: HeaderSettings }
     if (!error) setPassword("");
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  }
-
   if (loading) return <main className="account-center-loading">Hesabınız hazırlanıyor...</main>;
   if (!user) return (
     <main className="account-center-guest">
@@ -89,22 +85,47 @@ export default function AccountCenter({ settings }: { settings: HeaderSettings }
     if (item.id === "projelerim") return settings.accountMenuProjectsEnabled;
     return true;
   });
+  const menuPages = pages.filter((item) => !item.parentId && item.enabled);
 
   return (
     <main className="account-center" style={{ "--account-accent": settings.accountPageAccentColor } as CSSProperties}>
-      <header className="account-center-header">
-        <Link href="/" className="account-center-brand"><span>ia</span><strong>İyilik Adresim</strong></Link>
-        <div><span>Merhaba, <strong>{name}</strong></span><button type="button" onClick={signOut}>Çıkış Yap</button></div>
-      </header>
+      <div className={`site-header-shell account-site-header${settings.sticky ? " is-sticky" : ""}`} style={{
+        "--header-bg": settings.backgroundColor,
+        "--header-text": settings.textColor,
+        "--header-accent": settings.accentColor,
+        "--menu-desktop-size": `${settings.menuDesktopSize}px`,
+        "--menu-weight": settings.menuFontWeight,
+        "--menu-gap": `${settings.menuGap}px`,
+        "--menu-hover": settings.menuHoverColor,
+      } as CSSProperties}>
+        <header className="site-header">
+          <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
+            {settings.logoUrl ? <img className="brand-logo" src={settings.logoUrl} alt={settings.logoAlt} /> : <span className="brand-symbol"><i>i</i><b>a</b></span>}
+            {settings.showBrandText && <span className="brand-copy"><strong>{settings.brandName}</strong><small>{settings.brandTagline}</small></span>}
+          </Link>
+          <nav className="main-nav desktop-page-nav" aria-label="Ana menü">
+            {menuPages.map((item) => item.menuType === "dropdown" ? (
+              <div className="desktop-dropdown" key={item.id}>
+                <button type="button">{item.title} <span>⌄</span></button>
+                <div className="desktop-dropdown-panel">{pages.filter((child) => child.parentId === item.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}</Link>)}</div>
+              </div>
+            ) : <Link href={managedPageHref(item)} key={item.id}>{item.title}</Link>)}
+          </nav>
+          <div className="header-actions">
+            <MemberAccountNav signedOutLabel={settings.accountLabel} settings={settings} />
+            {settings.supportEnabled && <Link className="donate-button compact" href={settings.supportHref}>{settings.supportLabel} <span>↗</span></Link>}
+          </div>
+        </header>
+      </div>
       <div className="account-center-shell">
         <aside>
           <div className="account-profile-summary"><i>{name.slice(0, 1).toLocaleUpperCase("tr-TR")}</i><strong>{name}</strong><small>{user.email}</small></div>
           <nav>{visibleSections.map((item) => <button className={section === item.id ? "active" : ""} key={item.id} type="button" onClick={() => setSection(item.id)}><span>{item.icon}</span>{item.label}</button>)}</nav>
         </aside>
         <section className="account-center-content">
-          {section === "hesabim" && (
+          {section === "ayarlar" && (
             <>
-              <div className="account-section-heading"><span>PROFİL BİLGİLERİ</span><h1>Hesabım</h1><p>Bilgilerinizi dilediğiniz zaman tamamlayabilir veya güncelleyebilirsiniz.</p></div>
+              <div className="account-section-heading"><span>HESAP AYARLARI</span><h1>Ayarlar</h1><p>Profil, iletişim, adres ve güvenlik bilgilerinizi tek yerden yönetin.</p></div>
               <form className="account-profile-form" onSubmit={saveProfile}>
                 <fieldset><legend>Genel Bilgiler</legend>
                   <label>Ad Soyad<input required value={profile.full_name} onChange={(e) => setProfile({ ...profile, full_name: e.target.value })} /></label>
@@ -128,17 +149,18 @@ export default function AccountCenter({ settings }: { settings: HeaderSettings }
                 {message && <p className="account-save-message">{message}</p>}
                 <button className="account-save-button" type="submit">Bilgilerimi Güncelle</button>
               </form>
+              <div className="account-security-heading"><h2>Şifre ve Güvenlik</h2><p>Hesabınız için güçlü ve benzersiz bir şifre kullanın.</p></div>
+              <form className="account-security-form" onSubmit={changePassword}><label>Yeni Şifre<input type="password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} /></label><button type="submit">Şifremi Değiştir</button></form>
             </>
           )}
-          {section === "guvenlik" && (
-            <>
-              <div className="account-section-heading"><span>GÜVENLİK</span><h1>Şifre ve Güvenlik</h1><p>Hesabınız için güçlü ve benzersiz bir şifre kullanın.</p></div>
-              <form className="account-security-form" onSubmit={changePassword}><label>Yeni Şifre<input type="password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} /></label>{message && <p>{message}</p>}<button type="submit">Şifremi Değiştir</button></form>
-            </>
-          )}
-          {!["hesabim", "guvenlik"].includes(section) && <EmptyAccountSection title={sections.find((item) => item.id === section)?.label || "İşlemlerim"} />}
+          {section !== "ayarlar" && <EmptyAccountSection title={sections.find((item) => item.id === section)?.label || "İşlemlerim"} />}
         </section>
       </div>
+      <footer className="account-center-footer">
+        <div><Link href="/">İyilik Adresim</Link><p>İyiliğin güvenilir ve şeffaf adresi.</p></div>
+        <nav>{menuPages.slice(0, 5).map((item) => <Link href={managedPageHref(item)} key={item.id}>{item.title}</Link>)}</nav>
+        <small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small>
+      </footer>
     </main>
   );
 }

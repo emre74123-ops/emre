@@ -1,5 +1,6 @@
 import AccountCenter from "./AccountCenter";
 import { readHeaderSettings } from "../../lib/header-storage";
+import { readManagedPages } from "../../lib/page-storage";
 
 export const metadata = {
   title: "Hesabım | İyilik Adresim",
@@ -8,5 +9,6 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
-  return <AccountCenter settings={await readHeaderSettings()} />;
+  const [settings, pages] = await Promise.all([readHeaderSettings(), readManagedPages()]);
+  return <AccountCenter settings={settings} pages={pages} />;
 }
