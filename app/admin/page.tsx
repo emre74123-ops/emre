@@ -44,6 +44,17 @@ type SliderImage = {
   createdAt: string | null;
 };
 
+type Member = {
+  id: string;
+  name: string;
+  email: string;
+  provider: string;
+  providers: string[];
+  emailConfirmed: boolean;
+  createdAt: string;
+  lastSignInAt: string | null;
+};
+
 const navItems = [
   ["overview", "⌂", "Genel Bakış"],
   ["header", "▰", "Header Yönetimi"],
@@ -72,6 +83,7 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [slides, setSlides] = useState<Slide[]>(defaultSlides);
   const [loading, setLoading] = useState(true);
   const [campaignModal, setCampaignModal] = useState(false);
@@ -83,15 +95,17 @@ export default function AdminPage() {
     Promise.all([
       fetch("/api/admin/campaigns").then((response) => response.json()),
       fetch("/api/admin/applications").then((response) => response.json()),
+      fetch("/api/admin/members").then((response) => response.json()),
       fetch("/api/admin/slides").then(async (response) => {
         const result = await response.json();
         if (response.ok && Array.isArray(result.slides) && result.slides.length) return result;
         const fallbackResponse = await fetch(`/api/slides?t=${Date.now()}`, { cache: "no-store" });
         return fallbackResponse.json();
       }),
-    ]).then(([campaignResult, applicationResult, slideResult]) => {
+    ]).then(([campaignResult, applicationResult, memberResult, slideResult]) => {
       setCampaigns(campaignResult.campaigns || []);
       setApplications(applicationResult.applications || []);
+      setMembers(memberResult.members || []);
       setSlides(Array.isArray(slideResult.slides) && slideResult.slides.length ? slideResult.slides : defaultSlides);
       setLoading(false);
     }).catch(() => {
@@ -281,7 +295,7 @@ export default function AdminPage() {
             </>
           )}
 
-          {active === "members" && <Placeholder title="Üyeler" text="Kayıtlı destekçileri, yöneticileri ve kullanıcı yetkilerini buradan yöneteceksin." icon="◎" />}
+          {active === "members" && <MemberManager members={members} loading={loading} />}
           {active === "content" && <Placeholder title="İçerik Yönetimi" text="Ana sayfa metinleri, duyurular, iyilik hikâyeleri ve sık sorulan sorular burada düzenlenecek." icon="▤" />}
 
           {active === "settings" && (
@@ -982,6 +996,63 @@ function SliderManager({ slides, setSlides, showToast }: { slides: Slide[]; setS
       )}
     </>
   );
+}
+
+function MemberManager({ members, loading }: { members: Member[]; loading: boolean }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "confirmed" | "social">("all");
+  const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
+  const visibleMembers = members.filter((member) => {
+    const matchesQuery = !normalizedQuery || `${member.name} ${member.email}`.toLocaleLowerCase("tr-TR").includes(normalizedQuery);
+    const matchesFilter = filter === "all" || (filter === "confirmed" ? member.emailConfirmed : member.provider !== "email");
+    return matchesQuery && matchesFilter;
+  });
+
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>Üyelik merkezi</p><h1>Üyeler</h1><span>Ziyaretçi üyelerini görüntüle ve üyelik durumlarını takip et. Yönetici hesapları bu listeye dahil edilmez.</span></div>
+      </div>
+      <section className={styles.memberStats}>
+        <article><span>Toplam ziyaretçi üye</span><strong>{members.length}</strong><small>Yönetici hesapları hariç</small></article>
+        <article><span>E-postası doğrulanan</span><strong>{members.filter((member) => member.emailConfirmed).length}</strong><small>Güvenli hesap</small></article>
+        <article><span>Sosyal giriş kullanan</span><strong>{members.filter((member) => member.provider !== "email").length}</strong><small>Google veya Facebook</small></article>
+      </section>
+      <section className={styles.card}>
+        <div className={styles.memberToolbar}>
+          <div><strong>Üye listesi</strong><span>{visibleMembers.length} kayıt gösteriliyor</span></div>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="İsim veya e-posta ara..." aria-label="Üye ara" />
+          <select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} aria-label="Üye filtresi">
+            <option value="all">Tüm üyeler</option>
+            <option value="confirmed">Doğrulanmış hesaplar</option>
+            <option value="social">Sosyal giriş kullananlar</option>
+          </select>
+        </div>
+        <div className={styles.memberTableWrap}>
+          <table className={styles.memberTable}>
+            <thead><tr><th>Üye</th><th>Giriş yöntemi</th><th>Durum</th><th>Kayıt tarihi</th><th>Son giriş</th></tr></thead>
+            <tbody>
+              {visibleMembers.map((member) => (
+                <tr key={member.id}>
+                  <td><i>{(member.name || member.email || "Ü").slice(0, 1).toLocaleUpperCase("tr-TR")}</i><span><strong>{member.name || "İsimsiz üye"}</strong><small>{member.email}</small></span></td>
+                  <td><b className={styles.providerBadge}>{member.provider === "google" ? "Google" : member.provider === "facebook" ? "Facebook" : "E-posta"}</b></td>
+                  <td><b className={member.emailConfirmed ? styles.memberConfirmed : styles.memberPending}>{member.emailConfirmed ? "✓ Doğrulandı" : "Doğrulama bekliyor"}</b></td>
+                  <td>{formatDate(member.createdAt)}</td>
+                  <td>{member.lastSignInAt ? formatDate(member.lastSignInAt) : "Henüz giriş yok"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && visibleMembers.length === 0 && <div className={styles.memberEmpty}><span>◎</span><strong>Üye bulunamadı</strong><p>{members.length ? "Arama veya filtre ölçütlerini değiştirin." : "Ziyaretçiler üye oldukça kayıtları burada görünecek."}</p></div>}
+          {loading && <div className={styles.memberEmpty}><strong>Üyeler yükleniyor...</strong></div>}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function formatMoney(value: number) {
