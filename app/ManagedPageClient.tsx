@@ -33,8 +33,7 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
               <div className="desktop-dropdown" key={item.id}>
                 <button type="button">{item.title} <span>⌄</span></button>
                 <div className="desktop-dropdown-panel">
-                  <small>{item.title.toLocaleUpperCase("tr-TR")}</small>
-                  {pages.filter((child) => child.parentId === item.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}<span>→</span></Link>)}
+                  {pages.filter((child) => child.parentId === item.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}</Link>)}
                 </div>
               </div>
             ) : <Link className={item.slug === page.slug ? "is-current" : ""} href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}
