@@ -51,6 +51,12 @@ export type HeaderSettings = {
   mobileMenuTextColor: string;
   mobileMenuAccentColor: string;
   mobileMenuFontSize: number;
+  mobileMenuTitleColor: string;
+  mobileMenuTitleSize: number;
+  mobileMenuDescriptionColor: string;
+  mobileMenuDescriptionSize: number;
+  mobileMenuActiveTextColor: string;
+  mobileMenuActiveBorderColor: string;
   mobileMenuFontWeight: number;
   mobileMenuGap: number;
   mobileMenuShowNumbers: boolean;
@@ -116,6 +122,12 @@ export const defaultHeaderSettings: HeaderSettings = {
   mobileMenuTextColor: "#173b35",
   mobileMenuAccentColor: "#ed7048",
   mobileMenuFontSize: 28,
+  mobileMenuTitleColor: "#173b35",
+  mobileMenuTitleSize: 16,
+  mobileMenuDescriptionColor: "#607c76",
+  mobileMenuDescriptionSize: 12,
+  mobileMenuActiveTextColor: "#128465",
+  mobileMenuActiveBorderColor: "#128465",
   mobileMenuFontWeight: 600,
   mobileMenuGap: 9,
   mobileMenuShowNumbers: true,
