@@ -588,7 +588,7 @@ function MobileMenuManager({ showToast }: { showToast: (message: string) => void
       <div className={styles.mobileMenuWorkspace}>
         <aside className={styles.phoneMenuPreview}>
           <div className={styles.phoneSpeaker} />
-          <div className={styles.phoneScreen} style={{ background: settings.mobileMenuBackgroundColor, color: settings.mobileMenuTextColor, "--preview-title-color": settings.mobileMenuTitleColor, "--preview-title-size": `${Math.min(16, settings.mobileMenuTitleSize)}px`, "--preview-description-color": settings.mobileMenuDescriptionColor, "--preview-description-size": `${Math.min(10, settings.mobileMenuDescriptionSize)}px` } as CSSProperties}>
+          <div className={styles.phoneScreen} style={{ background: settings.mobileMenuBackgroundColor, color: settings.mobileMenuTextColor, "--preview-title-color": settings.mobileMenuTitleColor, "--preview-title-size": `${settings.mobileMenuTitleSize}px`, "--preview-description-color": settings.mobileMenuDescriptionColor, "--preview-description-size": `${settings.mobileMenuDescriptionSize}px`, "--preview-gap": `${settings.mobileMenuGap}px`, "--preview-weight": settings.mobileMenuFontWeight } as CSSProperties}>
             <header><strong>MEVCUT HEADER</strong><b>×</b></header>
             <nav>
               {visibleItems.map((item) => <span key={item.id}><small className={styles.phoneIconPreview} style={{ background: item.mobileIconBg || "#4f86df" }}>{mobileIconOptions.find((icon) => icon[0] === item.mobileIcon)?.[1] || "⌂"}</small><em><strong style={{ fontWeight: settings.mobileMenuFontWeight }}>{managedPages.find((page) => page.id === item.sourcePageId)?.title || item.label}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</em><b>›</b></span>)}
