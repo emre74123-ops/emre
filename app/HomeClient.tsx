@@ -65,10 +65,32 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     if (slides.length < 2 || draggingSlider) return;
     const timer = window.setTimeout(() => {
       setSliderAnimated(true);
-      setSliderPosition((position) => position + 1);
+      setSliderPosition((position) => {
+        const safePosition = position <= 0
+          ? slides.length
+          : position >= slides.length + 1
+            ? 1
+            : position;
+        return safePosition + 1;
+      });
     }, 6500);
     return () => window.clearTimeout(timer);
   }, [slides.length, sliderPosition, draggingSlider, timerReset]);
+
+  useEffect(() => {
+    if (slides.length < 2) return;
+    const isBeforeFirst = sliderPosition <= 0;
+    const isAfterLast = sliderPosition >= slides.length + 1;
+    if (!isBeforeFirst && !isAfterLast) return;
+
+    const fallback = window.setTimeout(() => {
+      setSliderAnimated(false);
+      setDragOffset(0);
+      setSliderPosition(isBeforeFirst ? slides.length : 1);
+    }, 550);
+
+    return () => window.clearTimeout(fallback);
+  }, [slides.length, sliderPosition]);
 
   const currentSlide = slides.length
     ? (sliderPosition - 1 + slides.length) % slides.length
@@ -80,7 +102,14 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
   function moveSlider(amount: number) {
     setSliderAnimated(true);
     setDragOffset(0);
-    setSliderPosition((position) => position + amount);
+    setSliderPosition((position) => {
+      const safePosition = position <= 0
+        ? slides.length
+        : position >= slides.length + 1
+          ? 1
+          : position;
+      return safePosition + amount;
+    });
     setTimerReset((value) => value + 1);
   }
 
@@ -120,7 +149,14 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     setSliderAnimated(true);
     setDragOffset(0);
     if (Math.abs(horizontal) >= threshold && Math.abs(horizontal) > Math.abs(vertical)) {
-      setSliderPosition((position) => position + (horizontal < 0 ? 1 : -1));
+      setSliderPosition((position) => {
+        const safePosition = position <= 0
+          ? slides.length
+          : position >= slides.length + 1
+            ? 1
+            : position;
+        return safePosition + (horizontal < 0 ? 1 : -1);
+      });
     }
     setTimerReset((value) => value + 1);
   }
