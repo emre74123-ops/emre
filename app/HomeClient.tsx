@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import Link from "next/link";
 import type { HeaderSettings } from "../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../lib/page-settings";
+import { readCart, writeCart, type CartItem } from "../lib/cart";
+import AccountPanel from "./components/AccountPanel";
+import CartPanel from "./components/CartPanel";
 
 type Slide = {
   id: string;
@@ -67,9 +70,11 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   const [openMobileMenuId, setOpenMobileMenuId] = useState<string | null>(null);
   const [donationOpen, setDonationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState("500");
   const [selectedProject, setSelectedProject] = useState("Genel Destek");
-  const [demoComplete, setDemoComplete] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
   const [slides] = useState<Slide[]>(initialSlides);
   const [sliderPosition, setSliderPosition] = useState(slides.length > 1 ? 1 : 0);
@@ -88,6 +93,18 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
     mobileIconBg: "#4f86df",
     mobileDescription: "",
   }));
+
+  useEffect(() => {
+    const hydrationTimer = window.setTimeout(() => {
+      setCartItems(readCart());
+      setCartHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(hydrationTimer);
+  }, []);
+
+  useEffect(() => {
+    if (cartHydrated) writeCart(cartItems);
+  }, [cartHydrated, cartItems]);
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -237,8 +254,29 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
 
   function openDonation(project = "Genel Destek") {
     setSelectedProject(project);
-    setDemoComplete(false);
     setDonationOpen(true);
+  }
+
+  function addSelectedDonationToCart() {
+    const amount = Number(selectedAmount.replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const id = `${selectedProject}-${amount}`.toLocaleLowerCase("tr-TR").replace(/[^a-z0-9ğüşöçı-]+/gi, "-");
+    setCartItems((current) => {
+      const existing = current.find((item) => item.id === id);
+      return existing
+        ? current.map((item) => item.id === id ? { ...item, quantity: Math.min(99, item.quantity + 1) } : item)
+        : [...current, { id, project: selectedProject, amount, quantity: 1 }];
+    });
+    setDonationOpen(false);
+    setCartOpen(true);
+  }
+
+  function updateCartQuantity(id: string, quantity: number) {
+    if (quantity < 1) {
+      setCartItems((current) => current.filter((item) => item.id !== id));
+      return;
+    }
+    setCartItems((current) => current.map((item) => item.id === id ? { ...item, quantity: Math.min(99, quantity) } : item));
   }
 
   return (
@@ -536,44 +574,39 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
         <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small><span>Demo proje · Gerçek ödeme alınmaz.</span></div>
       </footer>
 
+      <button className="floating-cart-button" type="button" onClick={() => setCartOpen(true)} aria-label={`Sepeti aç, ${cartItems.reduce((count, item) => count + item.quantity, 0)} ürün`}>
+        <span aria-hidden="true">♡</span>
+        <b>Sepetim</b>
+        {cartItems.length > 0 && <i>{cartItems.reduce((count, item) => count + item.quantity, 0)}</i>}
+      </button>
+
       {donationOpen && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setDonationOpen(false)}>
           <section className="support-modal" role="dialog" aria-modal="true" aria-labelledby="support-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="modal-close" type="button" aria-label="Pencereyi kapat" onClick={() => setDonationOpen(false)}>×</button>
-            {!demoComplete ? (
-              <>
-                <span className="modal-badge">GÜVENLİ DEMO</span><h2 id="support-title">İyiliğe ortak ol</h2>
-                <p className="selected-project">{selectedProject}</p>
-                <p>Bu ekran yalnızca bağış akışını göstermek içindir. Kart bilgisi istenmez ve gerçek ödeme alınmaz.</p>
-                <label>Örnek destek tutarı</label>
-                <div className="modal-amounts">
-                  {supportAmounts.map((amount) => <button className={selectedAmount === amount ? "active" : ""} type="button" key={amount} onClick={() => setSelectedAmount(amount)}>{amount} ₺</button>)}
-                </div>
-                <button className="modal-submit" type="button" onClick={() => setDemoComplete(true)}>Demo adımını tamamla <span>→</span></button>
-                <small>Canlı ödeme, gerekli yasal ve güvenlik kontrolleri tamamlandıktan sonra bağlanacaktır.</small>
-              </>
-            ) : (
-              <div className="success-state">
-                <span>✓</span><h2 id="support-title">Teşekkürler!</h2>
-                <p>{selectedAmount} ₺ tutarındaki örnek desteğin başarıyla canlandırıldı. Herhangi bir ödeme yapılmadı.</p>
-                <button className="modal-submit" type="button" onClick={() => setDonationOpen(false)}>Siteye dön</button>
-              </div>
-            )}
+            <span className="modal-badge">BAĞIŞ SEPETİ</span><h2 id="support-title">İyiliğe ortak ol</h2>
+            <p className="selected-project">{selectedProject}</p>
+            <p>Destek tutarını seçerek sepetinize ekleyin. Üyelik zorunlu değildir.</p>
+            <label>Destek tutarı</label>
+            <div className="modal-amounts">
+              {supportAmounts.map((amount) => <button className={selectedAmount === amount ? "active" : ""} type="button" key={amount} onClick={() => setSelectedAmount(amount)}>{amount} ₺</button>)}
+            </div>
+            <button className="modal-submit" type="button" onClick={addSelectedDonationToCart}>Sepete ekle <span>→</span></button>
+            <small>Gerçek ödeme bağlantısı henüz etkin değildir; kart bilgisi alınmaz.</small>
           </section>
         </div>
       )}
 
-      {accountOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setAccountOpen(false)}>
-          <section className="support-modal account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" aria-label="Pencereyi kapat" onClick={() => setAccountOpen(false)}>×</button>
-            <span className="modal-badge">ÇOK YAKINDA</span><h2 id="account-title">Üyelik sistemi</h2>
-            <p>Güvenli üyelik, destek geçmişi ve kişisel bildirimler bir sonraki aşamada bu ekrana bağlanacak.</p>
-            <div className="coming-features"><span>✓ Güvenli giriş</span><span>✓ Destek geçmişi</span><span>✓ Kampanya bildirimleri</span></div>
-            <button className="modal-submit" type="button" onClick={() => setAccountOpen(false)}>Anladım</button>
-          </section>
-        </div>
-      )}
+      <AccountPanel open={accountOpen} onClose={() => setAccountOpen(false)} />
+      <CartPanel
+        open={cartOpen}
+        items={cartItems}
+        onClose={() => setCartOpen(false)}
+        onQuantity={updateCartQuantity}
+        onRemove={(id) => setCartItems((current) => current.filter((item) => item.id !== id))}
+        onClear={() => setCartItems([])}
+        onOpenAccount={() => { setCartOpen(false); setAccountOpen(true); }}
+      />
     </main>
   );
 }
