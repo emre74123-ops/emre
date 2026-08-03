@@ -30,8 +30,7 @@ export async function GET() {
       id: user.id,
       name: String(user.user_metadata?.full_name || user.user_metadata?.name || ""),
       email: user.email || "",
-      provider: user.app_metadata?.provider || "email",
-      providers: Array.isArray(user.app_metadata?.providers) ? user.app_metadata.providers : [],
+      phone: String(user.user_metadata?.phone || user.phone || ""),
       emailConfirmed: Boolean(user.email_confirmed_at),
       createdAt: user.created_at,
       lastSignInAt: user.last_sign_in_at || null,
@@ -43,7 +42,7 @@ export async function GET() {
     summary: {
       total: members.length,
       confirmed: members.filter((member) => member.emailConfirmed).length,
-      social: members.filter((member) => member.provider !== "email").length,
+      withPhone: members.filter((member) => member.phone).length,
     },
   });
 }
