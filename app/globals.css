@@ -268,8 +268,12 @@ footer { background: #071f1d; color: white; padding: 70px max(30px, calc((100% -
 }
 
 @media(max-width:1050px){
-  html,body{width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior-x:none}
+  html,body{width:100%;max-width:100%;overscroll-behavior-x:none}
+  html{overflow-x:hidden}
   body{position:relative}
+  body>main{width:100%;max-width:100%;overflow-x:clip}
+  .site-header-shell.mobile-is-sticky{position:sticky;top:0}
+  .site-header-shell.mobile-not-sticky{position:relative;top:auto}
   .menu-toggle.is-open span:first-child{transform:translateY(6px) rotate(45deg)}.menu-toggle.is-open span:nth-child(2){opacity:0}.menu-toggle.is-open span:last-child{transform:translateY(-6px) rotate(-45deg)}
   .mobile-menu-overlay{position:absolute;z-index:1000;top:100%;right:auto;bottom:auto;left:0;width:100%;height:calc(100vh - 75px);padding:18px max(18px,calc((100% - 720px)/2)) 28px;background:var(--mobile-menu-bg,#f3f7f6);color:var(--mobile-menu-text,#173b35);overflow-y:auto;overscroll-behavior:contain;visibility:hidden;pointer-events:none;opacity:0;transform:translateY(-12px);transition:opacity .25s ease,transform .3s cubic-bezier(.22,.61,.36,1),visibility .25s}
   .mobile-menu-overlay.is-open{visibility:visible;pointer-events:auto;opacity:1;transform:none}.mobile-menu-overlay.is-drawer{top:100%;right:0;left:auto;width:min(90vw,430px);height:calc(100vh - 75px);box-shadow:-18px 20px 55px rgba(0,0,0,.18);transform:translateX(100%)}.mobile-menu-overlay.is-drawer.is-open{transform:none}.mobile-menu-overlay.is-fade{transform:none}
