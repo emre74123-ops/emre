@@ -10,4 +10,3 @@ export default async function Home() {
   const slides = storedSlides.filter((slide) => slide.active);
   return <HomeClient initialSlides={slides} headerSettings={headerSettings} />;
 }
-
