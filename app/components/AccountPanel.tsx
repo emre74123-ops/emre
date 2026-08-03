@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { AsYouType, getCountries, getCountryCallingCode, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
+import { AsYouType, getCountries, getCountryCallingCode, isPossiblePhoneNumber, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { createMemberClient } from "../../lib/supabase/member-browser";
 
 type Mode = "login" | "register" | "reset";
@@ -55,7 +55,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
       setMessage("Telefon numarası 5 ile başlayan 10 haneli bir cep telefonu olmalıdır.");
       return;
     }
-    if (mode === "register" && countryIso !== "TR" && (!parsedPhone || !parsedPhone.isPossible())) {
+    if (mode === "register" && countryIso !== "TR" && !isPossiblePhoneNumber(phoneDigits, countryIso)) {
       setMessage("Lütfen geçerli bir telefon numarası girin.");
       return;
     }
@@ -69,7 +69,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
         email,
         password,
         options: {
-          data: { full_name: name.trim(), phone: parsedPhone?.number || `${selectedCountry.dial}${phoneDigits}` },
+          data: { full_name: name.trim(), phone: (parsedPhone as unknown as { number?: string } | undefined)?.number || `${selectedCountry.dial}${phoneDigits}` },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
         },
       });
