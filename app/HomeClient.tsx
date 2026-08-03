@@ -60,10 +60,16 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const autoplayTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    if (autoplayTimer.current !== null) {
+      window.clearTimeout(autoplayTimer.current);
+      autoplayTimer.current = null;
+    }
     if (slides.length < 2 || draggingSlider) return;
-    const timer = window.setTimeout(() => {
+    autoplayTimer.current = window.setTimeout(() => {
+      autoplayTimer.current = null;
       setSliderAnimated(true);
       setSliderPosition((position) => {
         const safePosition = position <= 0
@@ -74,7 +80,12 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
         return safePosition + 1;
       });
     }, 6500);
-    return () => window.clearTimeout(timer);
+    return () => {
+      if (autoplayTimer.current !== null) {
+        window.clearTimeout(autoplayTimer.current);
+        autoplayTimer.current = null;
+      }
+    };
   }, [slides.length, sliderPosition, draggingSlider, timerReset]);
 
   useEffect(() => {
@@ -99,7 +110,20 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     ? [slides[slides.length - 1], ...slides, slides[0]]
     : slides;
 
+  function clearAutoplayTimer() {
+    if (autoplayTimer.current !== null) {
+      window.clearTimeout(autoplayTimer.current);
+      autoplayTimer.current = null;
+    }
+  }
+
+  function restartAutoplayTimer() {
+    clearAutoplayTimer();
+    setTimerReset((value) => value + 1);
+  }
+
   function moveSlider(amount: number) {
+    restartAutoplayTimer();
     setSliderAnimated(true);
     setDragOffset(0);
     setSliderPosition((position) => {
@@ -110,19 +134,19 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
           : position;
       return safePosition + amount;
     });
-    setTimerReset((value) => value + 1);
   }
 
   function goToSlide(index: number) {
+    restartAutoplayTimer();
     setSliderAnimated(true);
     setDragOffset(0);
     setSliderPosition(index + 1);
-    setTimerReset((value) => value + 1);
   }
 
   function startSliderDrag(event: React.PointerEvent<HTMLDivElement>) {
     if (slides.length < 2) return;
     if ((event.target as HTMLElement).closest(".slider-controls")) return;
+    clearAutoplayTimer();
     dragStart.current = { x: event.clientX, y: event.clientY };
     setSliderAnimated(false);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -158,7 +182,7 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
         return safePosition + (horizontal < 0 ? 1 : -1);
       });
     }
-    setTimerReset((value) => value + 1);
+    restartAutoplayTimer();
   }
 
   function cancelSliderDrag() {
@@ -166,7 +190,7 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     setDraggingSlider(false);
     setSliderAnimated(true);
     setDragOffset(0);
-    setTimerReset((value) => value + 1);
+    restartAutoplayTimer();
   }
 
   function finishSliderTransition() {
@@ -420,3 +444,4 @@ export default function HomeClient({ initialSlides }: { initialSlides: Slide[] }
     </main>
   );
 }
+
