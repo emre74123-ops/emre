@@ -16,6 +16,19 @@ export type HeaderSettings = {
   backgroundColor: string;
   textColor: string;
   accentColor: string;
+  menuDesktopSize: number;
+  menuMobileSize: number;
+  menuFontWeight: number;
+  menuGap: number;
+  menuLetterSpacing: number;
+  menuTextTransform: "none" | "uppercase";
+  menuFontFamily: "sans" | "serif";
+  menuAlignment: "start" | "center" | "end";
+  menuHoverColor: string;
+  menuActiveColor: string;
+  menuUnderlineEnabled: boolean;
+  menuUnderlineColor: string;
+  menuUnderlineThickness: number;
   topBarEnabled: boolean;
   phone: string;
   email: string;
@@ -38,6 +51,19 @@ export const defaultHeaderSettings: HeaderSettings = {
   backgroundColor: "#fffdf8",
   textColor: "#173b35",
   accentColor: "#ed7048",
+  menuDesktopSize: 15,
+  menuMobileSize: 16,
+  menuFontWeight: 700,
+  menuGap: 30,
+  menuLetterSpacing: 0,
+  menuTextTransform: "none",
+  menuFontFamily: "sans",
+  menuAlignment: "center",
+  menuHoverColor: "#ed7048",
+  menuActiveColor: "#128465",
+  menuUnderlineEnabled: true,
+  menuUnderlineColor: "#ed7048",
+  menuUnderlineThickness: 2,
   topBarEnabled: false,
   phone: "",
   email: "merhaba@iyilikadresim.org",
@@ -55,5 +81,3 @@ export const defaultHeaderSettings: HeaderSettings = {
     { id: "contact", label: "İletişim", href: "#iletisim", enabled: true, newTab: false },
   ],
 };
-
-
