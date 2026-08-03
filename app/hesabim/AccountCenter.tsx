@@ -38,6 +38,8 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [password, setPassword] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openMobilePageId, setOpenMobilePageId] = useState("");
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("bolum") as Section | null;
@@ -89,7 +91,7 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
 
   return (
     <main className="account-center" style={{ "--account-accent": settings.accountPageAccentColor } as CSSProperties}>
-      <div className={`site-header-shell account-site-header${settings.sticky ? " is-sticky" : ""}`} style={{
+      <div className={`site-header-shell account-site-header${settings.sticky ? " is-sticky" : ""}${settings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}`} style={{
         "--header-bg": settings.backgroundColor,
         "--header-text": settings.textColor,
         "--header-accent": settings.accentColor,
@@ -97,12 +99,18 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
         "--menu-weight": settings.menuFontWeight,
         "--menu-gap": `${settings.menuGap}px`,
         "--menu-hover": settings.menuHoverColor,
+        "--mobile-menu-bg": settings.mobileMenuBackgroundColor,
+        "--mobile-menu-text": settings.mobileMenuTextColor,
+        "--mobile-menu-accent": settings.mobileMenuAccentColor,
       } as CSSProperties}>
         <header className="site-header">
           <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
             {settings.logoUrl ? <img className="brand-logo" src={settings.logoUrl} alt={settings.logoAlt} /> : <span className="brand-symbol"><i>i</i><b>a</b></span>}
             {settings.showBrandText && <span className="brand-copy"><strong>{settings.brandName}</strong><small>{settings.brandTagline}</small></span>}
           </Link>
+          <button className={`menu-toggle${mobileMenuOpen ? " is-open" : ""}`} type="button" aria-label="Menüyü aç veya kapat" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((value) => !value)}>
+            <span /><span /><span />
+          </button>
           <nav className="main-nav desktop-page-nav" aria-label="Ana menü">
             {menuPages.map((item) => item.menuType === "dropdown" ? (
               <div className="desktop-dropdown" key={item.id}>
@@ -116,6 +124,36 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
             {settings.supportEnabled && <Link className="donate-button compact" href={settings.supportHref}>{settings.supportLabel} <span>↗</span></Link>}
           </div>
         </header>
+        <div className={`mobile-menu-overlay account-mobile-menu ${mobileMenuOpen ? "is-open" : ""} is-dropdown`} aria-hidden={!mobileMenuOpen}>
+          <div className="mobile-menu-body">
+            <nav aria-label="Mobil menü">
+              {menuPages.map((item) => {
+                const children = item.menuType === "dropdown" ? pages.filter((child) => child.parentId === item.id && child.enabled) : [];
+                return (
+                  <div className={`mobile-menu-card${openMobilePageId === item.id ? " is-expanded" : ""}`} key={item.id}>
+                    {children.length ? (
+                      <button type="button" onClick={() => setOpenMobilePageId((current) => current === item.id ? "" : item.id)}>
+                        <i className="mobile-card-icon" style={{ background: settings.mobileMenuAccentColor }}>◇</i>
+                        <span className="mobile-card-copy"><strong>{item.title}</strong><small>Alt sayfaları görüntüle</small></span><b>{openMobilePageId === item.id ? "−" : "+"}</b>
+                      </button>
+                    ) : (
+                      <Link href={managedPageHref(item)} onClick={() => setMobileMenuOpen(false)}>
+                        <i className="mobile-card-icon" style={{ background: settings.mobileMenuAccentColor }}>◇</i>
+                        <span className="mobile-card-copy"><strong>{item.title}</strong></span><b>›</b>
+                      </Link>
+                    )}
+                    {children.length > 0 && openMobilePageId === item.id && <div className="mobile-submenu">{children.map((child) => <Link href={`/${child.slug}`} key={child.id} onClick={() => setMobileMenuOpen(false)}>{child.title}</Link>)}</div>}
+                  </div>
+                );
+              })}
+            </nav>
+            <div className="mobile-menu-actions">
+              <Link href="/hesabim?bolum=bagislarim" onClick={() => setMobileMenuOpen(false)}>Hesabım</Link>
+              {settings.supportEnabled && <Link href={settings.supportHref} onClick={() => setMobileMenuOpen(false)}>{settings.supportLabel} <span>↗</span></Link>}
+            </div>
+          </div>
+          <div className="mobile-menu-footer"><p>{settings.mobileMenuDescription}</p></div>
+        </div>
       </div>
       <div className="account-center-shell">
         <aside>
