@@ -274,8 +274,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
               <div className="desktop-dropdown" key={page.id}>
                 <button type="button">{page.title} <span>⌄</span></button>
                 <div className="desktop-dropdown-panel">
-                  <small>{page.title.toLocaleUpperCase("tr-TR")}</small>
-                  {managedPages.filter((child) => child.parentId === page.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}<span>→</span></Link>)}
+                  {managedPages.filter((child) => child.parentId === page.id && child.enabled).map((child) => <Link href={`/${child.slug}`} key={child.id}>{child.title}</Link>)}
                 </div>
               </div>
             ) : <Link href={`/${page.slug}`} key={page.id}>{page.title}</Link>)}
