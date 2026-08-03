@@ -361,13 +361,29 @@ function PageManager({ showToast }: { showToast: (message: string) => void }) {
     setPages((current) => current.map((page) => page.id === id ? { ...page, ...patch } : page));
   }
 
-  function addProjectPage() {
-    const title = "Yeni Proje";
+  function addTopLevelPage() {
+    const title = "Yeni Sayfa";
     setPages((current) => [...current, {
       id: crypto.randomUUID(),
       title,
-      slug: `${normalizeSlug(title)}-${current.filter((page) => page.kind === "project").length + 1}`,
+      slug: `${normalizeSlug(title)}-${current.filter((page) => !page.parentId).length + 1}`,
+      kind: "standard",
+      menuType: "direct",
+      parentId: null,
+      enabled: true,
+      locked: false,
+    }]);
+  }
+
+  function addChildPage(parentId: string) {
+    const title = "Yeni Alt Sayfa";
+    setPages((current) => [...current, {
+      id: crypto.randomUUID(),
+      title,
+      slug: `${normalizeSlug(title)}-${current.filter((page) => page.parentId === parentId).length + 1}`,
       kind: "project",
+      menuType: "direct",
+      parentId,
       enabled: true,
       locked: false,
     }]);
@@ -387,16 +403,15 @@ function PageManager({ showToast }: { showToast: (message: string) => void }) {
     showToast("Sayfalar kaydedildi ve yayınlandı.");
   }
 
-  const standards = pages.filter((page) => page.kind === "standard");
-  const projects = pages.filter((page) => page.kind === "project");
+  const mainPages = pages.filter((page) => !page.parentId);
 
   if (loadingPages) return <div className={styles.realEmpty}><span>◌</span><strong>Sayfalar yükleniyor</strong></div>;
 
   return (
     <>
       <div className={styles.pageHeading}>
-        <div><p>WEB SİTESİ</p><h1>Sayfa Yönetimi</h1><span>Gerçek sayfaları ve Projelerimiz açılır menüsünü buradan yönet.</span></div>
-        <button className={styles.primaryButton} type="button" disabled={saving} onClick={savePages}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+        <div><p>WEB SİTESİ</p><h1>Sayfa Yönetimi</h1><span>Her menüyü doğrudan sayfa veya alt sayfalı açılır menü olarak düzenle.</span></div>
+        <div className={styles.pageHeadingActions}><button type="button" onClick={addTopLevelPage}>＋ Yeni Sayfa Oluştur</button><button className={styles.primaryButton} type="button" disabled={saving} onClick={savePages}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button></div>
       </div>
 
       <div className={styles.pageStructureInfo}>
@@ -404,36 +419,39 @@ function PageManager({ showToast }: { showToast: (message: string) => void }) {
         <a href="/biz-kimiz" target="_blank">Örnek sayfayı aç ↗</a>
       </div>
 
-      <section className={`${styles.card} ${styles.pageManagerSection}`}>
-        <div className={styles.cardHeader}><div><h2>Doğrudan açılan sayfalar</h2><p>Header&apos;da tıklandığında kendi adresinde açılır.</p></div></div>
-        <div className={styles.pageRows}>
-          {standards.map((page) => (
-            <article key={page.id}>
-              <span className={styles.pageTypeIcon}>▤</span>
-              <label>Sayfa adı<input value={page.title} onChange={(event) => updatePage(page.id, { title: event.target.value })} /></label>
-              <label>Sayfa adresi<span className={styles.slugInput}><b>/</b><input value={page.slug} onChange={(event) => updatePage(page.id, { slug: normalizeSlug(event.target.value) })} /></span></label>
-              <label className={styles.tinyCheck}><input type="checkbox" checked={page.enabled} onChange={(event) => updatePage(page.id, { enabled: event.target.checked })} /> Header&apos;da göster</label>
-              <a href={`/${page.slug}`} target="_blank">Görüntüle ↗</a>
-            </article>
-          ))}
-        </div>
-      </section>
+      <div className={styles.menuTree}>
+        {mainPages.map((page) => {
+          const children = pages.filter((item) => item.parentId === page.id);
+          return (
+            <section className={`${styles.card} ${styles.menuTreeGroup}`} key={page.id}>
+              <div className={styles.menuTreeHeader}>
+                <span className={styles.pageTypeIcon}>{page.menuType === "dropdown" ? "⌄" : "▤"}</span>
+                <label>Header menü adı<input value={page.title} onChange={(event) => updatePage(page.id, { title: event.target.value })} /></label>
+                <label>Menü davranışı<select value={page.menuType} onChange={(event) => updatePage(page.id, { menuType: event.target.value as ManagedPage["menuType"] })}><option value="direct">Doğrudan sayfa açılsın</option><option value="dropdown">Üzerine gelince alt menü açılsın</option></select></label>
+                <label>Sayfa adresi<span className={styles.slugInput}><b>/</b><input value={page.slug} disabled={page.menuType === "dropdown"} onChange={(event) => updatePage(page.id, { slug: normalizeSlug(event.target.value) })} /></span></label>
+                <label className={styles.tinyCheck}><input type="checkbox" checked={page.enabled} onChange={(event) => updatePage(page.id, { enabled: event.target.checked })} /> Header&apos;da göster</label>
+                <div className={styles.menuTreeActions}>{page.menuType === "direct" && <a href={`/${page.slug}`} target="_blank">Aç ↗</a>}{!page.locked && <button type="button" onClick={() => setPages((current) => current.filter((item) => item.id !== page.id && item.parentId !== page.id))}>Sil</button>}</div>
+              </div>
 
-      <section className={`${styles.card} ${styles.pageManagerSection}`}>
-        <div className={styles.cardHeader}><div><h2>Projelerimiz açılır menüsü</h2><p>Projelerimiz tıklanmaz; fareyle üzerine gelince bu alt sayfalar açılır.</p></div><button type="button" onClick={addProjectPage}>＋ Proje Sayfası Ekle</button></div>
-        <div className={styles.dropdownPreview}><strong>Projelerimiz <span>⌄</span></strong><div>{projects.filter((page) => page.enabled).map((page) => <span key={page.id}>{page.title}<b>→</b></span>)}</div></div>
-        <div className={styles.pageRows}>
-          {projects.map((page) => (
-            <article key={page.id}>
-              <span className={styles.pageTypeIcon}>◇</span>
-              <label>Proje sayfası adı<input value={page.title} onChange={(event) => updatePage(page.id, { title: event.target.value, slug: normalizeSlug(event.target.value) })} /></label>
-              <label>Sayfa adresi<span className={styles.slugInput}><b>/</b><input value={page.slug} onChange={(event) => updatePage(page.id, { slug: normalizeSlug(event.target.value) })} /></span></label>
-              <label className={styles.tinyCheck}><input type="checkbox" checked={page.enabled} onChange={(event) => updatePage(page.id, { enabled: event.target.checked })} /> Menüde göster</label>
-              <div><a href={`/${page.slug}`} target="_blank">Aç ↗</a><button type="button" onClick={() => setPages((current) => current.filter((item) => item.id !== page.id))}>Sil</button></div>
-            </article>
-          ))}
-        </div>
-      </section>
+              {page.menuType === "dropdown" && (
+                <div className={styles.childPages}>
+                  <div><strong>Alt sayfalar</strong><span>Fareyle menünün üzerine gelindiğinde bunlar açılır.</span><button type="button" onClick={() => addChildPage(page.id)}>＋ Alt Sayfa Ekle</button></div>
+                  {children.length === 0 && <p>Henüz alt sayfa yok. “Alt Sayfa Ekle” düğmesini kullanabilirsin.</p>}
+                  {children.map((child) => (
+                    <article key={child.id}>
+                      <span>↳</span>
+                      <label>Alt sayfa adı<input value={child.title} onChange={(event) => updatePage(child.id, { title: event.target.value, slug: normalizeSlug(event.target.value) })} /></label>
+                      <label>Sayfa adresi<span className={styles.slugInput}><b>/</b><input value={child.slug} onChange={(event) => updatePage(child.id, { slug: normalizeSlug(event.target.value) })} /></span></label>
+                      <label className={styles.tinyCheck}><input type="checkbox" checked={child.enabled} onChange={(event) => updatePage(child.id, { enabled: event.target.checked })} /> Göster</label>
+                      <div><a href={`/${child.slug}`} target="_blank">Aç ↗</a><button type="button" onClick={() => setPages((current) => current.filter((item) => item.id !== child.id))}>Sil</button></div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </>
   );
 }
