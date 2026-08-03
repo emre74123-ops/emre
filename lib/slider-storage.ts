@@ -5,6 +5,21 @@ const bucket = "slider-images";
 const settingsPath = "settings/homepage-slides.json";
 
 export async function readStoredSlides(): Promise<Slide[]> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+    try {
+      const response = await fetch("https://www.iyilikadresim.org/api/slides", {
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const slides = await response.json();
+        if (Array.isArray(slides) && slides.length) return slides;
+      }
+    } catch {
+      // Yerel önizleme internete erişemiyorsa örnek slaytları göster.
+    }
+    return defaultSlides;
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase.storage.from(bucket).download(settingsPath);
   if (error || !data) return defaultSlides;
@@ -32,4 +47,3 @@ export async function writeStoredSlides(slides: Slide[]) {
   });
   return { error };
 }
-
