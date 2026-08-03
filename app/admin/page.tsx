@@ -142,7 +142,7 @@ export default function AdminPage() {
         <nav className={styles.nav} aria-label="Yönetim paneli menüsü">
           <span className={styles.navLabel}>Yönetim</span>
           {navItems.map(([id, icon, label]) => (
-            <button className={active === id ? styles.activeNav : ""} type="button" key={id} onClick={() => selectSection(id)}>
+            <button className={`${active === id ? styles.activeNav : ""} ${id === "mobileMenu" ? styles.navMobileMenu : ""}`} type="button" key={id} onClick={() => selectSection(id)}>
               <i>{icon}</i><span>{label}</span>
               {id === "applications" && applications.length > 0 && <b>{applications.length}</b>}
             </button>
@@ -222,6 +222,7 @@ export default function AdminPage() {
                   <div className={styles.cardHeader}><div><h2>Hızlı işlemler</h2><p>Sık kullanılan işlemler</p></div></div>
                   <div className={styles.quickActions}>
                     <button type="button" onClick={() => setCampaignModal(true)}><i>＋</i><span><strong>Kampanya oluştur</strong><small>Yeni bir yardım kampanyası ekle</small></span><b>›</b></button>
+                    <button type="button" onClick={() => selectSection("mobileMenu")}><i>☰</i><span><strong>Mobil menüyü tasarla</strong><small>Telefona özel menü yönetimi</small></span><b>›</b></button>
                     <button type="button" onClick={() => selectSection("applications")}><i>◫</i><span><strong>Başvuruları incele</strong><small>{applications.length} kayıt bulunuyor</small></span><b>›</b></button>
                     <button type="button" onClick={() => selectSection("content")}><i>▤</i><span><strong>İçerikleri düzenle</strong><small>Ana sayfa ve duyurular</small></span><b>›</b></button>
                     <button type="button" onClick={() => selectSection("settings")}><i>⚙</i><span><strong>Site ayarları</strong><small>Genel görünüm ve bilgiler</small></span><b>›</b></button>
