@@ -17,7 +17,7 @@
 .nav button { min-height:43px; border:0; background:none; color:#94aaa5; display:grid; grid-template-columns:32px 1fr auto; align-items:center; text-align:left; border-radius:5px; padding:0 12px; font-size:11px; font-weight:700; }
 .nav button i { font-style:normal;font-size:17px;color:#6d8c85; }.nav button b { min-width:19px;height:19px;display:grid;place-items:center;border-radius:10px;background:var(--orange);color:white;font-size:8px; }
 .nav button:hover,.nav .activeNav { background:rgba(255,255,255,.08); color:white; }.nav .activeNav i { color:#66c2a5; }
-.navMobileMenu{margin:7px 0 5px!important;border:1px solid rgba(102,194,165,.28)!important;background:rgba(18,132,101,.16)!important;color:#dff8ef!important}.navMobileMenu i{color:#83ddbf!important}.navMobileMenu::after{content:"Ã–ZEL";padding:3px 5px;border-radius:8px;background:var(--orange);color:#fff;font-size:6px;letter-spacing:.7px}
+.navMobileMenu{margin:7px 0 5px!important;border:1px solid rgba(102,194,165,.28)!important;background:rgba(18,132,101,.16)!important;color:#dff8ef!important}.navMobileMenu i{color:#83ddbf!important}.navMobileMenu::after{content:"ÖZEL";padding:3px 5px;border-radius:8px;background:var(--orange);color:#fff;font-size:6px;letter-spacing:.7px}
 .sidebarBottom { margin-top:auto;padding:12px 16px 18px; }
 .demoNotice { display:flex;gap:9px;background:rgba(87,177,148,.1);border:1px solid rgba(87,177,148,.15);padding:12px;border-radius:5px;margin-bottom:14px; }
 .demoNotice>span { width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:#5cb496;color:#062d26;font:italic bold 11px Georgia; }
