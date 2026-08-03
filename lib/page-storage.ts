@@ -1,5 +1,5 @@
 import { createAdminClient } from "./supabase/admin";
-import { defaultManagedPages, type ManagedPage } from "./page-settings";
+import { defaultManagedPages, normalizeManagedPages, type ManagedPage } from "./page-settings";
 
 const bucket = "slider-images";
 const settingsPath = "settings/pages.json";
@@ -11,7 +11,7 @@ export async function readManagedPages(): Promise<ManagedPage[]> {
   if (error || !data) return defaultManagedPages;
   try {
     const parsed = JSON.parse(await data.text());
-    return Array.isArray(parsed) && parsed.length ? parsed : defaultManagedPages;
+    return Array.isArray(parsed) && parsed.length ? normalizeManagedPages(parsed) : defaultManagedPages;
   } catch {
     return defaultManagedPages;
   }
