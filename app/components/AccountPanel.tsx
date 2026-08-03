@@ -2,27 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { AsYouType, getCountries, getCountryCallingCode, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { createMemberClient } from "../../lib/supabase/member-browser";
 
 type Mode = "login" | "register" | "reset";
 
-const countries = [
-  { iso: "TR", flag: "🇹🇷", dial: "+90", name: "Türkiye", placeholder: "501 234 56 78", maxDigits: 10 },
-  { iso: "DE", flag: "🇩🇪", dial: "+49", name: "Almanya", placeholder: "151 23456789", maxDigits: 11 },
-  { iso: "NL", flag: "🇳🇱", dial: "+31", name: "Hollanda", placeholder: "6 12345678", maxDigits: 9 },
-  { iso: "BE", flag: "🇧🇪", dial: "+32", name: "Belçika", placeholder: "470 12 34 56", maxDigits: 9 },
-  { iso: "FR", flag: "🇫🇷", dial: "+33", name: "Fransa", placeholder: "6 12 34 56 78", maxDigits: 9 },
-  { iso: "GB", flag: "🇬🇧", dial: "+44", name: "Birleşik Krallık", placeholder: "7400 123456", maxDigits: 10 },
-  { iso: "US", flag: "🇺🇸", dial: "+1", name: "ABD", placeholder: "555 123 4567", maxDigits: 10 },
-  { iso: "AT", flag: "🇦🇹", dial: "+43", name: "Avusturya", placeholder: "664 1234567", maxDigits: 10 },
-  { iso: "CH", flag: "🇨🇭", dial: "+41", name: "İsviçre", placeholder: "79 123 45 67", maxDigits: 9 },
-  { iso: "AZ", flag: "🇦🇿", dial: "+994", name: "Azerbaycan", placeholder: "50 123 45 67", maxDigits: 9 },
-];
+const countryNames = new Intl.DisplayNames(["tr"], { type: "region" });
+const countries = getCountries()
+  .map((iso) => ({
+    iso,
+    dial: `+${getCountryCallingCode(iso)}`,
+    name: countryNames.of(iso) || iso,
+  }))
+  .sort((a, b) => a.iso === "TR" ? -1 : b.iso === "TR" ? 1 : a.name.localeCompare(b.name, "tr"));
 
-function formatPhoneDigits(value: string, iso: string) {
-  const digits = value.replace(/\D/g, "");
-  if (iso === "TR") return digits.replace(/^(\d{3})(\d{0,3})(\d{0,2})(\d{0,2}).*$/, (_all, a, b, c, d) => [a, b, c, d].filter(Boolean).join(" "));
-  return digits.replace(/(\d{3})(?=\d)/g, "$1 ").trim();
+function flagUrl(iso: string) {
+  return `https://flagcdn.com/w40/${iso.toLowerCase()}.png`;
+}
+
+function formatPhoneDigits(value: string, iso: CountryCode) {
+  return new AsYouType(iso).input(value.replace(/\D/g, ""));
 }
 
 export default function AccountPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -32,11 +31,14 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneDigits, setPhoneDigits] = useState("");
-  const [countryIso, setCountryIso] = useState("TR");
+  const [countryIso, setCountryIso] = useState<CountryCode>("TR");
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [countryQuery, setCountryQuery] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const selectedCountry = countries.find((country) => country.iso === countryIso) || countries[0];
+  const filteredCountries = countries.filter((country) => `${country.name} ${country.iso} ${country.dial}`.toLocaleLowerCase("tr-TR").includes(countryQuery.trim().toLocaleLowerCase("tr-TR")));
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -48,11 +50,12 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    const parsedPhone = mode === "register" ? parsePhoneNumberFromString(phoneDigits, countryIso) : undefined;
     if (mode === "register" && countryIso === "TR" && (!phoneDigits.startsWith("5") || phoneDigits.length !== 10)) {
       setMessage("Telefon numarası 5 ile başlayan 10 haneli bir cep telefonu olmalıdır.");
       return;
     }
-    if (mode === "register" && countryIso !== "TR" && phoneDigits.length < 7) {
+    if (mode === "register" && countryIso !== "TR" && (!parsedPhone || !parsedPhone.isPossible())) {
       setMessage("Lütfen geçerli bir telefon numarası girin.");
       return;
     }
@@ -66,7 +69,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
         email,
         password,
         options: {
-          data: { full_name: name.trim(), phone: `${selectedCountry.dial}${phoneDigits}` },
+          data: { full_name: name.trim(), phone: parsedPhone?.number || `${selectedCountry.dial}${phoneDigits}` },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
         },
       });
@@ -120,23 +123,32 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
                 <div className="phone-field-group">
                   <span>Telefon numarası</span>
                   <div className="phone-country-field">
-                    <label className="country-picker" aria-label="Ülke kodu">
-                      <select value={countryIso} onChange={(event) => { setCountryIso(event.target.value); setPhoneDigits(""); }}>
-                        {countries.map((country) => <option key={country.iso} value={country.iso}>{country.flag} {country.name} ({country.dial})</option>)}
-                      </select>
-                      <b aria-hidden="true">{selectedCountry.flag}</b><i aria-hidden="true">⌄</i>
-                    </label>
+                    <button className="country-picker" type="button" aria-label={`Ülke seç: ${selectedCountry.name}`} aria-expanded={countryOpen} onClick={() => setCountryOpen((value) => !value)}>
+                      <img src={flagUrl(selectedCountry.iso)} alt="" /><i aria-hidden="true">⌄</i>
+                    </button>
                     <strong>{selectedCountry.dial}</strong>
                     <input
                       type="tel"
                       inputMode="numeric"
                       autoComplete="tel-national"
                       aria-label="Telefon numarası"
-                      placeholder={selectedCountry.placeholder}
+                      placeholder={countryIso === "TR" ? "501 234 56 78" : "Telefon Numarası"}
                       required
                       value={formatPhoneDigits(phoneDigits, countryIso)}
-                      onChange={(event) => setPhoneDigits(event.target.value.replace(/\D/g, "").slice(0, selectedCountry.maxDigits))}
+                      onChange={(event) => setPhoneDigits(event.target.value.replace(/\D/g, "").slice(0, 15))}
                     />
+                    {countryOpen && (
+                      <div className="country-dropdown">
+                        <input autoFocus value={countryQuery} onChange={(event) => setCountryQuery(event.target.value)} placeholder="Ülke veya kod ara..." aria-label="Ülke ara" />
+                        <div>
+                          {filteredCountries.map((country) => (
+                            <button key={country.iso} type="button" className={country.iso === countryIso ? "active" : ""} onClick={() => { setCountryIso(country.iso); setPhoneDigits(""); setCountryOpen(false); setCountryQuery(""); }}>
+                              <img src={flagUrl(country.iso)} alt="" /><span>{country.name}</span><b>{country.dial}</b>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
