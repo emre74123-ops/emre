@@ -33,6 +33,10 @@ function formatPhoneDigits(value: string, iso: CountryCode) {
   return new AsYouType(iso).input(value.replace(/\D/g, ""));
 }
 
+function phoneMaxDigits(iso: CountryCode) {
+  return (mobileExamples as Record<string, string>)[iso]?.replace(/\D/g, "").length || 15;
+}
+
 export default function AccountPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const supabase = useMemo(() => createMemberClient(), []);
   const [mode, setMode] = useState<Mode>("login");
@@ -47,6 +51,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const selectedCountry = countries.find((country) => country.iso === countryIso) || countries[0];
+  const selectedCountryMaxDigits = phoneMaxDigits(countryIso);
   const filteredCountries = countries.filter((country) => `${country.name} ${country.iso} ${country.dial}`.toLocaleLowerCase("tr-TR").includes(countryQuery.trim().toLocaleLowerCase("tr-TR")));
 
   useEffect(() => {
@@ -144,7 +149,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
                       placeholder={phonePlaceholder(countryIso, selectedCountry.dial)}
                       required
                       value={formatPhoneDigits(phoneDigits, countryIso)}
-                      onChange={(event) => setPhoneDigits(event.target.value.replace(/\D/g, "").slice(0, 15))}
+                      onChange={(event) => setPhoneDigits(event.target.value.replace(/\D/g, "").slice(0, selectedCountryMaxDigits))}
                     />
                     {countryOpen && (
                       <div className="country-dropdown">
