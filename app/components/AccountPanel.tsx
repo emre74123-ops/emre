@@ -12,6 +12,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -36,7 +37,7 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
         email,
         password,
         options: {
-          data: { full_name: name.trim() },
+          data: { full_name: name.trim(), phone: phone.trim() },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
         },
       });
@@ -48,19 +49,6 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
       setMessage(error ? error.message : "Şifre yenileme bağlantısı e-posta adresinize gönderildi.");
     }
     setLoading(false);
-  }
-
-  async function social(provider: "google" | "facebook") {
-    setLoading(true);
-    setMessage("");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
-    });
-    if (error) {
-      setMessage(`${provider === "google" ? "Google" : "Facebook"} girişi henüz etkin değil: ${error.message}`);
-      setLoading(false);
-    }
   }
 
   async function signOut() {
@@ -86,25 +74,27 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
           </div>
         ) : (
           <>
-            <span className="modal-badge">KOLAY VE GÜVENLİ</span>
-            <h2 id="customer-account-title">{mode === "login" ? "Üye girişi" : mode === "register" ? "Kolayca üye ol" : "Şifreni yenile"}</h2>
-            <p>Üye olmadan da bağış sepetini kullanabilirsiniz. Hesap açmak geçmiş işlemlerinize daha kolay ulaşmanızı sağlar.</p>
             {mode !== "reset" && (
-              <div className="social-login-grid">
-                <button type="button" disabled={loading} onClick={() => social("google")}><b>G</b> Google ile devam et</button>
-                <button type="button" disabled={loading} onClick={() => social("facebook")}><b>f</b> Facebook ile devam et</button>
+              <div className="account-tabs" role="tablist" aria-label="Üyelik işlemleri">
+                <button className={mode === "login" ? "active" : ""} type="button" role="tab" aria-selected={mode === "login"} onClick={() => { setMode("login"); setMessage(""); }}>Giriş Yap</button>
+                <button className={mode === "register" ? "active" : ""} type="button" role="tab" aria-selected={mode === "register"} onClick={() => { setMode("register"); setMessage(""); }}>Üye Ol</button>
               </div>
             )}
-            {mode !== "reset" && <div className="auth-divider"><span>veya e-posta ile</span></div>}
+            <div className="account-form-heading">
+              <h2 id="customer-account-title">{mode === "login" ? "Hoş Geldiniz" : mode === "register" ? "Aramıza Katılın" : "Şifrenizi Yenileyin"}</h2>
+              <p>{mode === "login" ? "Hesabınıza giriş yapın" : mode === "register" ? "Hemen ücretsiz üye olun" : "E-posta adresinize yenileme bağlantısı gönderelim"}</p>
+            </div>
             <form className="customer-auth-form" onSubmit={submit}>
-              {mode === "register" && <label>Adınız ve soyadınız<input autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} /></label>}
-              <label>E-posta adresiniz<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-              {mode !== "reset" && <label>Şifreniz<input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={6} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>}
+              {mode === "register" && <label><span>Ad Soyad</span><input autoComplete="name" placeholder="Ad Soyad" required value={name} onChange={(event) => setName(event.target.value)} /></label>}
+              <label><span>E-posta adresi</span><input type="email" autoComplete="email" placeholder="E-posta Adresi" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+              {mode === "register" && <label><span>Telefon numarası</span><input type="tel" inputMode="tel" autoComplete="tel" placeholder="Telefon Numarası" minLength={10} required value={phone} onChange={(event) => setPhone(event.target.value)} /></label>}
+              {mode !== "reset" && <label><span>Şifre</span><input type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} placeholder="Şifreniz" minLength={6} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>}
               {message && <p className="auth-message" role="status">{message}</p>}
-              <button className="modal-submit" disabled={loading} type="submit">{loading ? "Lütfen bekleyin..." : mode === "login" ? "Giriş yap" : mode === "register" ? "Üyeliği oluştur" : "Yenileme bağlantısı gönder"} <span>→</span></button>
+              <button className="modal-submit account-main-submit" disabled={loading} type="submit">{loading ? "Lütfen bekleyin..." : mode === "login" ? "Giriş Yap" : mode === "register" ? "Üye Ol" : "Yenileme Bağlantısı Gönder"}</button>
             </form>
             <div className="auth-mode-actions">
-              {mode === "login" ? <><button type="button" onClick={() => { setMode("register"); setMessage(""); }}>Hesabın yok mu? Üye ol</button><button type="button" onClick={() => { setMode("reset"); setMessage(""); }}>Şifremi unuttum</button></> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>Zaten hesabın var mı? Giriş yap</button>}
+              {mode === "login" && <button type="button" onClick={() => { setMode("reset"); setMessage(""); }}>🔒 Şifremi Unuttum</button>}
+              {mode === "reset" && <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>← Giriş ekranına dön</button>}
             </div>
           </>
         )}
