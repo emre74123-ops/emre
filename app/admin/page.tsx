@@ -343,7 +343,44 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
 
   useEffect(() => {
     fetch(`/api/admin/header?t=${Date.now()}`, { cache: "no-store" })
-      .then(…295 tokens truncated… setSettings((current) => ({ ...current, logoUrl: result.url }));
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        setSettings(result.settings);
+      })
+      .catch(() => showToast("Header ayarları yüklenemedi."))
+      .finally(() => setLoadingHeader(false));
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    const response = await fetch("/api/admin/header", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    const result = await response.json();
+    setSaving(false);
+    if (!response.ok) {
+      showToast(result.error || "Header ayarları kaydedilemedi.");
+      return;
+    }
+    setSettings(result.settings);
+    showToast("Header ayarları canlı siteye kaydedildi.");
+  }
+
+  async function uploadLogo(file: File) {
+    setUploading(true);
+    const body = new FormData();
+    body.set("file", file);
+    const response = await fetch("/api/admin/header/upload", { method: "POST", body });
+    const result = await response.json();
+    setUploading(false);
+    if (!response.ok) {
+      showToast(result.error || "Logo yüklenemedi.");
+      return;
+    }
+    setSettings((current) => ({ ...current, logoUrl: result.url }));
     showToast("Logo yüklendi. Canlıya almak için ayarları kaydet.");
   }
 
@@ -652,4 +689,3 @@ function Placeholder({ title, text, icon }: { title: string; text: string; icon:
     </>
   );
 }
-
