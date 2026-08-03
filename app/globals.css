@@ -20,8 +20,10 @@ button { cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
 
-.site-header { min-height: 88px; width: min(1240px, calc(100% - 48px)); margin: auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 40px; position: relative; z-index: 50; }
+.site-header-shell{position:relative;z-index:50;background:var(--header-bg,#fffdf8);color:var(--header-text,#173b35);border-bottom:1px solid rgba(23,59,53,.08)}.site-header-shell.is-sticky{position:sticky;top:0}.header-contact-bar{background:var(--header-text,#173b35);color:white}.header-contact-bar>div{width:min(1240px,calc(100% - 48px));min-height:32px;margin:auto;display:flex;align-items:center;justify-content:space-between;font-size:10px}.header-contact-bar p{display:flex;gap:22px;margin:0}.header-contact-bar a{color:inherit}
+.site-header { min-height: 88px; width: min(1240px, calc(100% - 48px)); margin: auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 40px; position: relative; }
 .brand { display: flex; align-items: center; gap: 10px; }
+.brand-logo{display:block;width:auto;height:60px;max-width:220px;object-fit:contain}
 .brand-symbol { width: 46px; height: 46px; position: relative; display: block; }
 .brand-symbol::before, .brand-symbol::after { content: ""; position: absolute; border-radius: 50% 50% 45% 55%; }
 .brand-symbol::before { inset: 1px 13px 13px 1px; background: var(--green); transform: rotate(-12deg); }
@@ -31,15 +33,15 @@ img { display: block; max-width: 100%; }
 .brand-symbol b { right: 8px; bottom: 7px; font-weight: 500; }
 .brand-copy { display: flex; flex-direction: column; line-height: .9; }
 .brand-copy strong { font-family: Georgia, serif; font-size: 20px; letter-spacing: -.4px; }
-.brand-copy small { color: var(--orange); font-size: 11px; font-weight: 800; letter-spacing: 2.7px; text-transform: uppercase; margin-top: 5px; }
+.brand-copy small { color: var(--header-accent,var(--orange)); font-size: 11px; font-weight: 800; letter-spacing: 2.7px; text-transform: uppercase; margin-top: 5px; }
 .main-nav { justify-self: center; display: flex; align-items: center; gap: 27px; font-size: 12px; font-weight: 700; }
 .main-nav a { padding: 35px 0; position: relative; }
-.main-nav a::after { content: ""; position: absolute; height: 2px; left: 50%; right: 50%; bottom: 25px; background: var(--orange); transition: .2s; }
+.main-nav a::after { content: ""; position: absolute; height: 2px; left: 50%; right: 50%; bottom: 25px; background: var(--header-accent,var(--orange)); transition: .2s; }
 .main-nav a:hover::after { left: 0; right: 0; }
 .header-actions { display: flex; align-items: center; gap: 15px; }
 .account-button { border: 0; background: none; font-size: 12px; font-weight: 750; padding: 12px 4px; }
 .account-button span { font-size: 20px; vertical-align: -2px; margin-right: 4px; }
-.donate-button { border: 0; background: var(--orange); color: white; min-height: 56px; padding: 0 25px; display: inline-flex; align-items: center; justify-content: space-between; gap: 35px; font-weight: 800; font-size: 13px; transition: transform .2s, background .2s; box-shadow: 0 12px 30px rgba(238,112,71,.25); }
+.donate-button { border: 0; background: var(--header-accent,var(--orange)); color: white; min-height: 56px; padding: 0 25px; display: inline-flex; align-items: center; justify-content: space-between; gap: 35px; font-weight: 800; font-size: 13px; transition: transform .2s, background .2s; box-shadow: 0 12px 30px rgba(238,112,71,.25); }
 .donate-button:hover { transform: translateY(-2px); background: #dc603b; }
 .donate-button.compact { min-height: 45px; padding: 0 18px; gap: 22px; }
 .menu-toggle { display: none; border: 0; background: none; padding: 8px; }
@@ -204,6 +206,7 @@ footer { background: #071f1d; color: white; padding: 70px max(30px, calc((100% -
 
 @media (max-width: 780px) {
   .site-header { min-height: 75px; width: calc(100% - 30px); }
+  .brand-logo{height:50px;max-width:175px}.header-contact-bar>div{width:calc(100% - 30px);min-height:29px}.header-contact-bar>div>span{display:none}.header-contact-bar p{width:100%;justify-content:center;gap:14px;font-size:9px}
   .brand-symbol { width: 40px; height: 40px; }
   .hero { width: 100%; margin-bottom: 45px; }
   .hero-image { min-height:0; aspect-ratio:6 / 7; align-items: flex-end; background-position: 60% center; }
