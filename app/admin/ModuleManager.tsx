@@ -174,40 +174,44 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
 
           {tab === "desktop" ? <>
             <div className={styles.moduleEditorGrid}>
-              <div className={styles.moduleControls}>
-                <h3>Web tasarımı</h3>
-                <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
-                <label>Kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="60" max="500" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
-                <label>Kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="60" max="500" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
-                <p className={styles.moduleHint}>Genişlik ve yüksekliği eşit yaparsanız kare; yüksekliği artırırsanız dikey; genişliği artırırsanız yatay kart oluşur.</p>
-                <label>Kartlar arası boşluk <b>{donation.desktopCardGap} px</b><input type="range" min="0" max="60" value={donation.desktopCardGap} onChange={(event) => update({ desktopCardGap: Number(event.target.value) })} /></label>
-                <label>Bağış alanıyla mesafe <b>{donation.desktopContentGap} px</b><input type="range" min="0" max="120" value={donation.desktopContentGap} onChange={(event) => update({ desktopContentGap: Number(event.target.value) })} /></label>
-                <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
-                <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
-                <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
+              <div className={styles.moduleConfigurationPanel}>
+                <div className={styles.moduleControls}>
+                  <h3>Web Ayarları</h3>
+                  <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
+                  <label>Kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="60" max="500" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
+                  <label>Kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="60" max="500" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
+                  <p className={styles.moduleHint}>Genişlik ve yüksekliği eşit yaparsanız kare; yüksekliği artırırsanız dikey; genişliği artırırsanız yatay kart oluşur.</p>
+                  <label>Kartlar arası boşluk <b>{donation.desktopCardGap} px</b><input type="range" min="0" max="60" value={donation.desktopCardGap} onChange={(event) => update({ desktopCardGap: Number(event.target.value) })} /></label>
+                  <label>Bağış alanıyla mesafe <b>{donation.desktopContentGap} px</b><input type="range" min="0" max="120" value={donation.desktopContentGap} onChange={(event) => update({ desktopContentGap: Number(event.target.value) })} /></label>
+                  <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
+                  <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
+                  <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
+                </div>
+                {gallery("desktop")}
               </div>
               {preview("desktop")}
             </div>
-            {gallery("desktop")}
           </> : null}
 
           {tab === "mobile" ? <>
             <div className={styles.moduleEditorGrid}>
-              <div className={styles.moduleControls}>
-                <h3>Mobil tasarımı</h3>
-                <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
-                <label>Kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="50" max="320" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
-                <label>Kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="50" max="400" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
-                <p className={styles.moduleHint}>Mobil kart da serbest ölçülüdür. Kare, yatay veya dikey görünümü genişlik ve yükseklik değerleriyle belirleyebilirsiniz.</p>
-                <label>Kartlar arası boşluk <b>{donation.mobileCardGap} px</b><input type="range" min="0" max="40" value={donation.mobileCardGap} onChange={(event) => update({ mobileCardGap: Number(event.target.value) })} /></label>
-                <label>Bağış alanıyla mesafe <b>{donation.mobileContentGap} px</b><input type="range" min="0" max="100" value={donation.mobileContentGap} onChange={(event) => update({ mobileContentGap: Number(event.target.value) })} /></label>
-                <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
-                <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
-                <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
+              <div className={styles.moduleConfigurationPanel}>
+                <div className={styles.moduleControls}>
+                  <h3>Mobil Ayarları</h3>
+                  <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
+                  <label>Kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="50" max="320" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
+                  <label>Kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="50" max="400" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
+                  <p className={styles.moduleHint}>Mobil kart da serbest ölçülüdür. Kare, yatay veya dikey görünümü genişlik ve yükseklik değerleriyle belirleyebilirsiniz.</p>
+                  <label>Kartlar arası boşluk <b>{donation.mobileCardGap} px</b><input type="range" min="0" max="40" value={donation.mobileCardGap} onChange={(event) => update({ mobileCardGap: Number(event.target.value) })} /></label>
+                  <label>Bağış alanıyla mesafe <b>{donation.mobileContentGap} px</b><input type="range" min="0" max="100" value={donation.mobileContentGap} onChange={(event) => update({ mobileContentGap: Number(event.target.value) })} /></label>
+                  <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
+                  <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
+                  <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
+                </div>
+                {gallery("mobile")}
               </div>
               {preview("mobile")}
             </div>
-            {gallery("mobile")}
           </> : null}
 
           {tab === "placement" ? <div className={styles.moduleSettingsPane}>
