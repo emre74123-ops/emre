@@ -9,10 +9,16 @@ export type DonationModuleSettings = {
   desktopCardHeight: number;
   mobileCardWidth: number;
   mobileCardHeight: number;
-  cardGap: number;
-  contentGap: number;
-  progressColor: string;
-  progressTrackColor: string;
+  desktopCardGap: number;
+  mobileCardGap: number;
+  desktopContentGap: number;
+  mobileContentGap: number;
+  desktopProgressStartColor: string;
+  desktopProgressEndColor: string;
+  desktopProgressTrackColor: string;
+  mobileProgressStartColor: string;
+  mobileProgressEndColor: string;
+  mobileProgressTrackColor: string;
   visibleCategories: string[];
   placement: "home-after-slider";
   categoryImages: Record<string, { desktop: string; mobile: string }>;
@@ -52,10 +58,16 @@ export const defaultModuleSettings: ModuleSettings = {
     desktopCardHeight: 150,
     mobileCardWidth: 118,
     mobileCardHeight: 115,
-    cardGap: 10,
-    contentGap: 38,
-    progressColor: "#128465",
-    progressTrackColor: "#e1ebe7",
+    desktopCardGap: 10,
+    mobileCardGap: 8,
+    desktopContentGap: 38,
+    mobileContentGap: 30,
+    desktopProgressStartColor: "#128465",
+    desktopProgressEndColor: "#ee7047",
+    desktopProgressTrackColor: "#e1ebe7",
+    mobileProgressStartColor: "#128465",
+    mobileProgressEndColor: "#ee7047",
+    mobileProgressTrackColor: "#e1ebe7",
     visibleCategories: donationCategoryOptions.map(([id]) => id),
     placement: "home-after-slider",
     categoryImages: defaultDonationCategoryImages,

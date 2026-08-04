@@ -14,30 +14,37 @@
 .embedded .moduleShell{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .categoryRail{padding:0 0 10px;border:0;border-radius:0;background:transparent;box-shadow:none}
 .embedded .moduleShell{margin-top:calc(var(--dm-desktop-overlap,28px) * -1)}
-.categoryRail{gap:var(--dm-card-gap,10px)}
+.categoryRail{gap:var(--dm-desktop-card-gap,10px)}
 .categoryRail button{flex-basis:var(--dm-desktop-card-width,190px);min-height:var(--dm-desktop-card-height,150px)}
-.contentGrid{margin-top:var(--dm-content-gap,38px)}
+.contentGrid{margin-top:var(--dm-desktop-content-gap,38px)}
 .categoryScroller:after{display:none}
-.categoryProgress{left:0;right:0;background:var(--dm-progress-track,#e1ebe7)}
-.categoryProgress i{background:var(--dm-progress,#128465)}
+.categoryProgress{left:0;right:0;background:var(--dm-desktop-progress-track,#e1ebe7)}
+.categoryProgress i{background:linear-gradient(90deg,var(--dm-desktop-progress-start,#128465),var(--dm-desktop-progress-end,#ee7047))}
 .categoryProgressBottom{bottom:0}
 
 @media(max-width:640px){
   .embedded .moduleShell{margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0}
   .categoryRail{padding:0 0 10px}
+  .categoryRail{gap:var(--dm-mobile-card-gap,8px)}
   .categoryProgress{left:0;right:0}
+  .categoryProgress{background:var(--dm-mobile-progress-track,#e1ebe7)}
+  .categoryProgress i{background:linear-gradient(90deg,var(--dm-mobile-progress-start,#128465),var(--dm-mobile-progress-end,#ee7047))}
   .categoryRail button{flex-basis:var(--dm-mobile-card-width,118px);min-height:var(--dm-mobile-card-height,115px)}
+  .contentGrid{margin-top:var(--dm-mobile-content-gap,30px)}
   .desktopCategoryImage{display:none}
   .mobileCategoryImage{display:block}
 }
 .forceMobile{padding-top:0}
 .forceMobile .moduleShell{width:100%;margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0;border-radius:0;border-left:0;border-right:0}
 .forceMobile .categoryRail{padding:0 0 10px}
+.forceMobile .categoryRail{gap:var(--dm-mobile-card-gap,8px)}
 .forceMobile .categoryProgress{left:0;right:0}
+.forceMobile .categoryProgress{background:var(--dm-mobile-progress-track,#e1ebe7)}
+.forceMobile .categoryProgress i{background:linear-gradient(90deg,var(--dm-mobile-progress-start,#128465),var(--dm-mobile-progress-end,#ee7047))}
 .forceMobile .categoryRail button{flex-basis:var(--dm-mobile-card-width,118px);min-height:var(--dm-mobile-card-height,115px)}
 .forceMobile .desktopCategoryImage{display:none}
 .forceMobile .mobileCategoryImage{display:block}
-.forceMobile .contentGrid{margin-top:30px}
+.forceMobile .contentGrid{margin-top:var(--dm-mobile-content-gap,30px)}
 .forceMobile .sectionHeading{align-items:center;padding:0 4px}
 .forceMobile .sectionHeading h2{font-size:30px}
 .forceMobile .carouselActions p{display:none}

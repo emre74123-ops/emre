@@ -883,16 +883,16 @@ function LegacyModuleManager({ showToast }: { showToast: (message: string) => vo
             <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Otomatik kaydır</label>
             <label className={styles.headerCheck}><input type="checkbox" checked={donation.showProgress} onChange={(event) => update({ showProgress: event.target.checked })} /> İlerleme çizgisini göster</label>
             <label>Kaydırma hızı <b>{donation.autoScrollSpeed.toFixed(2)}×</b><input type="range" min=".25" max="4" step=".25" value={donation.autoScrollSpeed} onChange={(event) => update({ autoScrollSpeed: Number(event.target.value) })} /></label>
-            <label>Kartlar arası boşluk <b>{donation.cardGap} px</b><input type="range" min="0" max="40" value={donation.cardGap} onChange={(event) => update({ cardGap: Number(event.target.value) })} /></label>
+            <label>Kartlar arası boşluk <b>{donation.desktopCardGap} px</b><input type="range" min="0" max="40" value={donation.desktopCardGap} onChange={(event) => update({ desktopCardGap: Number(event.target.value) })} /></label>
             <label>Web slider bindirmesi <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
             <label>Mobil slider bindirmesi <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
             <label>Web kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="120" max="320" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
             <label>Web kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="90" max="280" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
             <label>Mobil kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="80" max="220" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
             <label>Mobil kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="70" max="220" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
-            <label>Bağış alanıyla mesafe <b>{donation.contentGap} px</b><input type="range" min="10" max="100" value={donation.contentGap} onChange={(event) => update({ contentGap: Number(event.target.value) })} /></label>
-            <label>İlerleme rengi<input type="color" value={donation.progressColor} onChange={(event) => update({ progressColor: event.target.value })} /></label>
-            <label>Çizgi zemini<input type="color" value={donation.progressTrackColor} onChange={(event) => update({ progressTrackColor: event.target.value })} /></label>
+            <label>Bağış alanıyla mesafe <b>{donation.desktopContentGap} px</b><input type="range" min="10" max="100" value={donation.desktopContentGap} onChange={(event) => update({ desktopContentGap: Number(event.target.value) })} /></label>
+            <label>İlerleme rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
+            <label>Çizgi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
           </div>
         </section>
 

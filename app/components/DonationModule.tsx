@@ -148,10 +148,16 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-desktop-card-height": `${settings.desktopCardHeight}px`,
         "--dm-mobile-card-width": `${settings.mobileCardWidth}px`,
         "--dm-mobile-card-height": `${settings.mobileCardHeight}px`,
-        "--dm-card-gap": `${settings.cardGap}px`,
-        "--dm-content-gap": `${settings.contentGap}px`,
-        "--dm-progress": settings.progressColor,
-        "--dm-progress-track": settings.progressTrackColor,
+        "--dm-desktop-card-gap": `${settings.desktopCardGap}px`,
+        "--dm-mobile-card-gap": `${settings.mobileCardGap}px`,
+        "--dm-desktop-content-gap": `${settings.desktopContentGap}px`,
+        "--dm-mobile-content-gap": `${settings.mobileContentGap}px`,
+        "--dm-desktop-progress-start": settings.desktopProgressStartColor,
+        "--dm-desktop-progress-end": settings.desktopProgressEndColor,
+        "--dm-desktop-progress-track": settings.desktopProgressTrackColor,
+        "--dm-mobile-progress-start": settings.mobileProgressStartColor,
+        "--dm-mobile-progress-end": settings.mobileProgressEndColor,
+        "--dm-mobile-progress-track": settings.mobileProgressTrackColor,
       } as CSSProperties}
     >
       {!embedded && <div className={styles.previewBar}>

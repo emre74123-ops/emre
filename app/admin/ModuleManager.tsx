@@ -6,8 +6,9 @@ import { defaultModuleSettings, donationCategoryOptions, type ModuleSettings } f
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
-type ModuleTab = "general" | "desktop" | "mobile" | "images" | "placement";
-type GalleryImage = { path: string; url: string; size: number };
+type ModuleTab = "general" | "desktop" | "mobile" | "placement";
+type Device = "desktop" | "mobile";
+type GalleryImage = { path: string; url: string; size: number; device: Device };
 
 export default function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
   const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
@@ -65,15 +66,16 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     update({ visibleCategories: visible ? donation.visibleCategories.filter((item) => item !== id) : [...donation.visibleCategories, id] });
   }
 
-  async function uploadImage(file: File) {
+  async function uploadImage(file: File, device: Device) {
     setUploading(true);
     const body = new FormData();
     body.append("file", file);
+    body.append("device", device);
     const response = await fetch("/api/admin/modules/upload", { method: "POST", body });
     const result = await response.json();
     setUploading(false);
     if (!response.ok) return showToast(result.error || "Görsel yüklenemedi.");
-    setImages((current) => [{ path: result.path, url: result.url, size: file.size }, ...current]);
+    setImages((current) => [{ path: result.path, url: result.url, size: file.size, device }, ...current]);
     showToast("Görsel galeriye eklendi.");
   }
 
@@ -90,7 +92,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     showToast("Görsel silindi.");
   }
 
-  function selectCategoryImage(id: string, device: "desktop" | "mobile", url: string) {
+  function selectCategoryImage(id: string, device: Device, url: string) {
     update({
       categoryImages: {
         ...donation.categoryImages,
@@ -105,6 +107,33 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <div className={styles.modulePreviewViewport}><DonationModule embedded settings={donation} previewDevice={device} /></div>
     </div>
   );
+
+  const gallery = (device: Device) => {
+    const deviceImages = images.filter((image) => image.device === device);
+    const deviceLabel = device === "desktop" ? "Web" : "Mobil";
+    return (
+      <div className={styles.deviceGallery}>
+        <div className={styles.moduleUpload}>
+          <div><h3>{deviceLabel} görsel galerisi</h3><p>Sabit piksel zorunluluğu yoktur. Kart ölçüsünü üstte istediğiniz gibi belirleyin. WebP ve 250 KB altı önerilir.</p></div>
+          <label className={styles.primaryButton}>{uploading ? "Yükleniyor..." : "+ Görsel Yükle"}<input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.svg,image/webp,image/jpeg,image/png,image/svg+xml" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file, device); event.target.value = ""; }} /></label>
+        </div>
+        <div className={styles.deviceCategoryImages}>
+          {donationCategoryOptions.map(([id, label]) => <section className={styles.deviceCategoryImageRow} key={id}>
+            <div><strong>{label}</strong><small>Aktif {deviceLabel.toLocaleLowerCase("tr-TR")} görseli</small></div>
+            <div className={styles.selectedModuleImage}><Image src={donation.categoryImages[id][device]} alt="" fill sizes="180px" /></div>
+            <div className={styles.imageSelectors}>
+              {deviceImages.map((image) => <div key={image.path}>
+                <Image src={image.url} alt={`${deviceLabel} galeri görseli`} fill sizes="90px" />
+                <button type="button" onClick={() => selectCategoryImage(id, device, image.url)}>Seç</button>
+                <button type="button" aria-label="Görseli sil" onClick={() => void deleteImage(image)}>×</button>
+              </div>)}
+            </div>
+          </section>)}
+        </div>
+        {deviceImages.length === 0 ? <div className={styles.emptyModuleGallery}>Bu bölümde henüz özel görsel yok. Mevcut örnek görseller kullanılmaya devam ediyor.</div> : null}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -125,7 +154,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
 
         {expanded ? <div className={styles.moduleManagerBody}>
           <nav className={styles.moduleTabs} aria-label="Bağış modülü ayar bölümleri">
-            {([["general", "Genel"], ["desktop", "Web"], ["mobile", "Mobil"], ["images", "Görseller"], ["placement", "Yerleşim"]] as const).map(([id, label]) => (
+            {([["general", "Genel"], ["desktop", "Web"], ["mobile", "Mobil"], ["placement", "Yerleşim"]] as const).map(([id, label]) => (
               <button className={tab === id ? styles.activeModuleTab : ""} type="button" key={id} onClick={() => setTab(id)}>{label}</button>
             ))}
           </nav>
@@ -143,53 +172,43 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <div className={styles.moduleInformation}><strong>01</strong><h3>Bağış Modülü</h3><p>Web ve mobil tasarımları ayrı ayrı yönetilir. Değişiklikler kaydetmeden önce ilgili canlı görünümde izlenebilir.</p></div>
           </div> : null}
 
-          {tab === "desktop" ? <div className={styles.moduleEditorGrid}>
-            <div className={styles.moduleControls}>
-              <h3>Web tasarımı</h3>
-              <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
-              <label>Kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="120" max="320" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
-              <label>Kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="90" max="280" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
-              <label>Kartlar arası boşluk <b>{donation.cardGap} px</b><input type="range" min="0" max="40" value={donation.cardGap} onChange={(event) => update({ cardGap: Number(event.target.value) })} /></label>
-              <label>Bağış alanıyla mesafe <b>{donation.contentGap} px</b><input type="range" min="10" max="100" value={donation.contentGap} onChange={(event) => update({ contentGap: Number(event.target.value) })} /></label>
-              <label>İlerleme rengi<input type="color" value={donation.progressColor} onChange={(event) => update({ progressColor: event.target.value })} /></label>
-              <label>Çizgi zemini<input type="color" value={donation.progressTrackColor} onChange={(event) => update({ progressTrackColor: event.target.value })} /></label>
+          {tab === "desktop" ? <>
+            <div className={styles.moduleEditorGrid}>
+              <div className={styles.moduleControls}>
+                <h3>Web tasarımı</h3>
+                <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
+                <label>Kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="60" max="500" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
+                <label>Kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="60" max="500" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
+                <p className={styles.moduleHint}>Genişlik ve yüksekliği eşit yaparsanız kare; yüksekliği artırırsanız dikey; genişliği artırırsanız yatay kart oluşur.</p>
+                <label>Kartlar arası boşluk <b>{donation.desktopCardGap} px</b><input type="range" min="0" max="60" value={donation.desktopCardGap} onChange={(event) => update({ desktopCardGap: Number(event.target.value) })} /></label>
+                <label>Bağış alanıyla mesafe <b>{donation.desktopContentGap} px</b><input type="range" min="0" max="120" value={donation.desktopContentGap} onChange={(event) => update({ desktopContentGap: Number(event.target.value) })} /></label>
+                <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
+                <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
+                <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
+              </div>
+              {preview("desktop")}
             </div>
-            {preview("desktop")}
-          </div> : null}
+            {gallery("desktop")}
+          </> : null}
 
-          {tab === "mobile" ? <div className={styles.moduleEditorGrid}>
-            <div className={styles.moduleControls}>
-              <h3>Mobil tasarımı</h3>
-              <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
-              <label>Kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="80" max="220" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
-              <label>Kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="70" max="220" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
-              <p className={styles.moduleHint}>Mobil görseller için önerilen ölçü: <strong>420 × 300 px WebP</strong>, tercihen 100 KB altında.</p>
+          {tab === "mobile" ? <>
+            <div className={styles.moduleEditorGrid}>
+              <div className={styles.moduleControls}>
+                <h3>Mobil tasarımı</h3>
+                <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
+                <label>Kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="50" max="320" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
+                <label>Kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="50" max="400" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
+                <p className={styles.moduleHint}>Mobil kart da serbest ölçülüdür. Kare, yatay veya dikey görünümü genişlik ve yükseklik değerleriyle belirleyebilirsiniz.</p>
+                <label>Kartlar arası boşluk <b>{donation.mobileCardGap} px</b><input type="range" min="0" max="40" value={donation.mobileCardGap} onChange={(event) => update({ mobileCardGap: Number(event.target.value) })} /></label>
+                <label>Bağış alanıyla mesafe <b>{donation.mobileContentGap} px</b><input type="range" min="0" max="100" value={donation.mobileContentGap} onChange={(event) => update({ mobileContentGap: Number(event.target.value) })} /></label>
+                <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
+                <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
+                <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
+              </div>
+              {preview("mobile")}
             </div>
-            {preview("mobile")}
-          </div> : null}
-
-          {tab === "images" ? <div className={styles.moduleImagesPane}>
-            <div className={styles.moduleUpload}>
-              <div><h3>Bağış modülü görsel galerisi</h3><p>Web: 600 × 360 px · Mobil: 420 × 300 px · WebP önerilir · En fazla 2 MB</p></div>
-              <label className={styles.primaryButton}>{uploading ? "Yükleniyor..." : "+ Görsel Yükle"}<input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.svg,image/webp,image/jpeg,image/png,image/svg+xml" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file); event.target.value = ""; }} /></label>
-            </div>
-            {donationCategoryOptions.map(([id, label]) => <section className={styles.categoryImageRow} key={id}>
-              <div><strong>{label}</strong><small>Web ve mobil görsellerini ayrı seç.</small></div>
-              {(["desktop", "mobile"] as const).map((device) => <div className={styles.selectedModuleImage} key={device}>
-                <span>{device === "desktop" ? "Web görseli" : "Mobil görseli"}</span>
-                <Image src={donation.categoryImages[id][device]} alt="" fill sizes="180px" />
-              </div>)}
-              {images.length > 0 ? <div className={styles.imageSelectors}>
-                {images.map((image) => <div key={image.path}>
-                  <Image src={image.url} alt="Galeri görseli" fill sizes="90px" />
-                  <button type="button" onClick={() => selectCategoryImage(id, "desktop", image.url)}>Web</button>
-                  <button type="button" onClick={() => selectCategoryImage(id, "mobile", image.url)}>Mobil</button>
-                  <button type="button" aria-label="Görseli sil" onClick={() => void deleteImage(image)}>×</button>
-                </div>)}
-              </div> : null}
-            </section>)}
-            {images.length === 0 ? <div className={styles.emptyModuleGallery}>Henüz özel görsel yüklenmedi. Mevcut örnek görseller kullanılmaya devam ediyor.</div> : null}
-          </div> : null}
+            {gallery("mobile")}
+          </> : null}
 
           {tab === "placement" ? <div className={styles.moduleSettingsPane}>
             <div className={styles.moduleControls}><h3>Yerleşim</h3><label>Gösterileceği sayfa<select value="/" disabled><option>Ana sayfa</option></select></label><label>Konum<select value="after-slider" disabled><option>Sliderın hemen altında</option></select></label><p className={styles.moduleHint}>Yeni sayfa ve modül yerleşimleri oluşturulduğunda bu listeye eklenecek.</p></div>
