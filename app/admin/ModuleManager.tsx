@@ -297,6 +297,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi konumu<select value={donation.desktopProgressPosition} onChange={(event) => update({ desktopProgressPosition: event.target.value as typeof donation.desktopProgressPosition })}><option value="top">Yalnızca üstte</option><option value="bottom">Yalnızca altta</option><option value="both">Üstte ve altta</option></select></label>
+                  <label>Çizgi ile kart aralığı <b>{donation.desktopProgressGap} px</b><input type="range" min="0" max="60" value={donation.desktopProgressGap} onChange={(event) => update({ desktopProgressGap: Number(event.target.value) })} /></label>
+                  <label>Çizgi kalınlığı <b>{donation.desktopProgressThickness} px</b><input type="range" min="1" max="8" value={donation.desktopProgressThickness} onChange={(event) => update({ desktopProgressThickness: Number(event.target.value) })} /></label>
                 </div> : null}
                 {desktopPanel === "gallery" ? gallery("desktop") : null}
               </div>
@@ -319,6 +321,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi konumu<select value={donation.mobileProgressPosition} onChange={(event) => update({ mobileProgressPosition: event.target.value as typeof donation.mobileProgressPosition })}><option value="top">Yalnızca üstte</option><option value="bottom">Yalnızca altta</option><option value="both">Üstte ve altta</option></select></label>
+                  <label>Çizgi ile kart aralığı <b>{donation.mobileProgressGap} px</b><input type="range" min="0" max="50" value={donation.mobileProgressGap} onChange={(event) => update({ mobileProgressGap: Number(event.target.value) })} /></label>
+                  <label>Çizgi kalınlığı <b>{donation.mobileProgressThickness} px</b><input type="range" min="1" max="8" value={donation.mobileProgressThickness} onChange={(event) => update({ mobileProgressThickness: Number(event.target.value) })} /></label>
                 </div> : null}
                 {mobilePanel === "gallery" ? gallery("mobile") : null}
               </div>

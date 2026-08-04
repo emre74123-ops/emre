@@ -144,6 +144,11 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     cardsRef.current?.scrollBy({ left: direction * Math.min(760, cardsRef.current.clientWidth * .82), behavior: "smooth" });
   }
 
+  const desktopTopSpace = settings.desktopProgressPosition === "bottom" ? 0 : settings.desktopProgressGap + settings.desktopProgressThickness;
+  const desktopBottomSpace = settings.desktopProgressPosition === "top" ? 0 : settings.desktopProgressGap + settings.desktopProgressThickness;
+  const mobileTopSpace = settings.mobileProgressPosition === "bottom" ? 0 : settings.mobileProgressGap + settings.mobileProgressThickness;
+  const mobileBottomSpace = settings.mobileProgressPosition === "top" ? 0 : settings.mobileProgressGap + settings.mobileProgressThickness;
+
   return (
     <section
       className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}${previewDevice === "mobile" ? ` ${styles.forceMobile}` : ""}`}
@@ -164,6 +169,12 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-mobile-progress-start": settings.mobileProgressStartColor,
         "--dm-mobile-progress-end": settings.mobileProgressEndColor,
         "--dm-mobile-progress-track": settings.mobileProgressTrackColor,
+        "--dm-desktop-progress-top-space": `${desktopTopSpace}px`,
+        "--dm-desktop-progress-bottom-space": `${desktopBottomSpace}px`,
+        "--dm-mobile-progress-top-space": `${mobileTopSpace}px`,
+        "--dm-mobile-progress-bottom-space": `${mobileBottomSpace}px`,
+        "--dm-desktop-progress-thickness": `${settings.desktopProgressThickness}px`,
+        "--dm-mobile-progress-thickness": `${settings.mobileProgressThickness}px`,
         "--dm-desktop-image-fit": settings.desktopImageFit,
         "--dm-mobile-image-fit": settings.mobileImageFit,
         "--dm-desktop-image-position": settings.desktopImagePosition,
