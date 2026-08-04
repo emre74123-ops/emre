@@ -19,6 +19,8 @@ export type DonationModuleSettings = {
   mobileProgressStartColor: string;
   mobileProgressEndColor: string;
   mobileProgressTrackColor: string;
+  desktopProgressPosition: "top" | "bottom" | "both";
+  mobileProgressPosition: "top" | "bottom" | "both";
   desktopAspectRatio: string;
   mobileAspectRatio: string;
   desktopImageFit: "cover" | "contain";
@@ -84,6 +86,8 @@ export const defaultModuleSettings: ModuleSettings = {
     mobileProgressStartColor: "#128465",
     mobileProgressEndColor: "#ee7047",
     mobileProgressTrackColor: "#e1ebe7",
+    desktopProgressPosition: "bottom",
+    mobileProgressPosition: "bottom",
     desktopAspectRatio: "custom",
     mobileAspectRatio: "custom",
     desktopImageFit: "cover",

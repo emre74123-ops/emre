@@ -59,6 +59,8 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       mobileProgressStartColor: color(source.mobileProgressStartColor, "#128465"),
       mobileProgressEndColor: color(source.mobileProgressEndColor, "#ee7047"),
       mobileProgressTrackColor: color(source.mobileProgressTrackColor, "#e1ebe7"),
+      desktopProgressPosition: choice(source.desktopProgressPosition, ["top", "bottom", "both"], "bottom"),
+      mobileProgressPosition: choice(source.mobileProgressPosition, ["top", "bottom", "both"], "bottom"),
       desktopAspectRatio: choice(source.desktopAspectRatio, ["custom", "1:1", "4:3", "3:2", "16:9", "3:4", "2:3", "9:16"], "custom"),
       mobileAspectRatio: choice(source.mobileAspectRatio, ["custom", "1:1", "4:3", "3:2", "16:9", "3:4", "2:3", "9:16"], "custom"),
       desktopImageFit: choice(source.desktopImageFit, ["cover", "contain"], "cover"),

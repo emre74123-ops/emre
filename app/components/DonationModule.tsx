@@ -211,7 +211,10 @@ export default function DonationModule({ embedded = false, settings = defaultMod
               </button>
             ))}
           </div>
-          {settings.showProgress && <span className={`${styles.categoryProgress} ${styles.categoryProgressBottom}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>}
+          {settings.showProgress ? <>
+            <span className={`${styles.categoryProgress} ${styles.categoryProgressTop}${settings.desktopProgressPosition === "bottom" ? ` ${styles.desktopProgressOff}` : ""}${settings.mobileProgressPosition === "bottom" ? ` ${styles.mobileProgressOff}` : ""}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
+            <span className={`${styles.categoryProgress} ${styles.categoryProgressBottom}${settings.desktopProgressPosition === "top" ? ` ${styles.desktopProgressOff}` : ""}${settings.mobileProgressPosition === "top" ? ` ${styles.mobileProgressOff}` : ""}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
+          </> : null}
         </div>
 
         <div className={styles.contentGrid}>

@@ -21,6 +21,8 @@
 .categoryProgress{left:0;right:0;background:var(--dm-desktop-progress-track,#e1ebe7)}
 .categoryProgress i{background:linear-gradient(90deg,var(--dm-desktop-progress-start,#128465),var(--dm-desktop-progress-end,#ee7047))}
 .categoryProgressBottom{bottom:0}
+.categoryProgressTop{top:0}
+.desktopProgressOff{display:none}
 
 @media(max-width:640px){
   .embedded .moduleShell{margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0}
@@ -35,6 +37,8 @@
   .contentGrid{margin-top:var(--dm-mobile-content-gap,30px)}
   .desktopCategoryImage{display:none}
   .mobileCategoryImage{display:block}
+  .desktopProgressOff{display:block}
+  .mobileProgressOff{display:none}
 }
 .forceMobile{padding-top:0}
 .forceMobile .moduleShell{width:100%;margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0;border-radius:0;border-left:0;border-right:0}
@@ -48,6 +52,8 @@
 .forceMobile .categoryRail button img{object-fit:var(--dm-mobile-image-fit,cover);object-position:var(--dm-mobile-image-position,center)}
 .forceMobile .desktopCategoryImage{display:none}
 .forceMobile .mobileCategoryImage{display:block}
+.forceMobile .desktopProgressOff{display:block}
+.forceMobile .mobileProgressOff{display:none}
 .forceMobile .contentGrid{margin-top:var(--dm-mobile-content-gap,30px)}
 .forceMobile .sectionHeading{align-items:center;padding:0 4px}
 .forceMobile .sectionHeading h2{font-size:30px}

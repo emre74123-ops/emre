@@ -296,6 +296,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
+                  <label>İlerleme çizgisi konumu<select value={donation.desktopProgressPosition} onChange={(event) => update({ desktopProgressPosition: event.target.value as typeof donation.desktopProgressPosition })}><option value="top">Yalnızca üstte</option><option value="bottom">Yalnızca altta</option><option value="both">Üstte ve altta</option></select></label>
                 </div> : null}
                 {desktopPanel === "gallery" ? gallery("desktop") : null}
               </div>
@@ -317,6 +318,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
+                  <label>İlerleme çizgisi konumu<select value={donation.mobileProgressPosition} onChange={(event) => update({ mobileProgressPosition: event.target.value as typeof donation.mobileProgressPosition })}><option value="top">Yalnızca üstte</option><option value="bottom">Yalnızca altta</option><option value="both">Üstte ve altta</option></select></label>
                 </div> : null}
                 {mobilePanel === "gallery" ? gallery("mobile") : null}
               </div>
