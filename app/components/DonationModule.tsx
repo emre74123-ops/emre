@@ -80,6 +80,7 @@ const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY
 
 export default function DonationModule({ embedded = false }: { embedded?: boolean }) {
   const cardsRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
   const [category, setCategory] = useState<Category>("all");
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
@@ -109,6 +110,10 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
     cardsRef.current?.scrollBy({ left: direction * Math.min(760, cardsRef.current.clientWidth * .82), behavior: "smooth" });
   }
 
+  function moveCategories(direction: -1 | 1) {
+    categoriesRef.current?.scrollBy({ left: direction * Math.min(600, categoriesRef.current.clientWidth * .72), behavior: "smooth" });
+  }
+
   return (
     <section className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}`}>
       {!embedded && <div className={styles.previewBar}>
@@ -118,12 +123,17 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
       </div>}
 
       <section className={styles.moduleShell}>
-        <div className={styles.categoryRail} aria-label="Bağış kategorileri">
-          {categories.map((item) => (
-            <button className={category === item.id ? styles.activeCategory : ""} key={item.id} onClick={() => setCategory(item.id)}>
-              <i>{item.icon}</i><span>{item.label}</span>
-            </button>
-          ))}
+        <div className={styles.categoryScroller}>
+          <button className={`${styles.categoryArrow} ${styles.categoryArrowLeft}`} type="button" aria-label="Önceki bağış kategorileri" onClick={() => moveCategories(-1)}>←</button>
+          <div className={styles.categoryRail} aria-label="Bağış kategorileri" ref={categoriesRef}>
+            {categories.map((item) => (
+              <button className={category === item.id ? styles.activeCategory : ""} key={item.id} onClick={() => setCategory(item.id)}>
+                <i>{item.icon}</i><span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+          <button className={`${styles.categoryArrow} ${styles.categoryArrowRight}`} type="button" aria-label="Sonraki bağış kategorileri" onClick={() => moveCategories(1)}>→</button>
+          <span className={styles.swipeHint}>Kaydır <b>↔</b></span>
         </div>
 
         <div className={styles.contentGrid}>
