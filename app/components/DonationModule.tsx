@@ -145,7 +145,6 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
 
       <section className={styles.moduleShell}>
         <div className={styles.categoryScroller}>
-          <span className={`${styles.categoryProgress} ${styles.categoryProgressTop}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
           <div
             className={styles.categoryRail}
             aria-label="Bağış kategorileri"
