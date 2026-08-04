@@ -19,6 +19,22 @@ export type DonationModuleSettings = {
   mobileProgressStartColor: string;
   mobileProgressEndColor: string;
   mobileProgressTrackColor: string;
+  desktopAspectRatio: string;
+  mobileAspectRatio: string;
+  desktopImageFit: "cover" | "contain";
+  mobileImageFit: "cover" | "contain";
+  desktopImagePosition: string;
+  mobileImagePosition: string;
+  desktopBorderRadius: number;
+  mobileBorderRadius: number;
+  desktopBorderWidth: number;
+  mobileBorderWidth: number;
+  desktopBorderColor: string;
+  mobileBorderColor: string;
+  desktopShadow: "none" | "soft" | "medium" | "strong";
+  mobileShadow: "none" | "soft" | "medium" | "strong";
+  desktopImageBackgroundColor: string;
+  mobileImageBackgroundColor: string;
   visibleCategories: string[];
   placement: "home-after-slider";
   categoryImages: Record<string, { desktop: string; mobile: string }>;
@@ -68,6 +84,22 @@ export const defaultModuleSettings: ModuleSettings = {
     mobileProgressStartColor: "#128465",
     mobileProgressEndColor: "#ee7047",
     mobileProgressTrackColor: "#e1ebe7",
+    desktopAspectRatio: "custom",
+    mobileAspectRatio: "custom",
+    desktopImageFit: "cover",
+    mobileImageFit: "cover",
+    desktopImagePosition: "center",
+    mobileImagePosition: "center",
+    desktopBorderRadius: 12,
+    mobileBorderRadius: 10,
+    desktopBorderWidth: 0,
+    mobileBorderWidth: 0,
+    desktopBorderColor: "#128465",
+    mobileBorderColor: "#128465",
+    desktopShadow: "soft",
+    mobileShadow: "soft",
+    desktopImageBackgroundColor: "#edf6f2",
+    mobileImageBackgroundColor: "#edf6f2",
     visibleCategories: donationCategoryOptions.map(([id]) => id),
     placement: "home-after-slider",
     categoryImages: defaultDonationCategoryImages,

@@ -17,6 +17,7 @@ const clamp = (value: unknown, min: number, max: number, fallback: number) => {
   return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
 };
 const color = (value: unknown, fallback: string) => /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value) : fallback;
+const choice = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T => allowed.includes(value as T) ? value as T : fallback;
 
 function clean(input: Partial<ModuleSettings>): ModuleSettings {
   const source = input.donation || defaultModuleSettings.donation;
@@ -58,6 +59,22 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       mobileProgressStartColor: color(source.mobileProgressStartColor, "#128465"),
       mobileProgressEndColor: color(source.mobileProgressEndColor, "#ee7047"),
       mobileProgressTrackColor: color(source.mobileProgressTrackColor, "#e1ebe7"),
+      desktopAspectRatio: choice(source.desktopAspectRatio, ["custom", "1:1", "4:3", "3:2", "16:9", "3:4", "2:3", "9:16"], "custom"),
+      mobileAspectRatio: choice(source.mobileAspectRatio, ["custom", "1:1", "4:3", "3:2", "16:9", "3:4", "2:3", "9:16"], "custom"),
+      desktopImageFit: choice(source.desktopImageFit, ["cover", "contain"], "cover"),
+      mobileImageFit: choice(source.mobileImageFit, ["cover", "contain"], "cover"),
+      desktopImagePosition: choice(source.desktopImagePosition, ["center", "top", "bottom", "left", "right"], "center"),
+      mobileImagePosition: choice(source.mobileImagePosition, ["center", "top", "bottom", "left", "right"], "center"),
+      desktopBorderRadius: clamp(source.desktopBorderRadius, 0, 80, 12),
+      mobileBorderRadius: clamp(source.mobileBorderRadius, 0, 80, 10),
+      desktopBorderWidth: clamp(source.desktopBorderWidth, 0, 8, 0),
+      mobileBorderWidth: clamp(source.mobileBorderWidth, 0, 8, 0),
+      desktopBorderColor: color(source.desktopBorderColor, "#128465"),
+      mobileBorderColor: color(source.mobileBorderColor, "#128465"),
+      desktopShadow: choice(source.desktopShadow, ["none", "soft", "medium", "strong"], "soft"),
+      mobileShadow: choice(source.mobileShadow, ["none", "soft", "medium", "strong"], "soft"),
+      desktopImageBackgroundColor: color(source.desktopImageBackgroundColor, "#edf6f2"),
+      mobileImageBackgroundColor: color(source.mobileImageBackgroundColor, "#edf6f2"),
       visibleCategories,
       placement: "home-after-slider",
       categoryImages,

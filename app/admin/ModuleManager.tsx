@@ -18,6 +18,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
   const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const [imageMeta, setImageMeta] = useState<Record<string, { width: number; height: number }>>({});
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -82,7 +83,26 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }
 
   async function deleteImage(image: GalleryImage) {
-    if (!window.confirm("Bu görsel kalıcı olarak silinsin mi?")) return;
+    const usages = donationCategoryOptions.filter(([id]) => donation.categoryImages[id][image.device] === image.url);
+    const usageText = usages.length ? ` Bu görsel ${usages.map(([, label]) => label).join(", ")} kategorilerinde kullanılıyor; bu kategoriler varsayılan görsele dönecek.` : "";
+    if (!window.confirm(`Bu görsel kalıcı olarak silinsin mi?${usageText}`)) return;
+    if (usages.length) {
+      const categoryImages = { ...donation.categoryImages };
+      for (const [id] of usages) {
+        categoryImages[id] = {
+          ...categoryImages[id],
+          [image.device]: defaultModuleSettings.donation.categoryImages[id][image.device],
+        };
+      }
+      const nextSettings = { ...settings, donation: { ...donation, categoryImages } };
+      const settingsResponse = await fetch("/api/admin/modules", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextSettings),
+      });
+      if (!settingsResponse.ok) return showToast("Kullanımdaki görsel güvenle kaldırılamadı.");
+      setSettings(nextSettings);
+    }
     const response = await fetch("/api/admin/modules/images", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -103,6 +123,46 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     });
   }
 
+  const aspectRatios = [
+    ["custom", "Özel"], ["1:1", "1:1 Kare"], ["4:3", "4:3 Yatay"], ["3:2", "3:2 Yatay"],
+    ["16:9", "16:9 Geniş"], ["3:4", "3:4 Dikey"], ["2:3", "2:3 Dikey"], ["9:16", "9:16 Uzun"],
+  ] as const;
+
+  function setAspectRatio(device: Device, ratio: string) {
+    const width = device === "desktop" ? donation.desktopCardWidth : donation.mobileCardWidth;
+    if (ratio === "custom") {
+      update(device === "desktop" ? { desktopAspectRatio: ratio } : { mobileAspectRatio: ratio });
+      return;
+    }
+    const [ratioWidth, ratioHeight] = ratio.split(":").map(Number);
+    const height = Math.round(width * ratioHeight / ratioWidth);
+    update(device === "desktop"
+      ? { desktopAspectRatio: ratio, desktopCardHeight: Math.min(500, Math.max(60, height)) }
+      : { mobileAspectRatio: ratio, mobileCardHeight: Math.min(400, Math.max(50, height)) });
+  }
+
+  function updateImageWidth(device: Device, width: number) {
+    const ratio = device === "desktop" ? donation.desktopAspectRatio : donation.mobileAspectRatio;
+    if (ratio === "custom") {
+      update(device === "desktop" ? { desktopCardWidth: width } : { mobileCardWidth: width });
+      return;
+    }
+    const [ratioWidth, ratioHeight] = ratio.split(":").map(Number);
+    const height = Math.round(width * ratioHeight / ratioWidth);
+    update(device === "desktop"
+      ? { desktopCardWidth: width, desktopCardHeight: Math.min(500, Math.max(60, height)) }
+      : { mobileCardWidth: width, mobileCardHeight: Math.min(400, Math.max(50, height)) });
+  }
+
+  const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  const imageRatio = (width: number, height: number) => {
+    const divisor = (a: number, b: number): number => b ? divisor(b, a % b) : a;
+    const common = divisor(width, height);
+    const ratioWidth = width / common;
+    const ratioHeight = height / common;
+    return ratioWidth <= 20 && ratioHeight <= 20 ? `${ratioWidth}:${ratioHeight}` : (width / height).toFixed(2);
+  };
+
   const preview = (device: "desktop" | "mobile") => (
     <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
       <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlı görünüm" : "Web canlı görünüm"}</div>
@@ -113,26 +173,74 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const gallery = (device: Device) => {
     const deviceImages = images.filter((image) => image.device === device);
     const deviceLabel = device === "desktop" ? "Web" : "Mobil";
+    const aspectRatio = device === "desktop" ? donation.desktopAspectRatio : donation.mobileAspectRatio;
+    const cardWidth = device === "desktop" ? donation.desktopCardWidth : donation.mobileCardWidth;
+    const cardHeight = device === "desktop" ? donation.desktopCardHeight : donation.mobileCardHeight;
+    const cardGap = device === "desktop" ? donation.desktopCardGap : donation.mobileCardGap;
+    const imageFit = device === "desktop" ? donation.desktopImageFit : donation.mobileImageFit;
+    const imagePosition = device === "desktop" ? donation.desktopImagePosition : donation.mobileImagePosition;
+    const borderRadius = device === "desktop" ? donation.desktopBorderRadius : donation.mobileBorderRadius;
+    const borderWidth = device === "desktop" ? donation.desktopBorderWidth : donation.mobileBorderWidth;
+    const borderColor = device === "desktop" ? donation.desktopBorderColor : donation.mobileBorderColor;
+    const shadow = device === "desktop" ? donation.desktopShadow : donation.mobileShadow;
+    const backgroundColor = device === "desktop" ? donation.desktopImageBackgroundColor : donation.mobileImageBackgroundColor;
     return (
       <div className={styles.deviceGallery}>
+        <div className={styles.compactImageSettings}>
+          <div className={styles.compactSettingGroup}>
+            <strong>Boyut ve oran</strong>
+            <label>En-boy oranı<select value={aspectRatio} onChange={(event) => setAspectRatio(device, event.target.value)}>{aspectRatios.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+            <label>Genişlik <b>{cardWidth} px</b><input type="range" min={device === "desktop" ? 60 : 50} max={device === "desktop" ? 500 : 320} value={cardWidth} onChange={(event) => updateImageWidth(device, Number(event.target.value))} /></label>
+            {aspectRatio === "custom" ? <label>Yükseklik <b>{cardHeight} px</b><input type="range" min={device === "desktop" ? 60 : 50} max={device === "desktop" ? 500 : 400} value={cardHeight} onChange={(event) => update(device === "desktop" ? { desktopCardHeight: Number(event.target.value) } : { mobileCardHeight: Number(event.target.value) })} /></label> : <small>Yükseklik otomatik: {cardHeight} px</small>}
+            <label>Görseller arası boşluk <b>{cardGap} px</b><input type="range" min="0" max={device === "desktop" ? 60 : 40} value={cardGap} onChange={(event) => update(device === "desktop" ? { desktopCardGap: Number(event.target.value) } : { mobileCardGap: Number(event.target.value) })} /></label>
+          </div>
+          <div className={styles.compactSettingGroup}>
+            <strong>Yerleşim</strong>
+            <label>Görsel davranışı<select value={imageFit} onChange={(event) => update(device === "desktop" ? { desktopImageFit: event.target.value as "cover" | "contain" } : { mobileImageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
+            <label>Odak noktası<select value={imagePosition} onChange={(event) => update(device === "desktop" ? { desktopImagePosition: event.target.value } : { mobileImagePosition: event.target.value })}><option value="center">Orta</option><option value="top">Üst</option><option value="bottom">Alt</option><option value="left">Sol</option><option value="right">Sağ</option></select></label>
+            <label>Arka plan<input type="color" value={backgroundColor} onChange={(event) => update(device === "desktop" ? { desktopImageBackgroundColor: event.target.value } : { mobileImageBackgroundColor: event.target.value })} /></label>
+          </div>
+          <div className={styles.compactSettingGroup}>
+            <strong>Görünüm</strong>
+            <label>Köşe yuvarlaklığı <b>{borderRadius} px</b><input type="range" min="0" max="80" value={borderRadius} onChange={(event) => update(device === "desktop" ? { desktopBorderRadius: Number(event.target.value) } : { mobileBorderRadius: Number(event.target.value) })} /></label>
+            <label>Çerçeve kalınlığı <b>{borderWidth} px</b><input type="range" min="0" max="8" value={borderWidth} onChange={(event) => update(device === "desktop" ? { desktopBorderWidth: Number(event.target.value) } : { mobileBorderWidth: Number(event.target.value) })} /></label>
+            <label>Çerçeve rengi<input type="color" value={borderColor} onChange={(event) => update(device === "desktop" ? { desktopBorderColor: event.target.value } : { mobileBorderColor: event.target.value })} /></label>
+            <label>Gölge<select value={shadow} onChange={(event) => update(device === "desktop" ? { desktopShadow: event.target.value as typeof donation.desktopShadow } : { mobileShadow: event.target.value as typeof donation.mobileShadow })}><option value="none">Kapalı</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
+          </div>
+        </div>
         <div className={styles.moduleUpload}>
-          <div><h3>{deviceLabel} görsel galerisi</h3><p>Sabit piksel zorunluluğu yoktur. Kart ölçüsünü üstte istediğiniz gibi belirleyin. WebP ve 250 KB altı önerilir.</p></div>
+          <div><h3>{deviceLabel} görsel galerisi</h3><p>WebP önerilir. 250 KB üzerindeki dosyalarda boyut uyarısı gösterilir.</p></div>
           <label className={styles.primaryButton}>{uploading ? "Yükleniyor..." : "+ Görsel Yükle"}<input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.svg,image/webp,image/jpeg,image/png,image/svg+xml" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file, device); event.target.value = ""; }} /></label>
         </div>
-        <div className={styles.deviceCategoryImages}>
+        <div className={styles.compactCategoryAssignments}>
           {donationCategoryOptions.map(([id, label]) => <section className={styles.deviceCategoryImageRow} key={id}>
             <div><strong>{label}</strong><small>Aktif {deviceLabel.toLocaleLowerCase("tr-TR")} görseli</small></div>
             <div className={styles.selectedModuleImage}><Image src={donation.categoryImages[id][device]} alt="" fill sizes="180px" /></div>
-            <div className={styles.imageSelectors}>
-              {deviceImages.map((image) => <div key={image.path}>
-                <Image src={image.url} alt={`${deviceLabel} galeri görseli`} fill sizes="90px" />
-                <button type="button" onClick={() => selectCategoryImage(id, device, image.url)}>Seç</button>
-                <button type="button" aria-label="Görseli sil" onClick={() => void deleteImage(image)}>×</button>
-              </div>)}
-            </div>
+            <select value={donation.categoryImages[id][device]} onChange={(event) => selectCategoryImage(id, device, event.target.value)}>
+              <option value={defaultModuleSettings.donation.categoryImages[id][device]}>Varsayılan görsel</option>
+              {deviceImages.map((image, index) => <option value={image.url} key={image.path}>Galeri görseli {index + 1} · {formatSize(image.size)}</option>)}
+            </select>
           </section>)}
         </div>
-        {deviceImages.length === 0 ? <div className={styles.emptyModuleGallery}>Bu bölümde henüz özel görsel yok. Mevcut örnek görseller kullanılmaya devam ediyor.</div> : null}
+        {deviceImages.length ? <div className={styles.compactGalleryGrid}>
+          {deviceImages.map((image) => {
+            const meta = imageMeta[image.url];
+            const usages = donationCategoryOptions.filter(([id]) => donation.categoryImages[id][device] === image.url);
+            return <article className={styles.compactGalleryCard} key={image.path}>
+              <div>
+                <Image src={image.url} alt={`${deviceLabel} galeri görseli`} fill sizes="130px" onLoad={(event) => {
+                  const element = event.currentTarget;
+                  setImageMeta((current) => current[image.url] ? current : { ...current, [image.url]: { width: element.naturalWidth, height: element.naturalHeight } });
+                }} />
+                {usages.length ? <span>Kullanılıyor</span> : null}
+              </div>
+              <small>{meta ? `${meta.width}×${meta.height} · ${imageRatio(meta.width, meta.height)} · ` : ""}{formatSize(image.size)}</small>
+              {image.size > 250 * 1024 ? <em>Boyut yüksek</em> : null}
+              <p>{usages.length ? usages.map(([, label]) => label).join(", ") : "Kullanılmıyor"}</p>
+              <button type="button" onClick={() => void deleteImage(image)}>Sil</button>
+            </article>;
+          })}
+        </div> : <div className={styles.emptyModuleGallery}>Bu bölümde henüz özel görsel yok. Mevcut örnek görseller kullanılmaya devam ediyor.</div>}
       </div>
     );
   };
@@ -179,15 +287,11 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <div className={styles.moduleConfigurationPanel}>
                 <nav className={styles.deviceSettingsTabs} aria-label="Web ayar bölümleri">
                   <button type="button" className={desktopPanel === "design" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("design")}>Web Tasarımı</button>
-                  <button type="button" className={desktopPanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("gallery")}>Web Görsel Galerisi</button>
+                  <button type="button" className={desktopPanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("gallery")}>Web Görsel Ayarları</button>
                 </nav>
                 {desktopPanel === "design" ? <div className={styles.moduleControls}>
                   <h3>Web Ayarları</h3>
                   <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
-                  <label>Kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="60" max="500" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
-                  <label>Kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="60" max="500" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
-                  <p className={styles.moduleHint}>Genişlik ve yüksekliği eşit yaparsanız kare; yüksekliği artırırsanız dikey; genişliği artırırsanız yatay kart oluşur.</p>
-                  <label>Kartlar arası boşluk <b>{donation.desktopCardGap} px</b><input type="range" min="0" max="60" value={donation.desktopCardGap} onChange={(event) => update({ desktopCardGap: Number(event.target.value) })} /></label>
                   <label>Bağış alanıyla mesafe <b>{donation.desktopContentGap} px</b><input type="range" min="0" max="120" value={donation.desktopContentGap} onChange={(event) => update({ desktopContentGap: Number(event.target.value) })} /></label>
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
@@ -204,15 +308,11 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <div className={styles.moduleConfigurationPanel}>
                 <nav className={styles.deviceSettingsTabs} aria-label="Mobil ayar bölümleri">
                   <button type="button" className={mobilePanel === "design" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("design")}>Mobil Tasarımı</button>
-                  <button type="button" className={mobilePanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("gallery")}>Mobil Görsel Galerisi</button>
+                  <button type="button" className={mobilePanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("gallery")}>Mobil Görsel Ayarları</button>
                 </nav>
                 {mobilePanel === "design" ? <div className={styles.moduleControls}>
                   <h3>Mobil Ayarları</h3>
                   <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
-                  <label>Kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="50" max="320" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
-                  <label>Kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="50" max="400" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
-                  <p className={styles.moduleHint}>Mobil kart da serbest ölçülüdür. Kare, yatay veya dikey görünümü genişlik ve yükseklik değerleriyle belirleyebilirsiniz.</p>
-                  <label>Kartlar arası boşluk <b>{donation.mobileCardGap} px</b><input type="range" min="0" max="40" value={donation.mobileCardGap} onChange={(event) => update({ mobileCardGap: Number(event.target.value) })} /></label>
                   <label>Bağış alanıyla mesafe <b>{donation.mobileContentGap} px</b><input type="range" min="0" max="100" value={donation.mobileContentGap} onChange={(event) => update({ mobileContentGap: Number(event.target.value) })} /></label>
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>

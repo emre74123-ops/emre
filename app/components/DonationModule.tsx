@@ -79,6 +79,12 @@ const projects: Project[] = [
 ];
 
 const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
+const shadowValue = {
+  none: "none",
+  soft: "0 7px 18px rgba(18,60,53,.08)",
+  medium: "0 12px 28px rgba(18,60,53,.16)",
+  strong: "0 18px 38px rgba(18,60,53,.26)",
+} as const;
 
 export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile" }) {
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -158,6 +164,20 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-mobile-progress-start": settings.mobileProgressStartColor,
         "--dm-mobile-progress-end": settings.mobileProgressEndColor,
         "--dm-mobile-progress-track": settings.mobileProgressTrackColor,
+        "--dm-desktop-image-fit": settings.desktopImageFit,
+        "--dm-mobile-image-fit": settings.mobileImageFit,
+        "--dm-desktop-image-position": settings.desktopImagePosition,
+        "--dm-mobile-image-position": settings.mobileImagePosition,
+        "--dm-desktop-radius": `${settings.desktopBorderRadius}px`,
+        "--dm-mobile-radius": `${settings.mobileBorderRadius}px`,
+        "--dm-desktop-border-width": `${settings.desktopBorderWidth}px`,
+        "--dm-mobile-border-width": `${settings.mobileBorderWidth}px`,
+        "--dm-desktop-border-color": settings.desktopBorderColor,
+        "--dm-mobile-border-color": settings.mobileBorderColor,
+        "--dm-desktop-shadow": shadowValue[settings.desktopShadow],
+        "--dm-mobile-shadow": shadowValue[settings.mobileShadow],
+        "--dm-desktop-image-bg": settings.desktopImageBackgroundColor,
+        "--dm-mobile-image-bg": settings.mobileImageBackgroundColor,
       } as CSSProperties}
     >
       {!embedded && <div className={styles.previewBar}>
