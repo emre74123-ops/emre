@@ -9,3 +9,9 @@
 .categoryRail button:hover{transform:translateY(-2px);background:#edf6f2;box-shadow:0 11px 24px rgba(18,60,53,.14)}
 .categoryRail button img{object-fit:cover}
 .categoryRail .activeCategory{border-color:#128465;background:#edf6f2;box-shadow:0 0 0 3px rgba(18,132,101,.14),0 10px 28px rgba(18,60,53,.18)}
+.categoryRail button{min-height:150px}
+
+@media(max-width:640px){
+  .embedded .moduleShell{margin:-10px auto 0}
+  .categoryRail button{flex-basis:118px;min-height:115px}
+}

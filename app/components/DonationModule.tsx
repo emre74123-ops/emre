@@ -19,12 +19,12 @@ type Project = {
 };
 
 const categories: { id: Category; label: string; image: string }[] = [
-  { id: "all", label: "Tüm Bağışlar", image: "/donation-categories/tum-bagislar.svg" },
-  { id: "general", label: "Genel Bağış", image: "/donation-categories/genel-bagis.svg" },
-  { id: "qurban", label: "Kurban ve Akika", image: "/donation-categories/kurban-akika.svg" },
-  { id: "water", label: "Su Kuyusu", image: "/donation-categories/su-kuyusu.svg" },
-  { id: "zakat", label: "Zekât ve Fitre", image: "/donation-categories/zekat-fitre.svg" },
-  { id: "orphan", label: "Yetim Desteği", image: "/donation-categories/yetim-destegi.svg" },
+  { id: "all", label: "Tüm Bağışlar", image: "/donation-categories/tum-bagislar.webp" },
+  { id: "general", label: "Genel Bağış", image: "/donation-categories/genel-bagis.webp" },
+  { id: "qurban", label: "Kurban", image: "/donation-categories/kurban.webp" },
+  { id: "water", label: "Su Kuyusu", image: "/donation-categories/su-kuyusu.webp" },
+  { id: "zakat", label: "Zekât ve Fitre", image: "/donation-categories/zekat-fitre.webp" },
+  { id: "orphan", label: "Yetim Desteği", image: "/donation-categories/yetim-destegi.webp" },
 ];
 
 const projects: Project[] = [
