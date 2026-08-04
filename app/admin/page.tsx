@@ -6,6 +6,7 @@ import styles from "./admin.module.css";
 import { defaultSlides } from "../../lib/slides";
 import { defaultHeaderSettings, type HeaderSettings } from "../../lib/header-settings";
 import { defaultManagedPages, managedPageHref, normalizeSlug, type ManagedPage } from "../../lib/page-settings";
+import { defaultModuleSettings, donationCategoryOptions, type ModuleSettings } from "../../lib/module-settings";
 
 type Campaign = {
   id: string;
@@ -59,6 +60,7 @@ const navItems = [
   ["header", "▰", "Header Yönetimi"],
   ["mobileMenu", "☰", "Mobil Menü Yönetimi"],
   ["slider", "▣", "Slider Yönetimi"],
+  ["modules", "▦", "Modüller"],
   ["campaigns", "◇", "Kampanyalar"],
   ["applications", "◫", "Başvurular"],
   ["members", "◎", "Üyeler"],
@@ -266,6 +268,7 @@ export default function AdminPage() {
           {active === "slider" && <SliderManager slides={slides} setSlides={setSlides} showToast={showToast} />}
           {active === "header" && <HeaderManager showToast={showToast} />}
           {active === "mobileMenu" && <MobileMenuManager showToast={showToast} />}
+          {active === "modules" && <ModuleManager showToast={showToast} />}
 
           {active === "campaigns" && (
             <>
@@ -819,6 +822,87 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
             <label className={styles.headerCheck}><input type="checkbox" checked={settings.topBarEnabled} onChange={(event) => setSettings({ ...settings, topBarEnabled: event.target.checked })} /> Üst iletişim şeridini göster</label>
             <label>Telefon<input value={settings.phone} onChange={(event) => setSettings({ ...settings, phone: event.target.value })} placeholder="+90 5xx xxx xx xx" /></label>
             <label>E-posta<input type="email" value={settings.email} onChange={(event) => setSettings({ ...settings, email: event.target.value })} /></label>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
+
+function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
+  const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/modules", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => result.settings && setSettings({ ...defaultModuleSettings, ...result.settings, donation: { ...defaultModuleSettings.donation, ...result.settings.donation } }))
+      .catch(() => showToast("Modül ayarları yüklenemedi."));
+  }, []);
+
+  const donation = settings.donation;
+  const update = (changes: Partial<typeof donation>) => setSettings((current) => ({
+    ...current,
+    donation: { ...current.donation, ...changes },
+  }));
+
+  async function save() {
+    setSaving(true);
+    const response = await fetch("/api/admin/modules", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    const result = await response.json();
+    setSaving(false);
+    if (!response.ok) return showToast(result.error || "Modül ayarları kaydedilemedi.");
+    setSettings(result.settings);
+    showToast("Modül ayarları canlı siteye kaydedildi.");
+  }
+
+  function toggleCategory(id: string) {
+    const visible = donation.visibleCategories.includes(id);
+    update({ visibleCategories: visible ? donation.visibleCategories.filter((item) => item !== id) : [...donation.visibleCategories, id] });
+  }
+
+  return (
+    <>
+      <div className={styles.pageHeading}>
+        <div><p>Site bileşenleri</p><h1>Modüller</h1><span>Bugünkü ve gelecekte eklenecek site modüllerini tek merkezden yönet.</span></div>
+        <button className={styles.primaryButton} type="button" disabled={saving} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+      </div>
+
+      <div className={styles.demoBanner}><span>▦</span><p><strong>Modül merkezi hazır.</strong>Yeni modüller oluşturulduğunda bu ekranda ayrı yönetim kartları olarak yer alacak.</p></div>
+
+      <div className={styles.settingsGrid}>
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Bağış Modülü</h2><p>Ana sayfadaki kategori ve bağış alanını yönet.</p></div></div>
+          <div className={styles.formGrid}>
+            <label className={`${styles.headerCheck} ${styles.fullField}`}><input type="checkbox" checked={donation.enabled} onChange={(event) => update({ enabled: event.target.checked })} /> Modülü ana sayfada göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Otomatik kaydır</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={donation.showProgress} onChange={(event) => update({ showProgress: event.target.checked })} /> İlerleme çizgisini göster</label>
+            <label>Kaydırma hızı <b>{donation.autoScrollSpeed.toFixed(2)}×</b><input type="range" min=".25" max="4" step=".25" value={donation.autoScrollSpeed} onChange={(event) => update({ autoScrollSpeed: Number(event.target.value) })} /></label>
+            <label>Kartlar arası boşluk <b>{donation.cardGap} px</b><input type="range" min="0" max="40" value={donation.cardGap} onChange={(event) => update({ cardGap: Number(event.target.value) })} /></label>
+            <label>Web slider bindirmesi <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
+            <label>Mobil slider bindirmesi <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
+            <label>Web kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="120" max="320" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
+            <label>Web kart yüksekliği <b>{donation.desktopCardHeight} px</b><input type="range" min="90" max="280" value={donation.desktopCardHeight} onChange={(event) => update({ desktopCardHeight: Number(event.target.value) })} /></label>
+            <label>Mobil kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="80" max="220" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
+            <label>Mobil kart yüksekliği <b>{donation.mobileCardHeight} px</b><input type="range" min="70" max="220" value={donation.mobileCardHeight} onChange={(event) => update({ mobileCardHeight: Number(event.target.value) })} /></label>
+            <label>Bağış alanıyla mesafe <b>{donation.contentGap} px</b><input type="range" min="10" max="100" value={donation.contentGap} onChange={(event) => update({ contentGap: Number(event.target.value) })} /></label>
+            <label>İlerleme rengi<input type="color" value={donation.progressColor} onChange={(event) => update({ progressColor: event.target.value })} /></label>
+            <label>Çizgi zemini<input type="color" value={donation.progressTrackColor} onChange={(event) => update({ progressTrackColor: event.target.value })} /></label>
+          </div>
+        </section>
+
+        <section className={styles.card}>
+          <div className={styles.cardHeader}><div><h2>Kategori kartları</h2><p>Görünecek bağış kategorilerini seç.</p></div></div>
+          <div className={styles.formGrid}>
+            {donationCategoryOptions.map(([id, label]) => (
+              <label className={`${styles.headerCheck} ${styles.fullField}`} key={id}>
+                <input type="checkbox" checked={donation.visibleCategories.includes(id)} onChange={() => toggleCategory(id)} /> {label}
+              </label>
+            ))}
           </div>
         </section>
       </div>

@@ -10,6 +10,7 @@ import CartPanel from "./components/CartPanel";
 import MemberAccountNav from "./components/MemberAccountNav";
 import SiteFooter from "./components/SiteFooter";
 import DonationModule from "./components/DonationModule";
+import type { ModuleSettings } from "../lib/module-settings";
 
 type Slide = {
   id: string;
@@ -68,7 +69,7 @@ function MobileMenuIcon({ name }: { name?: string }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name || "home"] || paths.home}</svg>;
 }
 
-export default function HomeClient({ initialSlides, headerSettings, managedPages }: { initialSlides: Slide[]; headerSettings: HeaderSettings; managedPages: ManagedPage[] }) {
+export default function HomeClient({ initialSlides, headerSettings, managedPages, moduleSettings }: { initialSlides: Slide[]; headerSettings: HeaderSettings; managedPages: ManagedPage[]; moduleSettings: ModuleSettings }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openMobileMenuId, setOpenMobileMenuId] = useState<string | null>(null);
   const [donationOpen, setDonationOpen] = useState(false);
@@ -452,7 +453,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           )}
         </div>
 
-        <DonationModule embedded />
+        {moduleSettings.donation.enabled && <DonationModule embedded settings={moduleSettings.donation} />}
       </section>
 
       <section className="trust-band" aria-label="Platform değerleri">

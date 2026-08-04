@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
+import { defaultModuleSettings, type DonationModuleSettings } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Category = "all" | "general" | "qurban" | "water" | "zakat" | "orphan";
@@ -79,7 +80,7 @@ const projects: Project[] = [
 
 const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
 
-export default function DonationModule({ embedded = false }: { embedded?: boolean }) {
+export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation }: { embedded?: boolean; settings?: DonationModuleSettings }) {
   const cardsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const categoryDirectionRef = useRef<1 | -1>(1);
@@ -90,21 +91,23 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
 
-  const filtered = category === "all" ? projects : projects.filter((project) => project.category === category);
+  const visibleCategories = categories.filter((item) => settings.visibleCategories.includes(item.id));
+  const effectiveCategory = settings.visibleCategories.includes(category) ? category : "all";
+  const filtered = effectiveCategory === "all" ? projects : projects.filter((project) => project.category === effectiveCategory);
 
   useEffect(() => {
     const rail = categoriesRef.current;
     if (!rail) return;
     const timer = window.setInterval(() => {
-      if (categoryPausedRef.current || rail.scrollWidth <= rail.clientWidth) return;
+      if (!settings.autoScroll || categoryPausedRef.current || rail.scrollWidth <= rail.clientWidth) return;
       const max = rail.scrollWidth - rail.clientWidth;
-      const next = rail.scrollLeft + categoryDirectionRef.current;
+      const next = rail.scrollLeft + categoryDirectionRef.current * settings.autoScrollSpeed;
       if (next >= max) categoryDirectionRef.current = -1;
       if (next <= 0) categoryDirectionRef.current = 1;
       rail.scrollLeft = Math.max(0, Math.min(max, next));
     }, 34);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [settings.autoScroll, settings.autoScrollSpeed]);
 
   function updateCategoryProgress() {
     const rail = categoriesRef.current;
@@ -136,7 +139,21 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
   }
 
   return (
-    <section className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}`}>
+    <section
+      className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}`}
+      style={{
+        "--dm-desktop-overlap": `${settings.desktopOverlap}px`,
+        "--dm-mobile-overlap": `${settings.mobileOverlap}px`,
+        "--dm-desktop-card-width": `${settings.desktopCardWidth}px`,
+        "--dm-desktop-card-height": `${settings.desktopCardHeight}px`,
+        "--dm-mobile-card-width": `${settings.mobileCardWidth}px`,
+        "--dm-mobile-card-height": `${settings.mobileCardHeight}px`,
+        "--dm-card-gap": `${settings.cardGap}px`,
+        "--dm-content-gap": `${settings.contentGap}px`,
+        "--dm-progress": settings.progressColor,
+        "--dm-progress-track": settings.progressTrackColor,
+      } as CSSProperties}
+    >
       {!embedded && <div className={styles.previewBar}>
         <span><i /> DENEME ALANI</span>
         <p>Bu sayfada gerçek ödeme alınmaz.</p>
@@ -155,7 +172,7 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
             onPointerCancel={() => { categoryPausedRef.current = false; }}
             onPointerLeave={() => { categoryPausedRef.current = false; }}
           >
-            {categories.map((item) => (
+            {visibleCategories.map((item) => (
               <button
                 className={category === item.id ? styles.activeCategory : ""}
                 key={item.id}
@@ -167,7 +184,7 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
               </button>
             ))}
           </div>
-          <span className={`${styles.categoryProgress} ${styles.categoryProgressBottom}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
+          {settings.showProgress && <span className={`${styles.categoryProgress} ${styles.categoryProgressBottom}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>}
         </div>
 
         <div className={styles.contentGrid}>
