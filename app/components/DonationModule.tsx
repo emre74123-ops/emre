@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
 import styles from "./donation-module.module.css";
 
@@ -80,12 +80,37 @@ const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY
 
 export default function DonationModule({ embedded = false }: { embedded?: boolean }) {
   const cardsRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  const categoryDirectionRef = useRef<1 | -1>(1);
+  const categoryPausedRef = useRef(false);
+  const [categoryProgress, setCategoryProgress] = useState(0);
   const [category, setCategory] = useState<Category>("all");
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
 
   const filtered = category === "all" ? projects : projects.filter((project) => project.category === category);
+
+  useEffect(() => {
+    const rail = categoriesRef.current;
+    if (!rail) return;
+    const timer = window.setInterval(() => {
+      if (categoryPausedRef.current || rail.scrollWidth <= rail.clientWidth) return;
+      const max = rail.scrollWidth - rail.clientWidth;
+      const next = rail.scrollLeft + categoryDirectionRef.current;
+      if (next >= max) categoryDirectionRef.current = -1;
+      if (next <= 0) categoryDirectionRef.current = 1;
+      rail.scrollLeft = Math.max(0, Math.min(max, next));
+    }, 34);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function updateCategoryProgress() {
+    const rail = categoriesRef.current;
+    if (!rail) return;
+    const max = rail.scrollWidth - rail.clientWidth;
+    setCategoryProgress(max > 0 ? Math.min(100, Math.max(0, (rail.scrollLeft / max) * 100)) : 100);
+  }
 
   function addToCart(project: Project) {
     const picked = selected[project.id] ?? project.suggested[0];
@@ -119,14 +144,24 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
 
       <section className={styles.moduleShell}>
         <div className={styles.categoryScroller}>
-          <div className={styles.categoryRail} aria-label="Bağış kategorileri">
+          <span className={`${styles.categoryProgress} ${styles.categoryProgressTop}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
+          <div
+            className={styles.categoryRail}
+            aria-label="Bağış kategorileri"
+            ref={categoriesRef}
+            onScroll={updateCategoryProgress}
+            onPointerDown={() => { categoryPausedRef.current = true; }}
+            onPointerUp={() => { categoryPausedRef.current = false; }}
+            onPointerCancel={() => { categoryPausedRef.current = false; }}
+            onPointerLeave={() => { categoryPausedRef.current = false; }}
+          >
             {categories.map((item) => (
               <button className={category === item.id ? styles.activeCategory : ""} key={item.id} onClick={() => setCategory(item.id)}>
                 <i>{item.icon}</i><span>{item.label}</span>
               </button>
             ))}
           </div>
-          <span className={styles.swipeHint}><i /><b>Sağa sola kaydır</b></span>
+          <span className={`${styles.categoryProgress} ${styles.categoryProgressBottom}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
         </div>
 
         <div className={styles.contentGrid}>
