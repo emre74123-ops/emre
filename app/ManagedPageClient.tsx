@@ -11,8 +11,6 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobilePageId, setOpenMobilePageId] = useState("");
   const menuPages = pages.filter((item) => !item.parentId && item.enabled);
-  const directPages = menuPages.filter((item) => item.menuType === "direct");
-  const childPages = pages.filter((item) => item.parentId && item.enabled);
   const configuredMobileItems = headerSettings.mobileMenuItems.filter((item) => item.enabled && item.sourcePageId);
   const activeMobileItems = configuredMobileItems.length ? configuredMobileItems : menuPages.map((item) => ({
     id: `mobile-${item.id}`, label: item.title, href: managedPageHref(item), enabled: true, newTab: false,
@@ -21,21 +19,37 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
 
   return (
     <main className="managed-page">
-      <div className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}`} style={{
+      <div className={`site-header-shell${headerSettings.sticky ? " is-sticky" : ""}${headerSettings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}${headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) ? " has-contact-bar" : ""}${headerSettings.menuUnderlineEnabled ? "" : " no-menu-underline"}${headerSettings.menuFontFamily === "serif" ? " menu-serif" : ""}`} style={{
         "--header-bg": headerSettings.backgroundColor,
         "--header-text": headerSettings.textColor,
         "--header-accent": headerSettings.accentColor,
         "--menu-desktop-size": `${headerSettings.menuDesktopSize}px`,
+        "--menu-mobile-size": `${headerSettings.menuMobileSize}px`,
         "--menu-weight": headerSettings.menuFontWeight,
         "--menu-gap": `${headerSettings.menuGap}px`,
+        "--menu-letter-spacing": `${headerSettings.menuLetterSpacing}px`,
+        "--menu-transform": headerSettings.menuTextTransform,
+        "--menu-alignment": headerSettings.menuAlignment,
         "--menu-hover": headerSettings.menuHoverColor,
+        "--menu-active": headerSettings.menuActiveColor,
+        "--menu-underline": headerSettings.menuUnderlineColor,
+        "--menu-underline-thickness": `${headerSettings.menuUnderlineThickness}px`,
         "--mobile-menu-bg": headerSettings.mobileMenuBackgroundColor,
         "--mobile-menu-text": headerSettings.mobileMenuTextColor,
         "--mobile-menu-accent": headerSettings.mobileMenuAccentColor,
         "--mobile-menu-size": `${headerSettings.mobileMenuFontSize}px`,
+        "--mobile-title-color": headerSettings.mobileMenuTitleColor,
+        "--mobile-title-size": `${headerSettings.mobileMenuTitleSize}px`,
+        "--mobile-description-color": headerSettings.mobileMenuDescriptionColor,
+        "--mobile-description-size": `${headerSettings.mobileMenuDescriptionSize}px`,
+        "--mobile-active-text": headerSettings.mobileMenuActiveTextColor,
+        "--mobile-active-border": headerSettings.mobileMenuActiveBorderColor,
         "--mobile-menu-weight": headerSettings.mobileMenuFontWeight,
         "--mobile-menu-gap": `${headerSettings.mobileMenuGap}px`,
       } as CSSProperties}>
+        {headerSettings.topBarEnabled && (headerSettings.phone || headerSettings.email) && (
+          <div className="header-contact-bar"><div><span>İyiliğe birlikte ulaşalım</span><p>{headerSettings.phone && <a href={`tel:${headerSettings.phone.replace(/\s/g, "")}`}>{headerSettings.phone}</a>}{headerSettings.email && <a href={`mailto:${headerSettings.email}`}>{headerSettings.email}</a>}</p></div></div>
+        )}
         <header className="site-header">
           <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
             {headerSettings.logoUrl
@@ -111,11 +125,11 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
             <Link className="brand inverted" href="/"><span className="brand-symbol"><i>i</i><b>a</b></span><span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span></Link>
             <p>İyiliğin güvenilir ve şeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a>
           </div>
-          <div><strong>Kurumsal</strong>{directPages.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}</div>
-          <div><strong>Alt Sayfalar</strong>{childPages.map((item) => <Link href={`/${item.slug}`} key={item.id}>{item.title}</Link>)}</div>
-          <div><strong>Bilgilendirme</strong><a href="#">Sık Sorulanlar</a><a href="#">KVKK</a><a href="#">Gizlilik</a></div>
+          <div><strong>Kurumsal</strong><Link href="/#hakkimizda">Hakkımızda</Link><Link href="/#seffaflik">Şeffaflık</Link><Link href="/#iletisim">İletişim</Link></div>
+          <div><strong>Projeler</strong><Link href="/#projeler">Eğitim</Link><Link href="/#projeler">Temiz Su</Link><Link href="/#projeler">Gıda</Link></div>
+          <div><strong>Bilgilendirme</strong><Link href="/#sorular">Sık Sorulanlar</Link><Link href="/#iletisim">KVKK</Link><Link href="/#iletisim">Gizlilik</Link></div>
         </div>
-        <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small></div>
+        <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small><span>Demo proje · Gerçek ödeme alınmaz.</span></div>
       </footer>
     </main>
   );

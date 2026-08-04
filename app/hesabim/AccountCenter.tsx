@@ -97,18 +97,37 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
 
   return (
     <main className="account-center" style={{ "--account-accent": settings.accountPageAccentColor } as CSSProperties}>
-      <div className={`site-header-shell account-site-header${settings.sticky ? " is-sticky" : ""}${settings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}`} style={{
+      <div className={`site-header-shell account-site-header${settings.sticky ? " is-sticky" : ""}${settings.mobileHeaderSticky ? " mobile-is-sticky" : " mobile-not-sticky"}${settings.topBarEnabled && (settings.phone || settings.email) ? " has-contact-bar" : ""}${settings.menuUnderlineEnabled ? "" : " no-menu-underline"}${settings.menuFontFamily === "serif" ? " menu-serif" : ""}`} style={{
         "--header-bg": settings.backgroundColor,
         "--header-text": settings.textColor,
         "--header-accent": settings.accentColor,
         "--menu-desktop-size": `${settings.menuDesktopSize}px`,
+        "--menu-mobile-size": `${settings.menuMobileSize}px`,
         "--menu-weight": settings.menuFontWeight,
         "--menu-gap": `${settings.menuGap}px`,
+        "--menu-letter-spacing": `${settings.menuLetterSpacing}px`,
+        "--menu-transform": settings.menuTextTransform,
+        "--menu-alignment": settings.menuAlignment,
         "--menu-hover": settings.menuHoverColor,
+        "--menu-active": settings.menuActiveColor,
+        "--menu-underline": settings.menuUnderlineColor,
+        "--menu-underline-thickness": `${settings.menuUnderlineThickness}px`,
         "--mobile-menu-bg": settings.mobileMenuBackgroundColor,
         "--mobile-menu-text": settings.mobileMenuTextColor,
         "--mobile-menu-accent": settings.mobileMenuAccentColor,
+        "--mobile-menu-size": `${settings.mobileMenuFontSize}px`,
+        "--mobile-title-color": settings.mobileMenuTitleColor,
+        "--mobile-title-size": `${settings.mobileMenuTitleSize}px`,
+        "--mobile-description-color": settings.mobileMenuDescriptionColor,
+        "--mobile-description-size": `${settings.mobileMenuDescriptionSize}px`,
+        "--mobile-active-text": settings.mobileMenuActiveTextColor,
+        "--mobile-active-border": settings.mobileMenuActiveBorderColor,
+        "--mobile-menu-weight": settings.mobileMenuFontWeight,
+        "--mobile-menu-gap": `${settings.mobileMenuGap}px`,
       } as CSSProperties}>
+        {settings.topBarEnabled && (settings.phone || settings.email) && (
+          <div className="header-contact-bar"><div><span>İyiliğe birlikte ulaşalım</span><p>{settings.phone && <a href={`tel:${settings.phone.replace(/\s/g, "")}`}>{settings.phone}</a>}{settings.email && <a href={`mailto:${settings.email}`}>{settings.email}</a>}</p></div></div>
+        )}
         <header className="site-header">
           <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
             {settings.logoUrl ? <img className="brand-logo" src={settings.logoUrl} alt={settings.logoAlt} /> : <span className="brand-symbol"><i>i</i><b>a</b></span>}
@@ -203,10 +222,14 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
           {section !== "ayarlar" && <EmptyAccountSection title={sections.find((item) => item.id === section)?.label || "İşlemlerim"} />}
         </section>
       </div>
-      <footer className="account-center-footer">
-        <div><Link href="/">İyilik Adresim</Link><p>İyiliğin güvenilir ve şeffaf adresi.</p></div>
-        <nav>{menuPages.slice(0, 5).map((item) => <Link href={managedPageHref(item)} key={item.id}>{item.title}</Link>)}</nav>
-        <small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small>
+      <footer>
+        <div className="footer-main">
+          <div className="footer-brand"><Link className="brand inverted" href="/"><span className="brand-symbol"><i>i</i><b>a</b></span><span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span></Link><p>İyiliğin güvenilir ve şeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a></div>
+          <div><strong>Kurumsal</strong><Link href="/#hakkimizda">Hakkımızda</Link><Link href="/#seffaflik">Şeffaflık</Link><Link href="/#iletisim">İletişim</Link></div>
+          <div><strong>Projeler</strong><Link href="/#projeler">Eğitim</Link><Link href="/#projeler">Temiz Su</Link><Link href="/#projeler">Gıda</Link></div>
+          <div><strong>Bilgilendirme</strong><Link href="/#sorular">Sık Sorulanlar</Link><Link href="/#iletisim">KVKK</Link><Link href="/#iletisim">Gizlilik</Link></div>
+        </div>
+        <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small><span>Demo proje · Gerçek ödeme alınmaz.</span></div>
       </footer>
     </main>
   );
