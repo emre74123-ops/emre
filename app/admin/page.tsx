@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import styles from "./admin.module.css";
+import ModuleManager from "./ModuleManager";
 import { defaultSlides } from "../../lib/slides";
 import { defaultHeaderSettings, type HeaderSettings } from "../../lib/header-settings";
 import { defaultManagedPages, managedPageHref, normalizeSlug, type ManagedPage } from "../../lib/page-settings";
@@ -829,7 +830,7 @@ function HeaderManager({ showToast }: { showToast: (message: string) => void }) 
   );
 }
 
-function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
+function LegacyModuleManager({ showToast }: { showToast: (message: string) => void }) {
   const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
   const [saving, setSaving] = useState(false);
 

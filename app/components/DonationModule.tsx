@@ -19,13 +19,13 @@ type Project = {
   suggested: number[];
 };
 
-const categories: { id: Category; label: string; image: string }[] = [
-  { id: "all", label: "Tüm Bağışlar", image: "/donation-categories/tum-bagislar.webp" },
-  { id: "general", label: "Genel Bağış", image: "/donation-categories/genel-bagis.webp" },
-  { id: "qurban", label: "Kurban", image: "/donation-categories/kurban.webp" },
-  { id: "water", label: "Su Kuyusu", image: "/donation-categories/su-kuyusu.webp" },
-  { id: "zakat", label: "Zekât ve Fitre", image: "/donation-categories/zekat-fitre.webp" },
-  { id: "orphan", label: "Yetim Desteği", image: "/donation-categories/yetim-destegi.webp" },
+const categories: { id: Category; label: string }[] = [
+  { id: "all", label: "Tüm Bağışlar" },
+  { id: "general", label: "Genel Bağış" },
+  { id: "qurban", label: "Kurban" },
+  { id: "water", label: "Su Kuyusu" },
+  { id: "zakat", label: "Zekât ve Fitre" },
+  { id: "orphan", label: "Yetim Desteği" },
 ];
 
 const projects: Project[] = [
@@ -80,7 +80,7 @@ const projects: Project[] = [
 
 const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
 
-export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation }: { embedded?: boolean; settings?: DonationModuleSettings }) {
+export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile" }) {
   const cardsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const categoryDirectionRef = useRef<1 | -1>(1);
@@ -140,7 +140,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
 
   return (
     <section
-      className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}`}
+      className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}${previewDevice === "mobile" ? ` ${styles.forceMobile}` : ""}`}
       style={{
         "--dm-desktop-overlap": `${settings.desktopOverlap}px`,
         "--dm-mobile-overlap": `${settings.mobileOverlap}px`,
@@ -180,7 +180,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                 aria-label={item.label}
                 title={item.label}
               >
-                <Image src={item.image} alt={`${item.label} bağış kategorisi`} fill sizes="(max-width: 640px) 118px, 190px" />
+                <Image className={styles.desktopCategoryImage} src={settings.categoryImages[item.id]?.desktop || defaultModuleSettings.donation.categoryImages[item.id].desktop} alt={`${item.label} bağış kategorisi`} fill sizes="(max-width: 640px) 1px, 190px" />
+                <Image className={styles.mobileCategoryImage} src={settings.categoryImages[item.id]?.mobile || settings.categoryImages[item.id]?.desktop || defaultModuleSettings.donation.categoryImages[item.id].mobile} alt="" fill sizes="(max-width: 640px) 118px, 1px" />
               </button>
             ))}
           </div>

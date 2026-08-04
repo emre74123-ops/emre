@@ -8,6 +8,7 @@
 .categoryRail button{position:relative;padding:0;overflow:hidden;border:2px solid transparent;background:#edf6f2;box-shadow:0 7px 18px rgba(18,60,53,.08);transition:transform .2s,border-color .2s,box-shadow .2s}
 .categoryRail button:hover{transform:translateY(-2px);background:#edf6f2;box-shadow:0 11px 24px rgba(18,60,53,.14)}
 .categoryRail button img{object-fit:cover}
+.mobileCategoryImage{display:none}
 .categoryRail .activeCategory{border-color:#128465;background:#edf6f2;box-shadow:0 0 0 3px rgba(18,132,101,.14),0 10px 28px rgba(18,60,53,.18)}
 .categoryRail button{min-height:150px}
 .embedded .moduleShell{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
@@ -26,4 +27,25 @@
   .categoryRail{padding:0 0 10px}
   .categoryProgress{left:0;right:0}
   .categoryRail button{flex-basis:var(--dm-mobile-card-width,118px);min-height:var(--dm-mobile-card-height,115px)}
+  .desktopCategoryImage{display:none}
+  .mobileCategoryImage{display:block}
 }
+.forceMobile{padding-top:0}
+.forceMobile .moduleShell{width:100%;margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0;border-radius:0;border-left:0;border-right:0}
+.forceMobile .categoryRail{padding:0 0 10px}
+.forceMobile .categoryProgress{left:0;right:0}
+.forceMobile .categoryRail button{flex-basis:var(--dm-mobile-card-width,118px);min-height:var(--dm-mobile-card-height,115px)}
+.forceMobile .desktopCategoryImage{display:none}
+.forceMobile .mobileCategoryImage{display:block}
+.forceMobile .contentGrid{margin-top:30px}
+.forceMobile .sectionHeading{align-items:center;padding:0 4px}
+.forceMobile .sectionHeading h2{font-size:30px}
+.forceMobile .carouselActions p{display:none}
+.forceMobile .carouselActions button{width:38px;height:38px}
+.forceMobile .card{flex-basis:86vw}
+.forceMobile .cardImage{height:205px}
+.forceMobile .cardBody h3{font-size:24px}
+.forceMobile .cardBody>p{min-height:0}
+.forceMobile .choices{display:grid;grid-template-columns:repeat(4,1fr)}
+.forceMobile .cardAction{grid-template-columns:1fr}
+.forceMobile .cardAction>button{height:46px}

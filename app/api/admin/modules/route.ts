@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
-import { defaultModuleSettings, donationCategoryOptions, type ModuleSettings } from "../../../../lib/module-settings";
+import { defaultDonationCategoryImages, defaultModuleSettings, donationCategoryOptions, type ModuleSettings } from "../../../../lib/module-settings";
 import { readModuleSettings, writeModuleSettings } from "../../../../lib/module-storage";
 
 async function isAdmin() {
@@ -24,6 +24,18 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
   const visibleCategories = Array.isArray(source.visibleCategories)
     ? source.visibleCategories.filter((id) => validIds.has(id as typeof donationCategoryOptions[number][0]))
     : defaultModuleSettings.donation.visibleCategories;
+  const categoryImages = Object.fromEntries(donationCategoryOptions.map(([id]) => {
+    const candidate = source.categoryImages?.[id];
+    const fallback = defaultDonationCategoryImages[id];
+    const safeUrl = (value: unknown, defaultValue: string) => {
+      const url = String(value || "");
+      return url.startsWith("/") || /^https:\/\/[a-z0-9.-]+\/.+/i.test(url) ? url : defaultValue;
+    };
+    return [id, {
+      desktop: safeUrl(candidate?.desktop, fallback.desktop),
+      mobile: safeUrl(candidate?.mobile, fallback.mobile),
+    }];
+  }));
   return {
     donation: {
       enabled: source.enabled !== false,
@@ -41,6 +53,8 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       progressColor: color(source.progressColor, "#128465"),
       progressTrackColor: color(source.progressTrackColor, "#e1ebe7"),
       visibleCategories,
+      placement: "home-after-slider",
+      categoryImages,
     },
   };
 }
