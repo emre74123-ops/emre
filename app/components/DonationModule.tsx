@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
 import styles from "./donation-module.module.css";
@@ -17,13 +18,13 @@ type Project = {
   suggested: number[];
 };
 
-const categories: { id: Category; label: string; icon: string }[] = [
-  { id: "all", label: "Tüm Bağışlar", icon: "✦" },
-  { id: "general", label: "Genel Bağış", icon: "♡" },
-  { id: "qurban", label: "Kurban & Akika", icon: "◒" },
-  { id: "water", label: "Su Kuyusu", icon: "♒" },
-  { id: "zakat", label: "Zekât & Fitre", icon: "◇" },
-  { id: "orphan", label: "Yetim Desteği", icon: "♙" },
+const categories: { id: Category; label: string; image: string }[] = [
+  { id: "all", label: "Tüm Bağışlar", image: "/donation-categories/tum-bagislar.svg" },
+  { id: "general", label: "Genel Bağış", image: "/donation-categories/genel-bagis.svg" },
+  { id: "qurban", label: "Kurban ve Akika", image: "/donation-categories/kurban-akika.svg" },
+  { id: "water", label: "Su Kuyusu", image: "/donation-categories/su-kuyusu.svg" },
+  { id: "zakat", label: "Zekât ve Fitre", image: "/donation-categories/zekat-fitre.svg" },
+  { id: "orphan", label: "Yetim Desteği", image: "/donation-categories/yetim-destegi.svg" },
 ];
 
 const projects: Project[] = [
@@ -156,8 +157,14 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
             onPointerLeave={() => { categoryPausedRef.current = false; }}
           >
             {categories.map((item) => (
-              <button className={category === item.id ? styles.activeCategory : ""} key={item.id} onClick={() => setCategory(item.id)}>
-                <i>{item.icon}</i><span>{item.label}</span>
+              <button
+                className={category === item.id ? styles.activeCategory : ""}
+                key={item.id}
+                onClick={() => setCategory(item.id)}
+                aria-label={item.label}
+                title={item.label}
+              >
+                <Image src={item.image} alt={`${item.label} bağış kategorisi`} fill sizes="(max-width: 640px) 118px, 190px" />
               </button>
             ))}
           </div>
