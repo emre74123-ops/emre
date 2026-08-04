@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { HeaderSettings } from "../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../lib/page-settings";
 import MemberAccountNav from "./components/MemberAccountNav";
 
 export default function ManagedPageClient({ page, pages, headerSettings }: { page: ManagedPage; pages: ManagedPage[]; headerSettings: HeaderSettings }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openMobilePageId, setOpenMobilePageId] = useState("");
   const menuPages = pages.filter((item) => !item.parentId && item.enabled);
   const directPages = menuPages.filter((item) => item.menuType === "direct");
   const childPages = pages.filter((item) => item.parentId && item.enabled);
@@ -21,6 +23,12 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
         "--menu-weight": headerSettings.menuFontWeight,
         "--menu-gap": `${headerSettings.menuGap}px`,
         "--menu-hover": headerSettings.menuHoverColor,
+        "--mobile-menu-bg": headerSettings.mobileMenuBackgroundColor,
+        "--mobile-menu-text": headerSettings.mobileMenuTextColor,
+        "--mobile-menu-accent": headerSettings.mobileMenuAccentColor,
+        "--mobile-menu-size": `${headerSettings.mobileMenuFontSize}px`,
+        "--mobile-menu-weight": headerSettings.mobileMenuFontWeight,
+        "--mobile-menu-gap": `${headerSettings.mobileMenuGap}px`,
       } as CSSProperties}>
         <header className="site-header">
           <Link className="brand" href="/" aria-label="İyilik Adresim ana sayfa">
@@ -29,6 +37,9 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
               : <span className="brand-symbol"><i>i</i><b>a</b></span>}
             {headerSettings.showBrandText && <span className="brand-copy"><strong>{headerSettings.brandName}</strong><small>{headerSettings.brandTagline}</small></span>}
           </Link>
+          <button className={`menu-toggle${mobileMenuOpen ? " is-open" : ""}`} type="button" aria-label="Menüyü aç veya kapat" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((value) => !value)}>
+            <span /><span /><span />
+          </button>
           <nav className="main-nav desktop-page-nav" aria-label="Ana menü">
             {menuPages.map((item) => item.menuType === "dropdown" ? (
               <div className="desktop-dropdown" key={item.id}>
@@ -44,6 +55,39 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
             {headerSettings.supportEnabled && <a className="donate-button compact" href={headerSettings.supportHref}>{headerSettings.supportLabel} <span>↗</span></a>}
           </div>
         </header>
+        <div className={`mobile-menu-overlay managed-page-mobile-menu ${mobileMenuOpen ? "is-open" : ""} ${headerSettings.mobileMenuLayout === "drawer" ? "is-drawer" : "is-dropdown"}`} aria-hidden={!mobileMenuOpen}>
+          <div className="mobile-menu-body">
+            <nav aria-label="Mobil menü">
+              {menuPages.map((item) => {
+                const children = item.menuType === "dropdown" ? pages.filter((child) => child.parentId === item.id && child.enabled) : [];
+                return (
+                  <div className={`mobile-menu-card${openMobilePageId === item.id ? " is-expanded" : ""}`} key={item.id}>
+                    {children.length ? (
+                      <button type="button" onClick={() => setOpenMobilePageId((current) => current === item.id ? "" : item.id)}>
+                        <i className="mobile-card-icon" style={{ background: headerSettings.mobileMenuAccentColor }}>◇</i>
+                        <span className="mobile-card-copy"><strong style={{ fontWeight: headerSettings.mobileMenuFontWeight }}>{item.title}</strong><small>Alt sayfaları görüntüle</small></span><b>{openMobilePageId === item.id ? "−" : "+"}</b>
+                      </button>
+                    ) : (
+                      <Link href={managedPageHref(item)} onClick={() => setMobileMenuOpen(false)}>
+                        <i className="mobile-card-icon" style={{ background: headerSettings.mobileMenuAccentColor }}>◇</i>
+                        <span className="mobile-card-copy"><strong style={{ fontWeight: headerSettings.mobileMenuFontWeight }}>{item.title}</strong></span><b>›</b>
+                      </Link>
+                    )}
+                    {children.length > 0 && openMobilePageId === item.id && <div className="mobile-submenu">{children.map((child) => <Link href={`/${child.slug}`} key={child.id} onClick={() => setMobileMenuOpen(false)}>{child.title}</Link>)}</div>}
+                  </div>
+                );
+              })}
+            </nav>
+            <div className="mobile-menu-actions">
+              {headerSettings.mobileMenuShowAccount && headerSettings.accountEnabled && <MemberAccountNav signedOutLabel={headerSettings.accountLabel} settings={headerSettings} />}
+              {headerSettings.mobileMenuShowSupport && headerSettings.supportEnabled && <Link className="managed-mobile-support" href={headerSettings.supportHref} onClick={() => setMobileMenuOpen(false)}>{headerSettings.supportLabel} <span>↗</span></Link>}
+            </div>
+          </div>
+          <div className="mobile-menu-footer">
+            <p>{headerSettings.mobileMenuDescription}</p>
+            {headerSettings.mobileMenuShowContact && <div>{headerSettings.phone && <a href={`tel:${headerSettings.phone.replace(/\s/g, "")}`}>{headerSettings.phone}</a>}{headerSettings.email && <a href={`mailto:${headerSettings.email}`}>{headerSettings.email}</a>}</div>}
+          </div>
+        </div>
       </div>
 
       <section className="empty-page-space" aria-label={`${page.title} içerik alanı`}>
