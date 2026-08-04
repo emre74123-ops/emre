@@ -9,6 +9,7 @@ import AccountPanel from "./components/AccountPanel";
 import CartPanel from "./components/CartPanel";
 import MemberAccountNav from "./components/MemberAccountNav";
 import SiteFooter from "./components/SiteFooter";
+import DonationModule from "./components/DonationModule";
 
 type Slide = {
   id: string;
@@ -108,6 +109,23 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   useEffect(() => {
     if (cartHydrated) writeCart(cartItems);
   }, [cartHydrated, cartItems]);
+
+  useEffect(() => {
+    const syncCart = (event: Event) => {
+      const items = (event as CustomEvent<CartItem[]>).detail;
+      setCartItems(Array.isArray(items) ? items : readCart());
+    };
+    const openCart = () => {
+      setCartItems(readCart());
+      setCartOpen(true);
+    };
+    window.addEventListener("iyilik-cart-updated", syncCart);
+    window.addEventListener("iyilik-cart-open", openCart);
+    return () => {
+      window.removeEventListener("iyilik-cart-updated", syncCart);
+      window.removeEventListener("iyilik-cart-open", openCart);
+    };
+  }, []);
   const [sliderAnimated, setSliderAnimated] = useState(true);
   const [timerReset, setTimerReset] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -434,25 +452,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
           )}
         </div>
 
-        <div className="quick-support">
-          <div className="quick-title"><span>Hızlı Destek</span><small>3 kolay adımda</small></div>
-          <div className="quick-steps">
-            <label><b>1</b><span>Proje seç</span>
-              <select value={selectedProject} onChange={(event) => setSelectedProject(event.target.value)}>
-                <option>Genel Destek</option><option>Eğitim Desteği</option><option>Temiz Su Projesi</option><option>Gıda Desteği</option>
-              </select>
-            </label>
-            <label><b>2</b><span>Tutar belirle</span>
-              <div className="quick-amounts">
-                {supportAmounts.slice(0, 3).map((amount) => (
-                  <button key={amount} className={selectedAmount === amount ? "active" : ""} type="button" onClick={() => setSelectedAmount(amount)}>{amount} ₺</button>
-                ))}
-              </div>
-            </label>
-            <button className="quick-submit" type="button" onClick={() => openDonation(selectedProject)}>Desteği Tamamla <span>→</span></button>
-          </div>
-          <p>🔒 Güvenli demo · Kart bilgisi istenmez</p>
-        </div>
+        <DonationModule embedded />
       </section>
 
       <section className="trust-band" aria-label="Platform değerleri">
