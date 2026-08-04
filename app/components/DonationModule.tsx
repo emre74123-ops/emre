@@ -118,10 +118,6 @@ export default function DonationModule({ embedded = false }: { embedded?: boolea
       </div>}
 
       <section className={styles.moduleShell}>
-        <div className={styles.moduleHeading}>
-          <div><span className={styles.eyebrow}>BAĞIŞ MODÜLÜ</span><h1>İyiliğinizi seçin</h1></div>
-          <p>Destek olmak istediğiniz alanı seçin ve bağışınızı sepetinize ekleyin.</p>
-        </div>
         <div className={styles.categoryRail} aria-label="Bağış kategorileri">
           {categories.map((item) => (
             <button className={category === item.id ? styles.activeCategory : ""} key={item.id} onClick={() => setCategory(item.id)}>
