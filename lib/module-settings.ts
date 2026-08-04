@@ -25,6 +25,9 @@ export type DonationModuleSettings = {
   mobileProgressGap: number;
   desktopProgressThickness: number;
   mobileProgressThickness: number;
+  desktopProgressExtraSpace: number;
+  mobileProgressExtraSpace: number;
+  desktopCategoryAlignment: "left" | "center";
   desktopAspectRatio: string;
   mobileAspectRatio: string;
   desktopImageFit: "cover" | "contain";
@@ -96,6 +99,9 @@ export const defaultModuleSettings: ModuleSettings = {
     mobileProgressGap: 12,
     desktopProgressThickness: 2,
     mobileProgressThickness: 2,
+    desktopProgressExtraSpace: 0,
+    mobileProgressExtraSpace: 0,
+    desktopCategoryAlignment: "left",
     desktopAspectRatio: "custom",
     mobileAspectRatio: "custom",
     desktopImageFit: "cover",
