@@ -7,6 +7,7 @@ import { createMemberClient } from "../../lib/supabase/member-browser";
 import type { HeaderSettings } from "../../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../../lib/page-settings";
 import MemberAccountNav from "../components/MemberAccountNav";
+import MobileMenuIcon from "../components/MobileMenuIcon";
 
 type Section = "bagislarim" | "kurban" | "sponsorluklar" | "su-kuyularim" | "projelerim" | "ayarlar";
 type Profile = {
@@ -88,6 +89,11 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
     return true;
   });
   const menuPages = pages.filter((item) => !item.parentId && item.enabled);
+  const configuredMobileItems = settings.mobileMenuItems.filter((item) => item.enabled && item.sourcePageId);
+  const activeMobileItems = configuredMobileItems.length ? configuredMobileItems : menuPages.map((item) => ({
+    id: `mobile-${item.id}`, label: item.title, href: managedPageHref(item), enabled: true, newTab: false,
+    sourcePageId: item.id, mobileIcon: "home", mobileIconBg: settings.mobileMenuAccentColor, mobileDescription: "",
+  }));
 
   return (
     <main className="account-center" style={{ "--account-accent": settings.accountPageAccentColor } as CSSProperties}>
@@ -127,19 +133,22 @@ export default function AccountCenter({ settings, pages }: { settings: HeaderSet
         <div className={`mobile-menu-overlay account-mobile-menu ${mobileMenuOpen ? "is-open" : ""} is-dropdown`} aria-hidden={!mobileMenuOpen}>
           <div className="mobile-menu-body">
             <nav aria-label="Mobil menü">
-              {menuPages.map((item) => {
-                const children = item.menuType === "dropdown" ? pages.filter((child) => child.parentId === item.id && child.enabled) : [];
+              {activeMobileItems.map((item) => {
+                const sourcePage = pages.find((candidate) => candidate.id === item.sourcePageId);
+                const children = sourcePage?.menuType === "dropdown" ? pages.filter((child) => child.parentId === sourcePage.id && child.enabled) : [];
+                const label = sourcePage?.title || item.label;
+                const href = sourcePage?.menuType === "direct" ? managedPageHref(sourcePage) : item.href;
                 return (
                   <div className={`mobile-menu-card${openMobilePageId === item.id ? " is-expanded" : ""}`} key={item.id}>
                     {children.length ? (
                       <button type="button" onClick={() => setOpenMobilePageId((current) => current === item.id ? "" : item.id)}>
-                        <i className="mobile-card-icon" style={{ background: settings.mobileMenuAccentColor }}>◇</i>
-                        <span className="mobile-card-copy"><strong>{item.title}</strong><small>Alt sayfaları görüntüle</small></span><b>{openMobilePageId === item.id ? "−" : "+"}</b>
+                        <i className="mobile-card-icon" style={{ background: item.mobileIconBg || settings.mobileMenuAccentColor }}><MobileMenuIcon name={item.mobileIcon} /></i>
+                        <span className="mobile-card-copy"><strong>{label}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</span><b>{openMobilePageId === item.id ? "−" : "+"}</b>
                       </button>
                     ) : (
-                      <Link href={managedPageHref(item)} onClick={() => setMobileMenuOpen(false)}>
-                        <i className="mobile-card-icon" style={{ background: settings.mobileMenuAccentColor }}>◇</i>
-                        <span className="mobile-card-copy"><strong>{item.title}</strong></span><b>›</b>
+                      <Link href={href} onClick={() => setMobileMenuOpen(false)}>
+                        <i className="mobile-card-icon" style={{ background: item.mobileIconBg || settings.mobileMenuAccentColor }}><MobileMenuIcon name={item.mobileIcon} /></i>
+                        <span className="mobile-card-copy"><strong>{label}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</span><b>›</b>
                       </Link>
                     )}
                     {children.length > 0 && openMobilePageId === item.id && <div className="mobile-submenu">{children.map((child) => <Link href={`/${child.slug}`} key={child.id} onClick={() => setMobileMenuOpen(false)}>{child.title}</Link>)}</div>}

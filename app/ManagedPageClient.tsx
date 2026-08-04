@@ -5,6 +5,7 @@ import { useState, type CSSProperties } from "react";
 import type { HeaderSettings } from "../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../lib/page-settings";
 import MemberAccountNav from "./components/MemberAccountNav";
+import MobileMenuIcon from "./components/MobileMenuIcon";
 
 export default function ManagedPageClient({ page, pages, headerSettings }: { page: ManagedPage; pages: ManagedPage[]; headerSettings: HeaderSettings }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -12,6 +13,11 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
   const menuPages = pages.filter((item) => !item.parentId && item.enabled);
   const directPages = menuPages.filter((item) => item.menuType === "direct");
   const childPages = pages.filter((item) => item.parentId && item.enabled);
+  const configuredMobileItems = headerSettings.mobileMenuItems.filter((item) => item.enabled && item.sourcePageId);
+  const activeMobileItems = configuredMobileItems.length ? configuredMobileItems : menuPages.map((item) => ({
+    id: `mobile-${item.id}`, label: item.title, href: managedPageHref(item), enabled: true, newTab: false,
+    sourcePageId: item.id, mobileIcon: "home", mobileIconBg: headerSettings.mobileMenuAccentColor, mobileDescription: "",
+  }));
 
   return (
     <main className="managed-page">
@@ -58,19 +64,22 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
         <div className={`mobile-menu-overlay managed-page-mobile-menu ${mobileMenuOpen ? "is-open" : ""} ${headerSettings.mobileMenuLayout === "drawer" ? "is-drawer" : "is-dropdown"}`} aria-hidden={!mobileMenuOpen}>
           <div className="mobile-menu-body">
             <nav aria-label="Mobil menü">
-              {menuPages.map((item) => {
-                const children = item.menuType === "dropdown" ? pages.filter((child) => child.parentId === item.id && child.enabled) : [];
+              {activeMobileItems.map((item) => {
+                const sourcePage = pages.find((candidate) => candidate.id === item.sourcePageId);
+                const children = sourcePage?.menuType === "dropdown" ? pages.filter((child) => child.parentId === sourcePage.id && child.enabled) : [];
+                const label = sourcePage?.title || item.label;
+                const href = sourcePage?.menuType === "direct" ? managedPageHref(sourcePage) : item.href;
                 return (
                   <div className={`mobile-menu-card${openMobilePageId === item.id ? " is-expanded" : ""}`} key={item.id}>
                     {children.length ? (
                       <button type="button" onClick={() => setOpenMobilePageId((current) => current === item.id ? "" : item.id)}>
-                        <i className="mobile-card-icon" style={{ background: headerSettings.mobileMenuAccentColor }}>◇</i>
-                        <span className="mobile-card-copy"><strong style={{ fontWeight: headerSettings.mobileMenuFontWeight }}>{item.title}</strong><small>Alt sayfaları görüntüle</small></span><b>{openMobilePageId === item.id ? "−" : "+"}</b>
+                        <i className="mobile-card-icon" style={{ background: item.mobileIconBg || headerSettings.mobileMenuAccentColor }}><MobileMenuIcon name={item.mobileIcon} /></i>
+                        <span className="mobile-card-copy"><strong style={{ fontWeight: headerSettings.mobileMenuFontWeight }}>{label}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</span><b>{openMobilePageId === item.id ? "−" : "+"}</b>
                       </button>
                     ) : (
-                      <Link href={managedPageHref(item)} onClick={() => setMobileMenuOpen(false)}>
-                        <i className="mobile-card-icon" style={{ background: headerSettings.mobileMenuAccentColor }}>◇</i>
-                        <span className="mobile-card-copy"><strong style={{ fontWeight: headerSettings.mobileMenuFontWeight }}>{item.title}</strong></span><b>›</b>
+                      <Link href={href} onClick={() => setMobileMenuOpen(false)}>
+                        <i className="mobile-card-icon" style={{ background: item.mobileIconBg || headerSettings.mobileMenuAccentColor }}><MobileMenuIcon name={item.mobileIcon} /></i>
+                        <span className="mobile-card-copy"><strong style={{ fontWeight: headerSettings.mobileMenuFontWeight }}>{label}</strong>{item.mobileDescription && <small>{item.mobileDescription}</small>}</span><b>›</b>
                       </Link>
                     )}
                     {children.length > 0 && openMobilePageId === item.id && <div className="mobile-submenu">{children.map((child) => <Link href={`/${child.slug}`} key={child.id} onClick={() => setMobileMenuOpen(false)}>{child.title}</Link>)}</div>}
