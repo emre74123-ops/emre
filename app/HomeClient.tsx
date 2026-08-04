@@ -8,6 +8,7 @@ import { readCart, writeCart, type CartItem } from "../lib/cart";
 import AccountPanel from "./components/AccountPanel";
 import CartPanel from "./components/CartPanel";
 import MemberAccountNav from "./components/MemberAccountNav";
+import SiteFooter from "./components/SiteFooter";
 
 type Slide = {
   id: string;
@@ -558,21 +559,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
         <button className="donate-button light" type="button" onClick={() => openDonation()}>İyiliğe Ortak Ol <span>↗</span></button>
       </section>
 
-      <footer id="iletisim">
-        <div className="footer-main">
-          <div className="footer-brand">
-            <a className="brand inverted" href="#top">
-              <span className="brand-symbol"><i>i</i><b>a</b></span>
-              <span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span>
-            </a>
-            <p>İyiliğin güvenilir ve şeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a>
-          </div>
-          <div><strong>Kurumsal</strong><a href="#hakkimizda">Hakkımızda</a><a href="#seffaflik">Şeffaflık</a><a href="#iletisim">İletişim</a></div>
-          <div><strong>Projeler</strong><a href="#projeler">Eğitim</a><a href="#projeler">Temiz Su</a><a href="#projeler">Gıda</a></div>
-          <div><strong>Bilgilendirme</strong><a href="#sorular">Sık Sorulanlar</a><a href="#iletisim">KVKK</a><a href="#iletisim">Gizlilik</a></div>
-        </div>
-        <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small><span>Demo proje · Gerçek ödeme alınmaz.</span></div>
-      </footer>
+      <SiteFooter />
 
       <button className="floating-cart-button" type="button" onClick={() => setCartOpen(true)} aria-label={`Sepeti aç, ${cartItems.reduce((count, item) => count + item.quantity, 0)} ürün`}>
         <span aria-hidden="true">♡</span>

@@ -6,6 +6,7 @@ import type { HeaderSettings } from "../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../lib/page-settings";
 import MemberAccountNav from "./components/MemberAccountNav";
 import MobileMenuIcon from "./components/MobileMenuIcon";
+import SiteFooter from "./components/SiteFooter";
 
 export default function ManagedPageClient({ page, pages, headerSettings }: { page: ManagedPage; pages: ManagedPage[]; headerSettings: HeaderSettings }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -119,18 +120,7 @@ export default function ManagedPageClient({ page, pages, headerSettings }: { pag
         <p>Bu sayfanın içeriği daha sonra yönetim panelinden düzenlenecek.</p>
       </section>
 
-      <footer>
-        <div className="footer-main">
-          <div className="footer-brand">
-            <Link className="brand inverted" href="/"><span className="brand-symbol"><i>i</i><b>a</b></span><span className="brand-copy"><strong>İyilik</strong><small>Adresim</small></span></Link>
-            <p>İyiliğin güvenilir ve şeffaf adresi.</p><a href="mailto:merhaba@iyilikadresim.org">merhaba@iyilikadresim.org</a>
-          </div>
-          <div><strong>Kurumsal</strong><Link href="/#hakkimizda">Hakkımızda</Link><Link href="/#seffaflik">Şeffaflık</Link><Link href="/#iletisim">İletişim</Link></div>
-          <div><strong>Projeler</strong><Link href="/#projeler">Eğitim</Link><Link href="/#projeler">Temiz Su</Link><Link href="/#projeler">Gıda</Link></div>
-          <div><strong>Bilgilendirme</strong><Link href="/#sorular">Sık Sorulanlar</Link><Link href="/#iletisim">KVKK</Link><Link href="/#iletisim">Gizlilik</Link></div>
-        </div>
-        <div className="footer-bottom"><small>© 2026 İyilik Adresim. Tüm hakları saklıdır.</small><span>Demo proje · Gerçek ödeme alınmaz.</span></div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
