@@ -15,6 +15,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [tab, setTab] = useState<ModuleTab>("general");
+  const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
+  const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -175,7 +177,11 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           {tab === "desktop" ? <>
             <div className={styles.moduleEditorGrid}>
               <div className={styles.moduleConfigurationPanel}>
-                <div className={styles.moduleControls}>
+                <nav className={styles.deviceSettingsTabs} aria-label="Web ayar bölümleri">
+                  <button type="button" className={desktopPanel === "design" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("design")}>Web Tasarımı</button>
+                  <button type="button" className={desktopPanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("gallery")}>Web Görsel Galerisi</button>
+                </nav>
+                {desktopPanel === "design" ? <div className={styles.moduleControls}>
                   <h3>Web Ayarları</h3>
                   <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
                   <label>Kart genişliği <b>{donation.desktopCardWidth} px</b><input type="range" min="60" max="500" value={donation.desktopCardWidth} onChange={(event) => update({ desktopCardWidth: Number(event.target.value) })} /></label>
@@ -186,8 +192,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
-                </div>
-                {gallery("desktop")}
+                </div> : null}
+                {desktopPanel === "gallery" ? gallery("desktop") : null}
               </div>
               {preview("desktop")}
             </div>
@@ -196,7 +202,11 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           {tab === "mobile" ? <>
             <div className={styles.moduleEditorGrid}>
               <div className={styles.moduleConfigurationPanel}>
-                <div className={styles.moduleControls}>
+                <nav className={styles.deviceSettingsTabs} aria-label="Mobil ayar bölümleri">
+                  <button type="button" className={mobilePanel === "design" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("design")}>Mobil Tasarımı</button>
+                  <button type="button" className={mobilePanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("gallery")}>Mobil Görsel Galerisi</button>
+                </nav>
+                {mobilePanel === "design" ? <div className={styles.moduleControls}>
                   <h3>Mobil Ayarları</h3>
                   <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
                   <label>Kart genişliği <b>{donation.mobileCardWidth} px</b><input type="range" min="50" max="320" value={donation.mobileCardWidth} onChange={(event) => update({ mobileCardWidth: Number(event.target.value) })} /></label>
@@ -207,8 +217,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
-                </div>
-                {gallery("mobile")}
+                </div> : null}
+                {mobilePanel === "gallery" ? gallery("mobile") : null}
               </div>
               {preview("mobile")}
             </div>
