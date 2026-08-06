@@ -26,7 +26,7 @@ const text = (value: unknown, fallback: string, max = 80) => {
 function cleanLower(source: Record<string, unknown> | undefined, defaults: typeof defaultModuleSettings.donation.lowerDesktop) {
   const input = source || {};
   return {
-    enabled: input.enabled !== false,
+    enabled: true,
     showHeading: input.showHeading !== false,
     headingEyebrow: text(input.headingEyebrow, defaults.headingEyebrow, 40),
     headingTitle: text(input.headingTitle, defaults.headingTitle, 80),
@@ -50,6 +50,7 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
     titleSize: clamp(input.titleSize, 12, 48, defaults.titleSize),
     titleColor: color(input.titleColor, defaults.titleColor),
     titleWeight: clamp(input.titleWeight, 300, 900, defaults.titleWeight),
+    titleVisible: input.titleVisible !== false,
     descriptionVisible: input.descriptionVisible !== false,
     descriptionSize: clamp(input.descriptionSize, 9, 24, defaults.descriptionSize),
     descriptionColor: color(input.descriptionColor, defaults.descriptionColor),

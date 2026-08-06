@@ -443,6 +443,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <section style={{ order: 2 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarları</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
+          <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.showHeading} onChange={(event) => updateSharedImage({ showHeading: event.target.checked })} /> Bölüm başlığını göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.titleVisible} onChange={(event) => updateSharedImage({ titleVisible: event.target.checked })} /> Kart başlığını göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
           <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
           <label className={styles.headerCheck}><input type="checkbox" checked={device === "desktop" ? selectedProject.showInAllDesktop !== false : selectedProject.showInAllMobile !== false} onChange={(event) => updateProject(device === "desktop" ? { showInAllDesktop: event.target.checked } : { showInAllMobile: event.target.checked })} /> Tüm Bağışlar’da {device === "desktop" ? "webde" : "mobilde"} göster</label>
           <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart tasarımını kullan</label>
@@ -468,9 +471,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Yazı ayarları</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
           <div className={styles.moduleTextSettingsGroup}>
-            <strong>Bölüm görünürlüğü ve başlığı</strong>
-            <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.enabled} onChange={(event) => updateSharedImage({ enabled: event.target.checked })} /> Alt bölümü bu cihazda göster</label>
-            <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.showHeading} onChange={(event) => updateSharedImage({ showHeading: event.target.checked })} /> Bölüm başlığını göster</label>
+            <strong>Bölüm başlığı metinleri</strong>
             <label>Üst etiket<input type="text" value={sharedImage.headingEyebrow} onChange={(event) => updateSharedImage({ headingEyebrow: event.target.value })} /></label>
             <label>Ana başlık<input type="text" value={sharedImage.headingTitle} onChange={(event) => updateSharedImage({ headingTitle: event.target.value })} /></label>
           </div>
@@ -478,7 +479,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <strong>Seçili kartın yazıları</strong>
           <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
           <label>Açıklama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
-          <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
           {design.useSharedDesign ? <>
             {sharedRange("Başlık boyutu", "titleSize", 12, 48)}
             {sharedRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}

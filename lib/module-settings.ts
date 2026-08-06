@@ -140,6 +140,7 @@ export type DonationLowerDeviceSettings = {
   titleSize: number;
   titleColor: string;
   titleWeight: number;
+  titleVisible: boolean;
   descriptionVisible: boolean;
   descriptionSize: number;
   descriptionColor: string;
@@ -287,7 +288,7 @@ export const defaultModuleSettings: ModuleSettings = {
       cardWidth: 370, cardRadius: 18, cardPadding: 24, cardGap: 22, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
       imageVisible: true, imageHeight: 218, imageRadius: 0, imageFit: "cover",
-      titleSize: 26, titleColor: "#143b34", titleWeight: 500,
+      titleSize: 26, titleColor: "#143b34", titleWeight: 500, titleVisible: true,
       descriptionVisible: true, descriptionSize: 12, descriptionColor: "#6e827d",
       priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
       selectedPriceBackground: "#e7f4ef", selectedPriceTextColor: "#0d7258", customAmountVisible: true,
@@ -303,7 +304,7 @@ export const defaultModuleSettings: ModuleSettings = {
       cardWidth: 330, cardRadius: 16, cardPadding: 20, cardGap: 14, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
       imageVisible: true, imageHeight: 205, imageRadius: 0, imageFit: "cover",
-      titleSize: 24, titleColor: "#143b34", titleWeight: 500,
+      titleSize: 24, titleColor: "#143b34", titleWeight: 500, titleVisible: true,
       descriptionVisible: true, descriptionSize: 12, descriptionColor: "#6e827d",
       priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
       selectedPriceBackground: "#e7f4ef", selectedPriceTextColor: "#0d7258", customAmountVisible: true,
@@ -338,10 +339,12 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
       lowerDesktop: {
         ...defaultModuleSettings.donation.lowerDesktop,
         ...donation?.lowerDesktop,
+        enabled: true,
       },
       lowerMobile: {
         ...defaultModuleSettings.donation.lowerMobile,
         ...donation?.lowerMobile,
+        enabled: true,
       },
       projects: (donation?.projects?.length ? donation.projects : defaultDonationProjects).map((project, index) => {
         const fallback = defaultDonationProjects.find((item) => item.id === project.id) || defaultDonationProjects[index] || defaultDonationProjects[0];
