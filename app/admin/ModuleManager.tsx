@@ -18,7 +18,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [expanded, setExpanded] = useState(true);
   const [section, setSection] = useState<ModuleSection>("upper");
   const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
-  const [lowerGroup, setLowerGroup] = useState("visibility");
+  const [lowerGroup, setLowerGroup] = useState("project-content");
   const [projectSelectorOpen, setProjectSelectorOpen] = useState(true);
   const [projectCategory, setProjectCategory] = useState<ProjectCategory>("all");
   const [selectedProjectId, setSelectedProjectId] = useState("general-support");
@@ -467,6 +467,15 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <section style={{ order: 4 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Yazı ayarları</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
+          <div className={styles.moduleTextSettingsGroup}>
+            <strong>Bölüm görünürlüğü ve başlığı</strong>
+            <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.enabled} onChange={(event) => updateSharedImage({ enabled: event.target.checked })} /> Alt bölümü bu cihazda göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.showHeading} onChange={(event) => updateSharedImage({ showHeading: event.target.checked })} /> Bölüm başlığını göster</label>
+            <label>Üst etiket<input type="text" value={sharedImage.headingEyebrow} onChange={(event) => updateSharedImage({ headingEyebrow: event.target.value })} /></label>
+            <label>Ana başlık<input type="text" value={sharedImage.headingTitle} onChange={(event) => updateSharedImage({ headingTitle: event.target.value })} /></label>
+          </div>
+          <div className={styles.moduleTextSettingsGroup}>
+            <strong>Seçili kartın yazıları</strong>
           <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
           <label>Açıklama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
           <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
@@ -483,6 +492,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <label>Başlık rengi<input type="color" value={design.titleColor} onChange={(event) => updateProjectDesign(device, { titleColor: event.target.value })} /></label>
             <label>Açıklama rengi<input type="color" value={design.descriptionColor} onChange={(event) => updateProjectDesign(device, { descriptionColor: event.target.value })} /></label>
           </>}
+          </div>
         </div> : null}
       </section>
       <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
@@ -537,7 +547,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const value = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
     const change = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
     const groups = [
-      ["visibility", "Görünürlük ve başlık"],
       ["layout", "Yerleşim ve ölçüler"],
       ["arrows", "Kaydırma okları"],
     ] as const;
@@ -548,12 +557,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       {groups.map(([id, label]) => <section key={id} className={lowerGroup === id ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setLowerGroup((current) => current === id ? "" : id)}><span>{label}</span><b>{lowerGroup === id ? "−" : "+"}</b></button>
         {lowerGroup === id ? <div className={styles.lowerAccordionContent}>
-          {id === "visibility" ? <>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.enabled} onChange={(event) => change({ enabled: event.target.checked })} /> Alt bölümü bu cihazda göster</label>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.showHeading} onChange={(event) => change({ showHeading: event.target.checked })} /> Bölüm başlığını göster</label>
-            <label>Üst etiket<input type="text" value={value.headingEyebrow} onChange={(event) => change({ headingEyebrow: event.target.value })} /></label>
-            <label>Ana başlık<input type="text" value={value.headingTitle} onChange={(event) => change({ headingTitle: event.target.value })} /></label>
-          </> : null}
           {id === "layout" ? <>
             <label>Gösterim biçimi<select value={value.layout} onChange={(event) => change({ layout: event.target.value as "carousel" | "grid" })}><option value="carousel">Yatay kaydırma</option><option value="grid">Izgara</option></select></label>
             {value.layout === "grid" ? range("Sütun sayısı", "columns", 1, device === "desktop" ? 6 : 2, "") : null}
@@ -769,8 +772,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <span>ALT BÖLÜM</span><h2>Bağış Seçenekleri</h2><p>Seçilen kategoriye ait bağış kartları ve bağış işlemleri bu ayrı alanda yönetilecek.</p>
             </div>
             <nav className={styles.lowerDeviceTabs} aria-label="Alt bölüm cihaz ayarları">
-              <button className={lowerDevice === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("desktop"); setLowerGroup("visibility"); }}><span>WEB</span><strong>Web Ayarları</strong><small>Masaüstü görünümü</small></button>
-              <button className={lowerDevice === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("mobile"); setLowerGroup("visibility"); }}><span>MOBİL</span><strong>Mobil Ayarları</strong><small>Telefon görünümü</small></button>
+              <button className={lowerDevice === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("desktop"); setLowerGroup("project-content"); }}><span>WEB</span><strong>Web Ayarları</strong><small>Masaüstü görünümü</small></button>
+              <button className={lowerDevice === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("mobile"); setLowerGroup("project-content"); }}><span>MOBİL</span><strong>Mobil Ayarları</strong><small>Telefon görünümü</small></button>
             </nav>
             <div className={styles.lowerEditorGrid}>
               <div className={styles.lowerSettingsPanel}>
