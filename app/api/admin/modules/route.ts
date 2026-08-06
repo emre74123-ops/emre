@@ -66,6 +66,20 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
     actionButtonBackground: color(input.actionButtonBackground, defaults.actionButtonBackground),
     actionButtonTextColor: color(input.actionButtonTextColor, defaults.actionButtonTextColor),
     arrowsVisible: input.arrowsVisible !== false,
+    leftArrowVisible: input.leftArrowVisible !== false,
+    rightArrowVisible: input.rightArrowVisible !== false,
+    arrowIcon: choice(input.arrowIcon, ["thin", "chevron", "bold", "long", "triangle"], defaults.arrowIcon),
+    arrowSize: clamp(input.arrowSize, 28, 72, defaults.arrowSize),
+    arrowIconSize: clamp(input.arrowIconSize, 12, 40, defaults.arrowIconSize),
+    arrowOffset: clamp(input.arrowOffset, -36, 36, defaults.arrowOffset),
+    arrowVerticalPosition: clamp(input.arrowVerticalPosition, 10, 90, defaults.arrowVerticalPosition),
+    arrowRadius: clamp(input.arrowRadius, 0, 50, defaults.arrowRadius),
+    arrowBackground: color(input.arrowBackground, defaults.arrowBackground),
+    arrowColor: color(input.arrowColor, defaults.arrowColor),
+    arrowOpacity: clamp(input.arrowOpacity, 10, 100, defaults.arrowOpacity),
+    arrowBorderWidth: clamp(input.arrowBorderWidth, 0, 6, defaults.arrowBorderWidth),
+    arrowBorderColor: color(input.arrowBorderColor, defaults.arrowBorderColor),
+    arrowShadow: choice(input.arrowShadow, ["none", "soft", "medium", "strong"], defaults.arrowShadow),
   };
 }
 
