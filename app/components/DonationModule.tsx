@@ -85,6 +85,13 @@ const shadowValue = {
   medium: "0 12px 28px rgba(18,60,53,.16)",
   strong: "0 18px 38px rgba(18,60,53,.26)",
 } as const;
+const arrowSymbols = {
+  thin: ["←", "→"],
+  chevron: ["‹", "›"],
+  bold: ["❮", "❯"],
+  long: ["⟵", "⟶"],
+  triangle: ["◀", "▶"],
+} as const;
 
 export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile" }) {
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -254,6 +261,26 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-lower-mobile-action-bg": settings.lowerMobile.actionButtonBackground,
         "--dm-lower-desktop-action-color": settings.lowerDesktop.actionButtonTextColor,
         "--dm-lower-mobile-action-color": settings.lowerMobile.actionButtonTextColor,
+        "--dm-arrow-desktop-size": `${settings.lowerDesktop.arrowSize}px`,
+        "--dm-arrow-mobile-size": `${settings.lowerMobile.arrowSize}px`,
+        "--dm-arrow-desktop-icon-size": `${settings.lowerDesktop.arrowIconSize}px`,
+        "--dm-arrow-mobile-icon-size": `${settings.lowerMobile.arrowIconSize}px`,
+        "--dm-arrow-desktop-offset": `${settings.lowerDesktop.arrowOffset}px`,
+        "--dm-arrow-mobile-offset": `${settings.lowerMobile.arrowOffset}px`,
+        "--dm-arrow-desktop-y": `${settings.lowerDesktop.arrowVerticalPosition}%`,
+        "--dm-arrow-mobile-y": `${settings.lowerMobile.arrowVerticalPosition}%`,
+        "--dm-arrow-desktop-radius": `${settings.lowerDesktop.arrowRadius}%`,
+        "--dm-arrow-mobile-radius": `${settings.lowerMobile.arrowRadius}%`,
+        "--dm-arrow-desktop-bg": settings.lowerDesktop.arrowBackground,
+        "--dm-arrow-mobile-bg": settings.lowerMobile.arrowBackground,
+        "--dm-arrow-desktop-color": settings.lowerDesktop.arrowColor,
+        "--dm-arrow-mobile-color": settings.lowerMobile.arrowColor,
+        "--dm-arrow-desktop-opacity": settings.lowerDesktop.arrowOpacity / 100,
+        "--dm-arrow-mobile-opacity": settings.lowerMobile.arrowOpacity / 100,
+        "--dm-arrow-desktop-border": `${settings.lowerDesktop.arrowBorderWidth}px solid ${settings.lowerDesktop.arrowBorderColor}`,
+        "--dm-arrow-mobile-border": `${settings.lowerMobile.arrowBorderWidth}px solid ${settings.lowerMobile.arrowBorderColor}`,
+        "--dm-arrow-desktop-shadow": shadowValue[settings.lowerDesktop.arrowShadow],
+        "--dm-arrow-mobile-shadow": shadowValue[settings.lowerMobile.arrowShadow],
       } as CSSProperties}
     >
       {!embedded && <div className={styles.previewBar}>
@@ -297,13 +324,10 @@ export default function DonationModule({ embedded = false, settings = defaultMod
             <div className={styles.sectionHeading}>
               <div className={styles.desktopLowerHeading} style={{ display: settings.lowerDesktop.showHeading ? undefined : "none" }}><span>{settings.lowerDesktop.headingEyebrow}</span><h2>{settings.lowerDesktop.headingTitle}</h2></div>
               <div className={styles.mobileLowerHeading} style={{ display: settings.lowerMobile.showHeading ? undefined : "none" }}><span>{settings.lowerMobile.headingEyebrow}</span><h2>{settings.lowerMobile.headingTitle}</h2></div>
-              <div className={styles.carouselActions}>
-                <p>{filtered.length} proje</p>
-                <button className={!settings.lowerDesktop.arrowsVisible ? styles.desktopArrowOff : ""} type="button" aria-label="Önceki bağış projeleri" onClick={() => moveCards(-1)}>←</button>
-                <button className={!settings.lowerDesktop.arrowsVisible ? styles.desktopArrowOff : ""} type="button" aria-label="Sonraki bağış projeleri" onClick={() => moveCards(1)}>→</button>
-              </div>
             </div>
-            <div className={styles.cards} ref={cardsRef}>
+            <div className={styles.cardsViewport}>
+              <button className={`${styles.sideArrow} ${styles.sideArrowLeft}${!settings.lowerDesktop.arrowsVisible || !settings.lowerDesktop.leftArrowVisible ? ` ${styles.desktopArrowOff}` : ""}${!settings.lowerMobile.arrowsVisible || !settings.lowerMobile.leftArrowVisible ? ` ${styles.mobileArrowOff}` : ""}`} type="button" aria-label="Önceki bağış projeleri" onClick={() => moveCards(-1)}><span className={styles.desktopArrowSymbol}>{arrowSymbols[settings.lowerDesktop.arrowIcon][0]}</span><span className={styles.mobileArrowSymbol}>{arrowSymbols[settings.lowerMobile.arrowIcon][0]}</span></button>
+              <div className={styles.cards} ref={cardsRef}>
               {filtered.map((project) => {
                 const picked = selected[project.id] ?? project.suggested[0];
                 return (
@@ -333,6 +357,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                   </article>
                 );
               })}
+              </div>
+              <button className={`${styles.sideArrow} ${styles.sideArrowRight}${!settings.lowerDesktop.arrowsVisible || !settings.lowerDesktop.rightArrowVisible ? ` ${styles.desktopArrowOff}` : ""}${!settings.lowerMobile.arrowsVisible || !settings.lowerMobile.rightArrowVisible ? ` ${styles.mobileArrowOff}` : ""}`} type="button" aria-label="Sonraki bağış projeleri" onClick={() => moveCards(1)}><span className={styles.desktopArrowSymbol}>{arrowSymbols[settings.lowerDesktop.arrowIcon][1]}</span><span className={styles.mobileArrowSymbol}>{arrowSymbols[settings.lowerMobile.arrowIcon][1]}</span></button>
             </div>
         </div>
       </section>
