@@ -335,6 +335,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                 const picked = selected[project.id] ?? project.suggested[0];
                 const sharedDesign = (projectDesign: typeof project.desktop, common: typeof settings.lowerDesktop) => projectDesign.useSharedDesign ? {
                   ...projectDesign,
+                  cardWidth: common.cardWidth,
+                  cardPadding: common.cardPadding,
                   cardBackground: common.cardBackground,
                   cardRadius: common.cardRadius,
                   cardBorderColor: common.cardBorderColor,
@@ -343,8 +345,11 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                   imageRadius: common.imageRadius,
                   titleColor: common.titleColor,
                   titleSize: common.titleSize,
+                  titleWeight: common.titleWeight,
                   descriptionColor: common.descriptionColor,
                   descriptionSize: common.descriptionSize,
+                  priceButtonHeight: common.priceButtonHeight,
+                  priceButtonRadius: common.priceButtonRadius,
                   priceBackground: common.priceBackground,
                   priceTextColor: common.priceTextColor,
                   selectedPriceBackground: common.selectedPriceBackground,
@@ -352,12 +357,17 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                   actionBackground: common.actionButtonBackground,
                   actionTextColor: common.actionButtonTextColor,
                   actionText: common.actionButtonText,
+                  actionHeight: common.actionButtonHeight,
                   actionRadius: common.actionButtonRadius,
                 } : projectDesign;
                 const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
                 const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
                 return (
                   <article className={styles.card} key={project.id} style={{
+                    "--dm-lower-desktop-card-width": `${desktopDesign.cardWidth}px`,
+                    "--dm-lower-mobile-card-width": `${mobileDesign.cardWidth}px`,
+                    "--dm-lower-desktop-card-padding": `${desktopDesign.cardPadding}px`,
+                    "--dm-lower-mobile-card-padding": `${mobileDesign.cardPadding}px`,
                     "--dm-lower-desktop-card-bg": desktopDesign.cardBackground,
                     "--dm-lower-mobile-card-bg": mobileDesign.cardBackground,
                     "--dm-lower-desktop-card-radius": `${desktopDesign.cardRadius}px`,
@@ -370,10 +380,16 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     "--dm-lower-mobile-title-color": mobileDesign.titleColor,
                     "--dm-lower-desktop-title-size": `${desktopDesign.titleSize}px`,
                     "--dm-lower-mobile-title-size": `${mobileDesign.titleSize}px`,
+                    "--dm-lower-desktop-title-weight": desktopDesign.titleWeight,
+                    "--dm-lower-mobile-title-weight": mobileDesign.titleWeight,
                     "--dm-lower-desktop-description-color": desktopDesign.descriptionColor,
                     "--dm-lower-mobile-description-color": mobileDesign.descriptionColor,
                     "--dm-lower-desktop-description-size": `${desktopDesign.descriptionSize}px`,
                     "--dm-lower-mobile-description-size": `${mobileDesign.descriptionSize}px`,
+                    "--dm-lower-desktop-choice-height": `${desktopDesign.priceButtonHeight}px`,
+                    "--dm-lower-mobile-choice-height": `${mobileDesign.priceButtonHeight}px`,
+                    "--dm-lower-desktop-choice-radius": `${desktopDesign.priceButtonRadius}px`,
+                    "--dm-lower-mobile-choice-radius": `${mobileDesign.priceButtonRadius}px`,
                     "--dm-lower-desktop-choice-bg": desktopDesign.priceBackground,
                     "--dm-lower-mobile-choice-bg": mobileDesign.priceBackground,
                     "--dm-lower-desktop-choice-color": desktopDesign.priceTextColor,
@@ -386,6 +402,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     "--dm-lower-mobile-action-bg": mobileDesign.actionBackground,
                     "--dm-lower-desktop-action-color": desktopDesign.actionTextColor,
                     "--dm-lower-mobile-action-color": mobileDesign.actionTextColor,
+                    "--dm-lower-desktop-action-height": `${desktopDesign.actionHeight}px`,
+                    "--dm-lower-mobile-action-height": `${mobileDesign.actionHeight}px`,
                     "--dm-lower-desktop-action-radius": `${desktopDesign.actionRadius}px`,
                     "--dm-lower-mobile-action-radius": `${mobileDesign.actionRadius}px`,
                   } as CSSProperties}>
