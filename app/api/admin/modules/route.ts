@@ -169,6 +169,7 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
           url: String(media.url || "").slice(0, 1000),
           path: String(media.path || "").slice(0, 500),
           poster: String(media.poster || "").slice(0, 1000),
+          posterPath: String(media.posterPath || "").slice(0, 500),
           alt: String(media.alt || "").slice(0, 160),
         })).filter((media) => media.url),
         mobileMedia: (project.mobileMedia || []).slice(0, 20).map((media) => ({
@@ -177,6 +178,7 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
           url: String(media.url || "").slice(0, 1000),
           path: String(media.path || "").slice(0, 500),
           poster: String(media.poster || "").slice(0, 1000),
+          posterPath: String(media.posterPath || "").slice(0, 500),
           alt: String(media.alt || "").slice(0, 160),
         })).filter((media) => media.url),
         desktop: {

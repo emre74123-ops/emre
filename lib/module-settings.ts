@@ -80,6 +80,7 @@ export type DonationProjectMedia = {
   url: string;
   path?: string;
   poster?: string;
+  posterPath?: string;
   alt?: string;
 };
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "../../../../../lib/supabase/admin";
 import { createClient } from "../../../../../lib/supabase/server";
+import { deleteR2Prefix } from "../../../../../lib/r2";
 
 async function isAdmin() {
   const supabase = await createClient();
@@ -37,6 +38,11 @@ export async function DELETE(request: Request) {
   const body = await request.json();
   const projectId = String(body.projectId || "").replace(/[^a-z0-9-]/gi, "").toLowerCase();
   if (body.deleteAll && projectId) {
+    try {
+      await deleteR2Prefix(`modules/donation/projects/${projectId}/`);
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "R2 kart galerisi silinemedi." }, { status: 500 });
+    }
     const storage = createAdminClient();
     const paths: string[] = [];
     for (const device of ["desktop", "mobile"] as const) {
