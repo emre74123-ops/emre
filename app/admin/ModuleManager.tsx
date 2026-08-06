@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type DonationLowerDeviceSettings, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -18,6 +18,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [section, setSection] = useState<ModuleSection>("upper");
   const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
   const [lowerGroup, setLowerGroup] = useState("visibility");
+  const [projectCategory, setProjectCategory] = useState<DonationProject["category"]>("general");
+  const [selectedProjectId, setSelectedProjectId] = useState("general-support");
   const [tab, setTab] = useState<ModuleTab>("general");
   const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
   const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
@@ -38,6 +40,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }, []);
 
   const donation = settings.donation;
+  const categoryProjects = donation.projects.filter((project) => project.category === projectCategory);
+  const selectedProject = donation.projects.find((project) => project.id === selectedProjectId) || categoryProjects[0];
   const update = (changes: Partial<typeof donation>) => setSettings((current) => ({
     ...current,
     donation: { ...current.donation, ...changes },
@@ -52,6 +56,54 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       },
     },
   }));
+  const updateProjects = (projects: DonationProject[]) => update({ projects });
+  const updateProject = (changes: Partial<DonationProject>) => {
+    if (!selectedProject) return;
+    updateProjects(donation.projects.map((project) => project.id === selectedProject.id ? { ...project, ...changes } : project));
+  };
+  const updateProjectDesign = (device: Device, changes: Partial<DonationProjectDesign>) => {
+    if (!selectedProject) return;
+    updateProject({ [device]: { ...selectedProject[device], ...changes } });
+  };
+  const addProject = () => {
+    const base = selectedProject || defaultModuleSettings.donation.projects[0];
+    const id = `bagis-${Date.now()}`;
+    const project: DonationProject = {
+      ...base,
+      id,
+      category: projectCategory,
+      title: "Yeni bağış kartı",
+      description: "Bağış kartı açıklamasını buradan düzenleyin.",
+      badge: "Yeni",
+      desktop: { ...base.desktop },
+      mobile: { ...base.mobile },
+    };
+    updateProjects([...donation.projects, project]);
+    setSelectedProjectId(id);
+  };
+  const duplicateProject = () => {
+    if (!selectedProject) return;
+    const id = `${selectedProject.id}-kopya-${Date.now()}`;
+    updateProjects([...donation.projects, { ...selectedProject, id, title: `${selectedProject.title} Kopyası`, desktop: { ...selectedProject.desktop }, mobile: { ...selectedProject.mobile } }]);
+    setSelectedProjectId(id);
+  };
+  const deleteProject = () => {
+    if (!selectedProject || !window.confirm("Bu bağış kartı silinsin mi?")) return;
+    const next = donation.projects.filter((project) => project.id !== selectedProject.id);
+    updateProjects(next);
+    setSelectedProjectId(next.find((project) => project.category === projectCategory)?.id || "");
+  };
+  const moveProject = (direction: -1 | 1) => {
+    if (!selectedProject) return;
+    const index = donation.projects.findIndex((project) => project.id === selectedProject.id);
+    const siblingIndex = direction < 0
+      ? donation.projects.map((project, itemIndex) => ({ project, itemIndex })).filter((item) => item.itemIndex < index && item.project.category === projectCategory).at(-1)?.itemIndex
+      : donation.projects.findIndex((project, itemIndex) => itemIndex > index && project.category === projectCategory);
+    if (siblingIndex === undefined || siblingIndex < 0) return;
+    const next = [...donation.projects];
+    [next[index], next[siblingIndex]] = [next[siblingIndex], next[index]];
+    updateProjects(next);
+  };
 
   async function save() {
     setSaving(true);
@@ -169,9 +221,59 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const preview = (device: "desktop" | "mobile") => (
     <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
       <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlı görünüm" : "Web canlı görünüm"}</div>
-      <div className={styles.modulePreviewViewport}><DonationModule embedded settings={donation} previewDevice={device} /></div>
+      <div className={styles.modulePreviewViewport}><DonationModule embedded settings={donation} previewDevice={device} previewCategory={projectCategory} /></div>
     </div>
   );
+
+  const projectControls = (device: Device) => {
+    if (!selectedProject) return <div className={styles.emptyModuleGallery}>Bu kategoride henüz bağış kartı yok. “Yeni Kart” düğmesiyle ilk kartı oluşturun.</div>;
+    const design = selectedProject[device];
+    const designRange = (label: string, key: keyof DonationProjectDesign, min: number, max: number) => (
+      <label>{label} <b>{String(design[key])} px</b><input type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => updateProjectDesign(device, { [key]: Number(event.target.value) })} /></label>
+    );
+    return <div className={styles.lowerAccordion}>
+      <section className={lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Kart içeriği ve bağış sistemi</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
+        {lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
+          <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
+          <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
+          <label>Üst etiket<input value={selectedProject.badge} onChange={(event) => updateProject({ badge: event.target.value })} /></label>
+          <label>Açıklama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
+          <label>Görsel adresi<input value={selectedProject.image} onChange={(event) => updateProject({ image: event.target.value })} /></label>
+          <label>Bağış biçimi<select value={selectedProject.pricingMode} onChange={(event) => updateProject({ pricingMode: event.target.value as DonationProject["pricingMode"] })}><option value="amount">Bağış tutarı</option><option value="quantity">Adet / hisse</option></select></label>
+          {selectedProject.pricingMode === "quantity" ? <label>Birim fiyat<input type="number" min="0" value={selectedProject.fixedPrice} onChange={(event) => updateProject({ fixedPrice: Number(event.target.value) })} /></label> : null}
+          <label>{selectedProject.pricingMode === "quantity" ? "Adet seçenekleri" : "Hazır tutarlar"}<input value={selectedProject.suggested.join(", ")} onChange={(event) => updateProject({ suggested: event.target.value.split(",").map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0).slice(0, 12) })} placeholder="250, 500, 1000" /></label>
+          {selectedProject.pricingMode === "amount" ? <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.customAmountEnabled} onChange={(event) => updateProject({ customAmountEnabled: event.target.checked })} /> Özel tutar girişini göster</label> : null}
+        </div> : null}
+      </section>
+      <section className={lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Bu karta özel tasarım</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
+        {lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
+          <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak tasarımı kullan</label>
+          {!design.useSharedDesign ? <>
+            <label>Kart arka planı<input type="color" value={design.cardBackground} onChange={(event) => updateProjectDesign(device, { cardBackground: event.target.value })} /></label>
+            {designRange("Kart köşeleri", "cardRadius", 0, 60)}
+            {designRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
+            <label>Çerçeve rengi<input type="color" value={design.cardBorderColor} onChange={(event) => updateProjectDesign(device, { cardBorderColor: event.target.value })} /></label>
+            {designRange("Görsel yüksekliği", "imageHeight", 80, 500)}
+            {designRange("Görsel köşeleri", "imageRadius", 0, 60)}
+            {designRange("Başlık boyutu", "titleSize", 12, 48)}
+            <label>Başlık rengi<input type="color" value={design.titleColor} onChange={(event) => updateProjectDesign(device, { titleColor: event.target.value })} /></label>
+            {designRange("Açıklama boyutu", "descriptionSize", 9, 24)}
+            <label>Açıklama rengi<input type="color" value={design.descriptionColor} onChange={(event) => updateProjectDesign(device, { descriptionColor: event.target.value })} /></label>
+            <label>Fiyat düğmesi zemini<input type="color" value={design.priceBackground} onChange={(event) => updateProjectDesign(device, { priceBackground: event.target.value })} /></label>
+            <label>Fiyat yazısı<input type="color" value={design.priceTextColor} onChange={(event) => updateProjectDesign(device, { priceTextColor: event.target.value })} /></label>
+            <label>Seçili fiyat zemini<input type="color" value={design.selectedPriceBackground} onChange={(event) => updateProjectDesign(device, { selectedPriceBackground: event.target.value })} /></label>
+            <label>Seçili fiyat yazısı<input type="color" value={design.selectedPriceTextColor} onChange={(event) => updateProjectDesign(device, { selectedPriceTextColor: event.target.value })} /></label>
+            <label>Bağış düğmesi yazısı<input value={design.actionText} onChange={(event) => updateProjectDesign(device, { actionText: event.target.value })} /></label>
+            <label>Bağış düğmesi rengi<input type="color" value={design.actionBackground} onChange={(event) => updateProjectDesign(device, { actionBackground: event.target.value })} /></label>
+            <label>Düğme yazı rengi<input type="color" value={design.actionTextColor} onChange={(event) => updateProjectDesign(device, { actionTextColor: event.target.value })} /></label>
+            {designRange("Düğme köşeleri", "actionRadius", 0, 36)}
+          </> : <p className={styles.moduleHint}>Bu kart şu anda cihazın ortak alt bölüm tasarımını kullanıyor. Özel düzenlemek için seçimi kapatın.</p>}
+        </div> : null}
+      </section>
+    </div>;
+  };
 
   const lowerControls = (device: Device) => {
     const value = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
@@ -452,6 +554,31 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <div className={styles.moduleSectionIntro}>
               <span>ALT BÖLÜM</span><h2>Bağış Seçenekleri</h2><p>Seçilen kategoriye ait bağış kartları ve bağış işlemleri bu ayrı alanda yönetilecek.</p>
             </div>
+            <div className={styles.moduleSettingsPane}>
+              <div className={styles.moduleControls}>
+                <h3>Bağış kategorisi</h3>
+                <nav className={styles.moduleTabs} aria-label="Kart kategorileri">
+                  {donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => <button className={projectCategory === id ? styles.activeModuleTab : ""} type="button" key={id} onClick={() => {
+                    const nextCategory = id as DonationProject["category"];
+                    setProjectCategory(nextCategory);
+                    setSelectedProjectId(donation.projects.find((project) => project.category === nextCategory)?.id || "");
+                    setLowerGroup("project-content");
+                  }}>{label} · {donation.projects.filter((project) => project.category === id).length}</button>)}
+                </nav>
+                <h3>Bu kategorideki kartlar</h3>
+                <nav className={styles.deviceSettingsTabs} aria-label="Bağış kartları">
+                  {categoryProjects.map((project, index) => <button type="button" className={selectedProject?.id === project.id ? styles.activeDeviceSettingsTab : ""} key={project.id} onClick={() => { setSelectedProjectId(project.id); setLowerGroup("project-content"); }}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</button>)}
+                </nav>
+                <div className={styles.moduleTabs}>
+                  <button type="button" onClick={addProject}>+ Yeni Kart</button>
+                  <button type="button" disabled={!selectedProject} onClick={duplicateProject}>Çoğalt</button>
+                  <button type="button" disabled={!selectedProject} onClick={() => moveProject(-1)}>← Sola Al</button>
+                  <button type="button" disabled={!selectedProject} onClick={() => moveProject(1)}>Sağa Al →</button>
+                  <button type="button" disabled={!selectedProject} onClick={deleteProject}>Sil</button>
+                </div>
+              </div>
+              <div className={styles.moduleInformation}><strong>{categoryProjects.length}</strong><h3>{donationCategoryOptions.find(([id]) => id === projectCategory)?.[1]}</h3><p>Bu kategoriye istediğiniz kadar bağış kartı ekleyebilir; her kartı web ve mobil için ayrı tasarlayabilirsiniz.</p></div>
+            </div>
             <nav className={styles.lowerDeviceTabs} aria-label="Alt bölüm cihaz ayarları">
               <button className={lowerDevice === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("desktop"); setLowerGroup("visibility"); }}><span>WEB</span><strong>Web Ayarları</strong><small>Masaüstü görünümü</small></button>
               <button className={lowerDevice === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("mobile"); setLowerGroup("visibility"); }}><span>MOBİL</span><strong>Mobil Ayarları</strong><small>Telefon görünümü</small></button>
@@ -459,6 +586,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <div className={styles.lowerEditorGrid}>
               <div className={styles.lowerSettingsPanel}>
                 <div className={styles.lowerPanelHeading}><span>{lowerDevice === "desktop" ? "WEB AYARLARI" : "MOBİL AYARLARI"}</span><p>Tüm tasarım ve yerleşim ayarları bu cihaz için bağımsızdır.</p></div>
+                {projectControls(lowerDevice)}
                 {lowerControls(lowerDevice)}
               </div>
               <div className={styles.lowerPreviewSticky}>{preview(lowerDevice)}</div>

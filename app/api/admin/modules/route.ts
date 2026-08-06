@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
-import { defaultDonationCategoryImages, defaultModuleSettings, donationCategoryOptions, type ModuleSettings } from "../../../../lib/module-settings";
+import { defaultDonationCategoryImages, defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type ModuleSettings } from "../../../../lib/module-settings";
 import { readModuleSettings, writeModuleSettings } from "../../../../lib/module-storage";
 
 async function isAdmin() {
@@ -84,7 +84,7 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
 }
 
 function clean(input: Partial<ModuleSettings>): ModuleSettings {
-  const source = input.donation || defaultModuleSettings.donation;
+  const source = normalizeModuleSettings(input).donation;
   const validIds = new Set(donationCategoryOptions.map(([id]) => id));
   const visibleCategories = Array.isArray(source.visibleCategories)
     ? source.visibleCategories.filter((id) => validIds.has(id as typeof donationCategoryOptions[number][0]))
@@ -151,6 +151,15 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       visibleCategories,
       placement: "home-after-slider",
       categoryImages,
+      projects: source.projects.slice(0, 100).map((project) => ({
+        ...project,
+        id: text(project.id, `project-${Date.now()}`, 80).replace(/[^a-z0-9-]/gi, "-").toLowerCase(),
+        title: text(project.title, "Yeni bağış", 100),
+        description: String(project.description || "").slice(0, 500),
+        badge: String(project.badge || "").slice(0, 60),
+        fixedPrice: clamp(project.fixedPrice, 0, 100000000, 0),
+        suggested: project.suggested.slice(0, 12).map((value) => clamp(value, 1, 100000000, 1)),
+      })),
       lowerDesktop: cleanLower(source.lowerDesktop as unknown as Record<string, unknown>, defaultModuleSettings.donation.lowerDesktop),
       lowerMobile: cleanLower(source.lowerMobile as unknown as Record<string, unknown>, defaultModuleSettings.donation.lowerMobile),
     },
