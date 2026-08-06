@@ -47,6 +47,51 @@ export type DonationModuleSettings = {
   visibleCategories: string[];
   placement: "home-after-slider";
   categoryImages: Record<string, { desktop: string; mobile: string }>;
+  lowerDesktop: DonationLowerDeviceSettings;
+  lowerMobile: DonationLowerDeviceSettings;
+};
+
+export type DonationLowerDeviceSettings = {
+  enabled: boolean;
+  showHeading: boolean;
+  headingEyebrow: string;
+  headingTitle: string;
+  layout: "carousel" | "grid";
+  columns: number;
+  sectionMaxWidth: number;
+  sectionPadding: number;
+  sectionGap: number;
+  cardWidth: number;
+  cardRadius: number;
+  cardPadding: number;
+  cardGap: number;
+  cardBackground: string;
+  cardBorderColor: string;
+  cardBorderWidth: number;
+  cardShadow: "none" | "soft" | "medium" | "strong";
+  imageVisible: boolean;
+  imageHeight: number;
+  imageRadius: number;
+  imageFit: "cover" | "contain";
+  titleSize: number;
+  titleColor: string;
+  titleWeight: number;
+  descriptionVisible: boolean;
+  descriptionSize: number;
+  descriptionColor: string;
+  priceButtonHeight: number;
+  priceButtonRadius: number;
+  priceBackground: string;
+  priceTextColor: string;
+  selectedPriceBackground: string;
+  selectedPriceTextColor: string;
+  customAmountVisible: boolean;
+  actionButtonText: string;
+  actionButtonHeight: number;
+  actionButtonRadius: number;
+  actionButtonBackground: string;
+  actionButtonTextColor: string;
+  arrowsVisible: boolean;
 };
 
 export type ModuleSettings = {
@@ -121,5 +166,32 @@ export const defaultModuleSettings: ModuleSettings = {
     visibleCategories: donationCategoryOptions.map(([id]) => id),
     placement: "home-after-slider",
     categoryImages: defaultDonationCategoryImages,
+    lowerDesktop: {
+      enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
+      layout: "carousel", columns: 3, sectionMaxWidth: 1320, sectionPadding: 0, sectionGap: 22,
+      cardWidth: 370, cardRadius: 18, cardPadding: 24, cardGap: 22, cardBackground: "#ffffff",
+      cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
+      imageVisible: true, imageHeight: 218, imageRadius: 0, imageFit: "cover",
+      titleSize: 26, titleColor: "#143b34", titleWeight: 500,
+      descriptionVisible: true, descriptionSize: 12, descriptionColor: "#6e827d",
+      priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
+      selectedPriceBackground: "#e7f4ef", selectedPriceTextColor: "#0d7258", customAmountVisible: true,
+      actionButtonText: "Sepete ekle", actionButtonHeight: 46, actionButtonRadius: 9,
+      actionButtonBackground: "#128465", actionButtonTextColor: "#ffffff", arrowsVisible: true,
+    },
+    lowerMobile: {
+      enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
+      layout: "carousel", columns: 1, sectionMaxWidth: 640, sectionPadding: 12, sectionGap: 14,
+      cardWidth: 330, cardRadius: 16, cardPadding: 20, cardGap: 14, cardBackground: "#ffffff",
+      cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
+      imageVisible: true, imageHeight: 205, imageRadius: 0, imageFit: "cover",
+      titleSize: 24, titleColor: "#143b34", titleWeight: 500,
+      descriptionVisible: true, descriptionSize: 12, descriptionColor: "#6e827d",
+      priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
+      selectedPriceBackground: "#e7f4ef", selectedPriceTextColor: "#0d7258", customAmountVisible: true,
+      actionButtonText: "Sepete ekle", actionButtonHeight: 46, actionButtonRadius: 9,
+      actionButtonBackground: "#128465", actionButtonTextColor: "#ffffff", arrowsVisible: false,
+    },
   },
 };
+
