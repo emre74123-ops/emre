@@ -253,7 +253,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           </div>
           <div className={styles.miniProjectPreview}>
             {categoryProjects.length ? categoryProjects.map((project) => <button type="button" key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onClick={() => setSelectedProjectId(project.id)}>
-              <span>{project.image ? <Image src={project.image} alt="" fill sizes="150px" /> : project.title.slice(0, 1)}</span>
+              <span>{donation.categoryImages[project.category]?.[lowerDevice] ? <Image src={donation.categoryImages[project.category][lowerDevice]} alt="" fill sizes="150px" /> : project.title.slice(0, 1)}</span>
               <div>
                 {project.badge ? <em>{project.badge}</em> : null}
                 <strong>{project.title}</strong>
@@ -271,12 +271,12 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <label>Bağış kartı<select value={selectedProject?.id || ""} onChange={(event) => setSelectedProjectId(event.target.value)}>
             {categoryProjects.length ? categoryProjects.map((project, index) => <option value={project.id} key={project.id}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</option>) : <option value="">Bu kategoride kart yok</option>}
           </select></label>
-          <div className={styles.moduleTabs}>
-            <button type="button" onClick={addProject}>+ Yeni</button>
-            <button type="button" disabled={!selectedProject} onClick={duplicateProject}>Çoğalt</button>
-            <button type="button" disabled={!selectedProject} onClick={() => moveProject(-1)}>←</button>
-            <button type="button" disabled={!selectedProject} onClick={() => moveProject(1)}>→</button>
-            <button type="button" disabled={!selectedProject} onClick={deleteProject}>Sil</button>
+          <div className={styles.projectQuickActions}>
+            <button type="button" title="Yeni kart" aria-label="Yeni kart" onClick={addProject}>＋</button>
+            <button type="button" title="Kartı çoğalt" aria-label="Kartı çoğalt" disabled={!selectedProject} onClick={duplicateProject}>⧉</button>
+            <button type="button" title="Sola taşı" aria-label="Sola taşı" disabled={!selectedProject} onClick={() => moveProject(-1)}>←</button>
+            <button type="button" title="Sağa taşı" aria-label="Sağa taşı" disabled={!selectedProject} onClick={() => moveProject(1)}>→</button>
+            <button type="button" title="Kartı sil" aria-label="Kartı sil" disabled={!selectedProject} onClick={deleteProject}>×</button>
           </div>
           <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
         </div> : null}
