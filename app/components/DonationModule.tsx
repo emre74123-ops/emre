@@ -109,7 +109,11 @@ export default function DonationModule({ embedded = false, settings = defaultMod
 
   const visibleCategories = categories.filter((item) => settings.visibleCategories.includes(item.id));
   const effectiveCategory = settings.visibleCategories.includes(category) ? category : "all";
-  const filtered = settings.projects.filter((project) => project.enabled && (effectiveCategory === "all" || project.category === effectiveCategory));
+  const filtered = settings.projects
+    .filter((project) => project.enabled && (effectiveCategory === "all" || project.category === effectiveCategory))
+    .sort((a, b) => effectiveCategory === "all"
+      ? (previewDevice === "mobile" ? (a.allOrderMobile ?? 0) - (b.allOrderMobile ?? 0) : (a.allOrderDesktop ?? 0) - (b.allOrderDesktop ?? 0))
+      : 0);
 
   useEffect(() => {
     const rail = categoriesRef.current;
@@ -352,7 +356,9 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                 const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
                 const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
                 return (
-                  <article className={styles.card} key={project.id} style={{
+                  <article className={`${styles.card}${effectiveCategory === "all" && project.showInAllDesktop === false ? ` ${styles.allDesktopHidden}` : ""}${effectiveCategory === "all" && project.showInAllMobile === false ? ` ${styles.allMobileHidden}` : ""}`} key={project.id} style={{
+                    "--dm-all-desktop-order": project.allOrderDesktop ?? 0,
+                    "--dm-all-mobile-order": project.allOrderMobile ?? 0,
                     "--dm-lower-desktop-card-width": `${desktopDesign.cardWidth}px`,
                     "--dm-lower-mobile-card-width": `${mobileDesign.cardWidth}px`,
                     "--dm-lower-desktop-card-padding": `${desktopDesign.cardPadding}px`,

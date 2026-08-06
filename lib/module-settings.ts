@@ -56,6 +56,10 @@ export type DonationProject = {
   id: string;
   category: "general" | "qurban" | "water" | "zakat" | "orphan";
   enabled: boolean;
+  showInAllDesktop?: boolean;
+  showInAllMobile?: boolean;
+  allOrderDesktop?: number;
+  allOrderMobile?: number;
   title: string;
   description: string;
   image: string;
@@ -329,6 +333,10 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
         return {
           ...fallback,
           ...project,
+          showInAllDesktop: project.showInAllDesktop !== false,
+          showInAllMobile: project.showInAllMobile !== false,
+          allOrderDesktop: Number.isFinite(project.allOrderDesktop) ? project.allOrderDesktop : index,
+          allOrderMobile: Number.isFinite(project.allOrderMobile) ? project.allOrderMobile : index,
           suggested: Array.isArray(project.suggested) && project.suggested.length ? project.suggested : fallback.suggested,
           desktop: { ...fallback.desktop, ...project.desktop },
           mobile: { ...fallback.mobile, ...project.mobile },
