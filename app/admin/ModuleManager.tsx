@@ -18,6 +18,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [section, setSection] = useState<ModuleSection>("upper");
   const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
   const [lowerGroup, setLowerGroup] = useState("visibility");
+  const [measurementGroup, setMeasurementGroup] = useState("card");
   const [projectCategory, setProjectCategory] = useState<DonationProject["category"]>("general");
   const [selectedProjectId, setSelectedProjectId] = useState("general-support");
   const [tab, setTab] = useState<ModuleTab>("general");
@@ -284,37 +285,67 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ölçüleri ve yerleşimi</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
         {lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart ölçülerini kullan</label>
-          {design.useSharedDesign ? <>
-            <p className={styles.moduleHint}>Bu değerler {device === "desktop" ? "web" : "mobil"} görünümündeki ortak kart ölçüleridir ve ortak ölçüleri kullanan bütün kartlara uygulanır.</p>
-            {sharedRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
-            {sharedRange("Kart iç boşluğu", "cardPadding", 0, 60)}
-            {sharedRange("Kart köşeleri", "cardRadius", 0, 60)}
-            {sharedRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
-            {sharedRange("Görsel yüksekliği", "imageHeight", 80, 500)}
-            {sharedRange("Görsel köşeleri", "imageRadius", 0, 60)}
-            {sharedRange("Başlık boyutu", "titleSize", 12, 48)}
-            {sharedRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}
-            {sharedRange("Açıklama boyutu", "descriptionSize", 9, 24)}
-            {sharedRange("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
-            {sharedRange("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
-            {sharedRange("Bağış düğmesi yüksekliği", "actionButtonHeight", 34, 72)}
-            {sharedRange("Bağış düğmesi köşeleri", "actionButtonRadius", 0, 36)}
-          </> : <>
-            <p className={styles.moduleHint}>Bu ölçüler yalnızca seçili karta uygulanır; diğer kartların ölçüleri değişmez.</p>
-            {designRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
-            {designRange("Kart iç boşluğu", "cardPadding", 0, 60)}
-            {designRange("Kart köşeleri", "cardRadius", 0, 60)}
-            {designRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
-            {designRange("Görsel yüksekliği", "imageHeight", 80, 500)}
-            {designRange("Görsel köşeleri", "imageRadius", 0, 60)}
-            {designRange("Başlık boyutu", "titleSize", 12, 48)}
-            {designRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}
-            {designRange("Açıklama boyutu", "descriptionSize", 9, 24)}
-            {designRange("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
-            {designRange("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
-            {designRange("Bağış düğmesi yüksekliği", "actionHeight", 34, 72)}
-            {designRange("Bağış düğmesi köşeleri", "actionRadius", 0, 36)}
-          </>}
+          <p className={styles.moduleHint}>{design.useSharedDesign ? `Bu değerler ${device === "desktop" ? "web" : "mobil"} görünümündeki ortak ölçülerdir ve ortak ölçüleri kullanan bütün kartlara uygulanır.` : "Bu ölçüler yalnızca seçili karta uygulanır; diğer kartların ölçüleri değişmez."}</p>
+          <div className={styles.measurementSubgroups}>
+            <section className={measurementGroup === "card" ? styles.measurementSubgroupOpen : ""}>
+              <button type="button" onClick={() => setMeasurementGroup((current) => current === "card" ? "" : "card")}><span>Kart ölçüleri</span><b>{measurementGroup === "card" ? "−" : "+"}</b></button>
+              {measurementGroup === "card" ? <div>
+                {design.useSharedDesign ? <>
+                  {sharedRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
+                  {sharedRange("Kart iç boşluğu", "cardPadding", 0, 60)}
+                  {sharedRange("Kart köşeleri", "cardRadius", 0, 60)}
+                  {sharedRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
+                </> : <>
+                  {designRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
+                  {designRange("Kart iç boşluğu", "cardPadding", 0, 60)}
+                  {designRange("Kart köşeleri", "cardRadius", 0, 60)}
+                  {designRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
+                </>}
+              </div> : null}
+            </section>
+            <section className={measurementGroup === "image" ? styles.measurementSubgroupOpen : ""}>
+              <button type="button" onClick={() => setMeasurementGroup((current) => current === "image" ? "" : "image")}><span>Görsel ölçüleri</span><b>{measurementGroup === "image" ? "−" : "+"}</b></button>
+              {measurementGroup === "image" ? <div>
+                {design.useSharedDesign ? <>
+                  {sharedRange("Görsel yüksekliği", "imageHeight", 80, 500)}
+                  {sharedRange("Görsel köşeleri", "imageRadius", 0, 60)}
+                </> : <>
+                  {designRange("Görsel yüksekliği", "imageHeight", 80, 500)}
+                  {designRange("Görsel köşeleri", "imageRadius", 0, 60)}
+                </>}
+              </div> : null}
+            </section>
+            <section className={measurementGroup === "text" ? styles.measurementSubgroupOpen : ""}>
+              <button type="button" onClick={() => setMeasurementGroup((current) => current === "text" ? "" : "text")}><span>Yazı ölçüleri</span><b>{measurementGroup === "text" ? "−" : "+"}</b></button>
+              {measurementGroup === "text" ? <div>
+                {design.useSharedDesign ? <>
+                  {sharedRange("Başlık boyutu", "titleSize", 12, 48)}
+                  {sharedRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}
+                  {sharedRange("Açıklama boyutu", "descriptionSize", 9, 24)}
+                </> : <>
+                  {designRange("Başlık boyutu", "titleSize", 12, 48)}
+                  {designRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}
+                  {designRange("Açıklama boyutu", "descriptionSize", 9, 24)}
+                </>}
+              </div> : null}
+            </section>
+            <section className={measurementGroup === "buttons" ? styles.measurementSubgroupOpen : ""}>
+              <button type="button" onClick={() => setMeasurementGroup((current) => current === "buttons" ? "" : "buttons")}><span>Düğme ölçüleri</span><b>{measurementGroup === "buttons" ? "−" : "+"}</b></button>
+              {measurementGroup === "buttons" ? <div>
+                {design.useSharedDesign ? <>
+                  {sharedRange("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
+                  {sharedRange("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
+                  {sharedRange("Bağış düğmesi yüksekliği", "actionButtonHeight", 34, 72)}
+                  {sharedRange("Bağış düğmesi köşeleri", "actionButtonRadius", 0, 36)}
+                </> : <>
+                  {designRange("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
+                  {designRange("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
+                  {designRange("Bağış düğmesi yüksekliği", "actionHeight", 34, 72)}
+                  {designRange("Bağış düğmesi köşeleri", "actionRadius", 0, 36)}
+                </>}
+              </div> : null}
+            </section>
+          </div>
         </div> : null}
       </section>
       <section style={{ order: 4 }} className={lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}>
