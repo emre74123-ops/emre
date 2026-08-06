@@ -192,6 +192,68 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-mobile-shadow": shadowValue[settings.mobileShadow],
         "--dm-desktop-image-bg": settings.desktopImageBackgroundColor,
         "--dm-mobile-image-bg": settings.mobileImageBackgroundColor,
+        "--dm-lower-desktop-display": settings.lowerDesktop.enabled ? "block" : "none",
+        "--dm-lower-mobile-display": settings.lowerMobile.enabled ? "block" : "none",
+        "--dm-lower-desktop-max": `${settings.lowerDesktop.sectionMaxWidth}px`,
+        "--dm-lower-mobile-max": `${settings.lowerMobile.sectionMaxWidth}px`,
+        "--dm-lower-desktop-padding": `${settings.lowerDesktop.sectionPadding}px`,
+        "--dm-lower-mobile-padding": `${settings.lowerMobile.sectionPadding}px`,
+        "--dm-lower-desktop-gap": `${settings.lowerDesktop.sectionGap}px`,
+        "--dm-lower-mobile-gap": `${settings.lowerMobile.sectionGap}px`,
+        "--dm-lower-desktop-card-width": `${settings.lowerDesktop.cardWidth}px`,
+        "--dm-lower-mobile-card-width": `${settings.lowerMobile.cardWidth}px`,
+        "--dm-lower-desktop-card-gap": `${settings.lowerDesktop.cardGap}px`,
+        "--dm-lower-mobile-card-gap": `${settings.lowerMobile.cardGap}px`,
+        "--dm-lower-desktop-card-radius": `${settings.lowerDesktop.cardRadius}px`,
+        "--dm-lower-mobile-card-radius": `${settings.lowerMobile.cardRadius}px`,
+        "--dm-lower-desktop-card-padding": `${settings.lowerDesktop.cardPadding}px`,
+        "--dm-lower-mobile-card-padding": `${settings.lowerMobile.cardPadding}px`,
+        "--dm-lower-desktop-card-bg": settings.lowerDesktop.cardBackground,
+        "--dm-lower-mobile-card-bg": settings.lowerMobile.cardBackground,
+        "--dm-lower-desktop-border": `${settings.lowerDesktop.cardBorderWidth}px solid ${settings.lowerDesktop.cardBorderColor}`,
+        "--dm-lower-mobile-border": `${settings.lowerMobile.cardBorderWidth}px solid ${settings.lowerMobile.cardBorderColor}`,
+        "--dm-lower-desktop-shadow": shadowValue[settings.lowerDesktop.cardShadow],
+        "--dm-lower-mobile-shadow": shadowValue[settings.lowerMobile.cardShadow],
+        "--dm-lower-desktop-image-display": settings.lowerDesktop.imageVisible ? "block" : "none",
+        "--dm-lower-mobile-image-display": settings.lowerMobile.imageVisible ? "block" : "none",
+        "--dm-lower-desktop-image-height": `${settings.lowerDesktop.imageHeight}px`,
+        "--dm-lower-mobile-image-height": `${settings.lowerMobile.imageHeight}px`,
+        "--dm-lower-desktop-image-radius": `${settings.lowerDesktop.imageRadius}px`,
+        "--dm-lower-mobile-image-radius": `${settings.lowerMobile.imageRadius}px`,
+        "--dm-lower-desktop-image-fit": settings.lowerDesktop.imageFit,
+        "--dm-lower-mobile-image-fit": settings.lowerMobile.imageFit,
+        "--dm-lower-desktop-title-size": `${settings.lowerDesktop.titleSize}px`,
+        "--dm-lower-mobile-title-size": `${settings.lowerMobile.titleSize}px`,
+        "--dm-lower-desktop-title-color": settings.lowerDesktop.titleColor,
+        "--dm-lower-mobile-title-color": settings.lowerMobile.titleColor,
+        "--dm-lower-desktop-title-weight": settings.lowerDesktop.titleWeight,
+        "--dm-lower-mobile-title-weight": settings.lowerMobile.titleWeight,
+        "--dm-lower-desktop-description-display": settings.lowerDesktop.descriptionVisible ? "block" : "none",
+        "--dm-lower-mobile-description-display": settings.lowerMobile.descriptionVisible ? "block" : "none",
+        "--dm-lower-desktop-description-size": `${settings.lowerDesktop.descriptionSize}px`,
+        "--dm-lower-mobile-description-size": `${settings.lowerMobile.descriptionSize}px`,
+        "--dm-lower-desktop-description-color": settings.lowerDesktop.descriptionColor,
+        "--dm-lower-mobile-description-color": settings.lowerMobile.descriptionColor,
+        "--dm-lower-desktop-choice-height": `${settings.lowerDesktop.priceButtonHeight}px`,
+        "--dm-lower-mobile-choice-height": `${settings.lowerMobile.priceButtonHeight}px`,
+        "--dm-lower-desktop-choice-radius": `${settings.lowerDesktop.priceButtonRadius}px`,
+        "--dm-lower-mobile-choice-radius": `${settings.lowerMobile.priceButtonRadius}px`,
+        "--dm-lower-desktop-choice-bg": settings.lowerDesktop.priceBackground,
+        "--dm-lower-mobile-choice-bg": settings.lowerMobile.priceBackground,
+        "--dm-lower-desktop-choice-color": settings.lowerDesktop.priceTextColor,
+        "--dm-lower-mobile-choice-color": settings.lowerMobile.priceTextColor,
+        "--dm-lower-desktop-selected-bg": settings.lowerDesktop.selectedPriceBackground,
+        "--dm-lower-mobile-selected-bg": settings.lowerMobile.selectedPriceBackground,
+        "--dm-lower-desktop-selected-color": settings.lowerDesktop.selectedPriceTextColor,
+        "--dm-lower-mobile-selected-color": settings.lowerMobile.selectedPriceTextColor,
+        "--dm-lower-desktop-action-height": `${settings.lowerDesktop.actionButtonHeight}px`,
+        "--dm-lower-mobile-action-height": `${settings.lowerMobile.actionButtonHeight}px`,
+        "--dm-lower-desktop-action-radius": `${settings.lowerDesktop.actionButtonRadius}px`,
+        "--dm-lower-mobile-action-radius": `${settings.lowerMobile.actionButtonRadius}px`,
+        "--dm-lower-desktop-action-bg": settings.lowerDesktop.actionButtonBackground,
+        "--dm-lower-mobile-action-bg": settings.lowerMobile.actionButtonBackground,
+        "--dm-lower-desktop-action-color": settings.lowerDesktop.actionButtonTextColor,
+        "--dm-lower-mobile-action-color": settings.lowerMobile.actionButtonTextColor,
       } as CSSProperties}
     >
       {!embedded && <div className={styles.previewBar}>
@@ -231,13 +293,14 @@ export default function DonationModule({ embedded = false, settings = defaultMod
           </> : null}
         </div>
 
-        <div className={styles.contentGrid}>
+        <div className={`${styles.contentGrid}${settings.lowerDesktop.layout === "grid" ? ` ${styles.desktopGrid}` : ""}${settings.lowerMobile.layout === "grid" ? ` ${styles.mobileGrid}` : ""}`}>
             <div className={styles.sectionHeading}>
-              <div><span>BAĞIŞ ALANLARI</span><h2>Destek projeleri</h2></div>
+              <div className={styles.desktopLowerHeading} style={{ display: settings.lowerDesktop.showHeading ? undefined : "none" }}><span>{settings.lowerDesktop.headingEyebrow}</span><h2>{settings.lowerDesktop.headingTitle}</h2></div>
+              <div className={styles.mobileLowerHeading} style={{ display: settings.lowerMobile.showHeading ? undefined : "none" }}><span>{settings.lowerMobile.headingEyebrow}</span><h2>{settings.lowerMobile.headingTitle}</h2></div>
               <div className={styles.carouselActions}>
                 <p>{filtered.length} proje</p>
-                <button type="button" aria-label="Önceki bağış projeleri" onClick={() => moveCards(-1)}>←</button>
-                <button type="button" aria-label="Sonraki bağış projeleri" onClick={() => moveCards(1)}>→</button>
+                <button className={!settings.lowerDesktop.arrowsVisible ? styles.desktopArrowOff : ""} type="button" aria-label="Önceki bağış projeleri" onClick={() => moveCards(-1)}>←</button>
+                <button className={!settings.lowerDesktop.arrowsVisible ? styles.desktopArrowOff : ""} type="button" aria-label="Sonraki bağış projeleri" onClick={() => moveCards(1)}>→</button>
               </div>
             </div>
             <div className={styles.cards} ref={cardsRef}>
@@ -264,7 +327,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                           <span>{project.fixedPrice ? money.format(project.fixedPrice * picked) : "₺"}</span>
                           {!project.fixedPrice && <input inputMode="numeric" value={custom[project.id] || ""} onChange={(event) => setCustom((state) => ({ ...state, [project.id]: event.target.value.replace(/[^\d,]/g, "") }))} placeholder="Başka tutar" />}
                         </label>
-                        <button onClick={() => addToCart(project)}>Sepete ekle <b>+</b></button>
+                        <button onClick={() => addToCart(project)}><span className={styles.desktopActionText}>{settings.lowerDesktop.actionButtonText}</span><span className={styles.mobileActionText}>{settings.lowerMobile.actionButtonText}</span> <b>+</b></button>
                       </div>
                     </div>
                   </article>
@@ -277,3 +340,4 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     </section>
   );
 }
+
