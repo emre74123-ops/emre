@@ -232,6 +232,27 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <label>{label} <b>{String(design[key])} px</b><input type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => updateProjectDesign(device, { [key]: Number(event.target.value) })} /></label>
     );
     return <div className={styles.lowerAccordion}>
+      <section className={lowerGroup === "project-selection" ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-selection" ? "" : "project-selection")}><span>Bağış kategorisi ve kart seçimi</span><b>{lowerGroup === "project-selection" ? "−" : "+"}</b></button>
+        {lowerGroup === "project-selection" ? <div className={styles.lowerAccordionContent}>
+          <label>Kategori<select value={projectCategory} onChange={(event) => {
+            const nextCategory = event.target.value as DonationProject["category"];
+            setProjectCategory(nextCategory);
+            setSelectedProjectId(donation.projects.find((project) => project.category === nextCategory)?.id || "");
+          }}>{donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => <option value={id} key={id}>{label} · {donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
+          <label>Bağış kartı<select value={selectedProject?.id || ""} onChange={(event) => setSelectedProjectId(event.target.value)}>
+            {categoryProjects.length ? categoryProjects.map((project, index) => <option value={project.id} key={project.id}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</option>) : <option value="">Bu kategoride kart yok</option>}
+          </select></label>
+          <div className={styles.moduleTabs}>
+            <button type="button" onClick={addProject}>+ Yeni</button>
+            <button type="button" disabled={!selectedProject} onClick={duplicateProject}>Çoğalt</button>
+            <button type="button" disabled={!selectedProject} onClick={() => moveProject(-1)}>←</button>
+            <button type="button" disabled={!selectedProject} onClick={() => moveProject(1)}>→</button>
+            <button type="button" disabled={!selectedProject} onClick={deleteProject}>Sil</button>
+          </div>
+          <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
+        </div> : null}
+      </section>
       <section className={lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Kart içeriği ve bağış sistemi</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
         {lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
@@ -553,31 +574,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           {section === "lower" ? <div className={styles.moduleLowerSection}>
             <div className={styles.moduleSectionIntro}>
               <span>ALT BÖLÜM</span><h2>Bağış Seçenekleri</h2><p>Seçilen kategoriye ait bağış kartları ve bağış işlemleri bu ayrı alanda yönetilecek.</p>
-            </div>
-            <div className={styles.moduleSettingsPane}>
-              <div className={styles.moduleControls}>
-                <h3>Bağış kategorisi</h3>
-                <nav className={styles.moduleTabs} aria-label="Kart kategorileri">
-                  {donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => <button className={projectCategory === id ? styles.activeModuleTab : ""} type="button" key={id} onClick={() => {
-                    const nextCategory = id as DonationProject["category"];
-                    setProjectCategory(nextCategory);
-                    setSelectedProjectId(donation.projects.find((project) => project.category === nextCategory)?.id || "");
-                    setLowerGroup("project-content");
-                  }}>{label} · {donation.projects.filter((project) => project.category === id).length}</button>)}
-                </nav>
-                <h3>Bu kategorideki kartlar</h3>
-                <nav className={styles.deviceSettingsTabs} aria-label="Bağış kartları">
-                  {categoryProjects.map((project, index) => <button type="button" className={selectedProject?.id === project.id ? styles.activeDeviceSettingsTab : ""} key={project.id} onClick={() => { setSelectedProjectId(project.id); setLowerGroup("project-content"); }}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</button>)}
-                </nav>
-                <div className={styles.moduleTabs}>
-                  <button type="button" onClick={addProject}>+ Yeni Kart</button>
-                  <button type="button" disabled={!selectedProject} onClick={duplicateProject}>Çoğalt</button>
-                  <button type="button" disabled={!selectedProject} onClick={() => moveProject(-1)}>← Sola Al</button>
-                  <button type="button" disabled={!selectedProject} onClick={() => moveProject(1)}>Sağa Al →</button>
-                  <button type="button" disabled={!selectedProject} onClick={deleteProject}>Sil</button>
-                </div>
-              </div>
-              <div className={styles.moduleInformation}><strong>{categoryProjects.length}</strong><h3>{donationCategoryOptions.find(([id]) => id === projectCategory)?.[1]}</h3><p>Bu kategoriye istediğiniz kadar bağış kartı ekleyebilir; her kartı web ve mobil için ayrı tasarlayabilirsiniz.</p></div>
             </div>
             <nav className={styles.lowerDeviceTabs} aria-label="Alt bölüm cihaz ayarları">
               <button className={lowerDevice === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("desktop"); setLowerGroup("visibility"); }}><span>WEB</span><strong>Web Ayarları</strong><small>Masaüstü görünümü</small></button>
