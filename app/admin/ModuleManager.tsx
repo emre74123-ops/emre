@@ -234,7 +234,30 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     return <div className={styles.lowerAccordion}>
       <section className={lowerGroup === "project-selection" ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-selection" ? "" : "project-selection")}><span>Bağış kategorisi ve kart seçimi</span><b>{lowerGroup === "project-selection" ? "−" : "+"}</b></button>
-        {lowerGroup === "project-selection" ? <div className={styles.lowerAccordionContent}>
+        {lowerGroup === "project-selection" ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
+          <div className={styles.miniCategoryPreview}>
+            {donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => {
+              const projects = donation.projects.filter((project) => project.category === id);
+              const cover = projects.find((project) => project.image)?.image;
+              const active = projectCategory === id;
+              return <button type="button" key={id} className={active ? styles.activeMiniCategory : ""} onClick={() => {
+                const nextCategory = id as DonationProject["category"];
+                setProjectCategory(nextCategory);
+                setSelectedProjectId(projects[0]?.id || "");
+              }}>
+                <span>{cover ? <Image src={cover} alt="" fill sizes="72px" /> : <b>{label.slice(0, 1)}</b>}</span>
+                <strong>{label}</strong>
+                <small>{projects.length} kart</small>
+              </button>;
+            })}
+          </div>
+          <div className={styles.miniProjectPreview}>
+            {categoryProjects.length ? categoryProjects.map((project) => <button type="button" key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onClick={() => setSelectedProjectId(project.id)}>
+              <span>{project.image ? <Image src={project.image} alt="" fill sizes="52px" /> : project.title.slice(0, 1)}</span>
+              <strong>{project.title}</strong>
+              {!project.enabled ? <small>Kapalı</small> : null}
+            </button>) : <small>Bu kategoride henüz bağış kartı yok.</small>}
+          </div>
           <label>Kategori<select value={projectCategory} onChange={(event) => {
             const nextCategory = event.target.value as DonationProject["category"];
             setProjectCategory(nextCategory);
