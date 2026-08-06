@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { defaultModuleSettings, donationCategoryOptions, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, donationCategoryOptions, type DonationLowerDeviceSettings, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -16,6 +16,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [section, setSection] = useState<ModuleSection>("upper");
+  const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
+  const [lowerGroup, setLowerGroup] = useState("visibility");
   const [tab, setTab] = useState<ModuleTab>("general");
   const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
   const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
@@ -50,6 +52,16 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const update = (changes: Partial<typeof donation>) => setSettings((current) => ({
     ...current,
     donation: { ...current.donation, ...changes },
+  }));
+  const updateLower = (device: Device, changes: Partial<DonationLowerDeviceSettings>) => setSettings((current) => ({
+    ...current,
+    donation: {
+      ...current.donation,
+      [device === "desktop" ? "lowerDesktop" : "lowerMobile"]: {
+        ...current.donation[device === "desktop" ? "lowerDesktop" : "lowerMobile"],
+        ...changes,
+      },
+    },
   }));
 
   async function save() {
@@ -171,6 +183,84 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <div className={styles.modulePreviewViewport}><DonationModule embedded settings={donation} previewDevice={device} /></div>
     </div>
   );
+
+  const lowerControls = (device: Device) => {
+    const value = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
+    const change = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
+    const groups = [
+      ["visibility", "Görünürlük ve başlık"],
+      ["layout", "Yerleşim ve ölçüler"],
+      ["card", "Kart tasarımı"],
+      ["image", "Görsel alanı"],
+      ["text", "Başlık ve açıklama"],
+      ["price", "Fiyat seçenekleri"],
+      ["action", "Tutar ve bağış butonu"],
+    ] as const;
+    const range = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
+      <label>{label} <b>{String(value[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(value[key])} onChange={(event) => change({ [key]: Number(event.target.value) })} /></label>
+    );
+    return <div className={styles.lowerAccordion}>
+      {groups.map(([id, label]) => <section key={id} className={lowerGroup === id ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setLowerGroup((current) => current === id ? "" : id)}><span>{label}</span><b>{lowerGroup === id ? "−" : "+"}</b></button>
+        {lowerGroup === id ? <div className={styles.lowerAccordionContent}>
+          {id === "visibility" ? <>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.enabled} onChange={(event) => change({ enabled: event.target.checked })} /> Alt bölümü bu cihazda göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.showHeading} onChange={(event) => change({ showHeading: event.target.checked })} /> Bölüm başlığını göster</label>
+            <label>Üst etiket<input type="text" value={value.headingEyebrow} onChange={(event) => change({ headingEyebrow: event.target.value })} /></label>
+            <label>Ana başlık<input type="text" value={value.headingTitle} onChange={(event) => change({ headingTitle: event.target.value })} /></label>
+          </> : null}
+          {id === "layout" ? <>
+            <label>Gösterim biçimi<select value={value.layout} onChange={(event) => change({ layout: event.target.value as "carousel" | "grid" })}><option value="carousel">Yatay kaydırma</option><option value="grid">Izgara</option></select></label>
+            {value.layout === "grid" ? range("Sütun sayısı", "columns", 1, device === "desktop" ? 6 : 2, "") : null}
+            {range("Bölüm genişliği", "sectionMaxWidth", device === "desktop" ? 700 : 280, device === "desktop" ? 1800 : 640)}
+            {range("Yan iç boşluk", "sectionPadding", 0, 80)}
+            {range("Üst bölümle mesafe", "sectionGap", 0, 100)}
+            {range("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
+            {range("Kartlar arası boşluk", "cardGap", 0, 60)}
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
+          </> : null}
+          {id === "card" ? <>
+            {range("Köşe yuvarlaklığı", "cardRadius", 0, 60)}
+            {range("Kart iç boşluğu", "cardPadding", 0, 60)}
+            {range("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
+            <label>Kart arka planı<input type="color" value={value.cardBackground} onChange={(event) => change({ cardBackground: event.target.value })} /></label>
+            <label>Çerçeve rengi<input type="color" value={value.cardBorderColor} onChange={(event) => change({ cardBorderColor: event.target.value })} /></label>
+            <label>Gölge<select value={value.cardShadow} onChange={(event) => change({ cardShadow: event.target.value as DonationLowerDeviceSettings["cardShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
+          </> : null}
+          {id === "image" ? <>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.imageVisible} onChange={(event) => change({ imageVisible: event.target.checked })} /> Kart görselini göster</label>
+            {range("Görsel yüksekliği", "imageHeight", 80, 500)}
+            {range("Görsel köşeleri", "imageRadius", 0, 60)}
+            <label>Görsel davranışı<select value={value.imageFit} onChange={(event) => change({ imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
+          </> : null}
+          {id === "text" ? <>
+            {range("Başlık boyutu", "titleSize", 12, 48)}
+            {range("Başlık kalınlığı", "titleWeight", 300, 900, "")}
+            <label>Başlık rengi<input type="color" value={value.titleColor} onChange={(event) => change({ titleColor: event.target.value })} /></label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.descriptionVisible} onChange={(event) => change({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
+            {range("Açıklama boyutu", "descriptionSize", 9, 24)}
+            <label>Açıklama rengi<input type="color" value={value.descriptionColor} onChange={(event) => change({ descriptionColor: event.target.value })} /></label>
+          </> : null}
+          {id === "price" ? <>
+            {range("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
+            {range("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
+            <label>Normal zemin<input type="color" value={value.priceBackground} onChange={(event) => change({ priceBackground: event.target.value })} /></label>
+            <label>Normal yazı<input type="color" value={value.priceTextColor} onChange={(event) => change({ priceTextColor: event.target.value })} /></label>
+            <label>Seçili zemin<input type="color" value={value.selectedPriceBackground} onChange={(event) => change({ selectedPriceBackground: event.target.value })} /></label>
+            <label>Seçili yazı<input type="color" value={value.selectedPriceTextColor} onChange={(event) => change({ selectedPriceTextColor: event.target.value })} /></label>
+          </> : null}
+          {id === "action" ? <>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.customAmountVisible} onChange={(event) => change({ customAmountVisible: event.target.checked })} /> Özel tutar alanını göster</label>
+            <label>Buton yazısı<input type="text" value={value.actionButtonText} onChange={(event) => change({ actionButtonText: event.target.value })} /></label>
+            {range("Buton yüksekliği", "actionButtonHeight", 34, 72)}
+            {range("Buton köşeleri", "actionButtonRadius", 0, 36)}
+            <label>Buton rengi<input type="color" value={value.actionButtonBackground} onChange={(event) => change({ actionButtonBackground: event.target.value })} /></label>
+            <label>Buton yazı rengi<input type="color" value={value.actionButtonTextColor} onChange={(event) => change({ actionButtonTextColor: event.target.value })} /></label>
+          </> : null}
+        </div> : null}
+      </section>)}
+    </div>;
+  };
 
   const gallery = (device: Device) => {
     const deviceImages = images.filter((image) => image.device === device);
@@ -355,21 +445,16 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <div className={styles.moduleSectionIntro}>
               <span>ALT BÖLÜM</span><h2>Bağış Seçenekleri</h2><p>Seçilen kategoriye ait bağış kartları ve bağış işlemleri bu ayrı alanda yönetilecek.</p>
             </div>
-            <div className={styles.moduleLowerGrid}>
-              <section>
-                <span className={styles.moduleLowerIcon}>02</span>
-                <div><h3>Alt Bölüm çalışma alanı hazır</h3><p>Bağış seçeneklerinin kart tasarımı, içerikleri, tutarları ve sepete ekleme ayarlarını burada adım adım oluşturacağız.</p></div>
-              </section>
-              <aside>
-                <strong>Bu bölümde geliştireceklerimiz</strong>
-                <ul>
-                  <li>Bağış kartları ve kategori bağlantıları</li>
-                  <li>Web ve mobil için ayrı tasarım</li>
-                  <li>Görsel, başlık ve açıklama alanları</li>
-                  <li>Sabit tutar, serbest tutar ve hisse seçenekleri</li>
-                  <li>Sepete ekleme ve canlı önizleme</li>
-                </ul>
-              </aside>
+            <nav className={styles.lowerDeviceTabs} aria-label="Alt bölüm cihaz ayarları">
+              <button className={lowerDevice === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("desktop"); setLowerGroup("visibility"); }}><span>WEB</span><strong>Web Ayarları</strong><small>Masaüstü görünümü</small></button>
+              <button className={lowerDevice === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("mobile"); setLowerGroup("visibility"); }}><span>MOBİL</span><strong>Mobil Ayarları</strong><small>Telefon görünümü</small></button>
+            </nav>
+            <div className={styles.lowerEditorGrid}>
+              <div className={styles.lowerSettingsPanel}>
+                <div className={styles.lowerPanelHeading}><span>{lowerDevice === "desktop" ? "WEB AYARLARI" : "MOBİL AYARLARI"}</span><p>Tüm tasarım ve yerleşim ayarları bu cihaz için bağımsızdır.</p></div>
+                {lowerControls(lowerDevice)}
+              </div>
+              <div className={styles.lowerPreviewSticky}>{preview(lowerDevice)}</div>
             </div>
           </div> : null}
         </div> : null}
