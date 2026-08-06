@@ -18,6 +18,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [section, setSection] = useState<ModuleSection>("upper");
   const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
   const [lowerGroup, setLowerGroup] = useState("visibility");
+  const [projectSelectorOpen, setProjectSelectorOpen] = useState(true);
   const [projectCategory, setProjectCategory] = useState<DonationProject["category"]>("general");
   const [selectedProjectId, setSelectedProjectId] = useState("general-support");
   const [tab, setTab] = useState<ModuleTab>("general");
@@ -237,9 +238,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <label>{label} <b>{String(sharedImage[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(sharedImage[key])} onChange={(event) => updateSharedImage({ [key]: Number(event.target.value) })} /></label>
     );
     return <div className={styles.lowerAccordion}>
-      <section className={lowerGroup === "project-selection" ? styles.lowerAccordionOpen : ""}>
-        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-selection" ? "" : "project-selection")}><span>Bağış kategorisi ve kart seçimi</span><b>{lowerGroup === "project-selection" ? "−" : "+"}</b></button>
-        {lowerGroup === "project-selection" ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
+      <section className={projectSelectorOpen ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
+        {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
           <div className={styles.miniCategoryPreview}>
             {donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => {
               const projects = donation.projects.filter((project) => project.category === id);
@@ -278,19 +279,19 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <button type="button" title="Kartı sil" aria-label="Kartı sil" disabled={!selectedProject} onClick={deleteProject}>×</button>
           </div>
           <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
+          <nav className={styles.projectSettingsTabs} aria-label="Seçili kart ayarları">
+            {[
+              ["project-measurements", "Kart ayarları"],
+              ["project-design", "Görsel ayarları"],
+              ["project-content", "Yazı ayarları"],
+              ["project-payment", "Fiyat ve düğme"],
+            ].map(([id, label]) => <button type="button" key={id} className={lowerGroup === id ? styles.activeProjectSettingsTab : ""} onClick={() => setLowerGroup(id)}>{label}</button>)}
+          </nav>
         </div> : null}
       </section>
-      <nav className={styles.projectSettingsTabs} aria-label="Seçili kart ayarları">
-        {[
-          ["project-measurements", "Kart ayarları"],
-          ["project-design", "Görsel ayarları"],
-          ["project-content", "Yazı ayarları"],
-          ["project-payment", "Fiyat ve düğme"],
-        ].map(([id, label]) => <button type="button" key={id} className={lowerGroup === id ? styles.activeProjectSettingsTab : ""} onClick={() => setLowerGroup(id)}>{label}</button>)}
-      </nav>
       <section style={{ order: 2 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarları</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
-        {lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
+        {projectSelectorOpen && lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
           <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart tasarımını kullan</label>
           {design.useSharedDesign ? <>
@@ -313,7 +314,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       </section>
       <section style={{ order: 4 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Yazı ayarları</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
-        {lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
+        {projectSelectorOpen && lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
           <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
           <label>Üst etiket<input value={selectedProject.badge} onChange={(event) => updateProject({ badge: event.target.value })} /></label>
           <label>Açıklama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
@@ -335,7 +336,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       </section>
       <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
-        {lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
+        {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.imageVisible} onChange={(event) => updateSharedImage({ imageVisible: event.target.checked })} /> Kart görselini göster</label>
           <label>Görsel adresi<input value={selectedProject.image} onChange={(event) => updateProject({ image: event.target.value })} /></label>
           <label>Görsel davranışı<select value={sharedImage.imageFit} onChange={(event) => updateSharedImage({ imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
@@ -350,7 +351,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       </section>
       <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-payment" ? "" : "project-payment")}><span>Fiyat ve düğme ayarları</span><b>{lowerGroup === "project-payment" ? "−" : "+"}</b></button>
-        {lowerGroup === "project-payment" ? <div className={styles.lowerAccordionContent}>
+        {projectSelectorOpen && lowerGroup === "project-payment" ? <div className={styles.lowerAccordionContent}>
           <label>Bağış biçimi<select value={selectedProject.pricingMode} onChange={(event) => updateProject({ pricingMode: event.target.value as DonationProject["pricingMode"] })}><option value="amount">Bağış tutarı</option><option value="quantity">Adet / hisse</option></select></label>
           {selectedProject.pricingMode === "quantity" ? <label>Birim fiyat<input type="number" min="0" value={selectedProject.fixedPrice} onChange={(event) => updateProject({ fixedPrice: Number(event.target.value) })} /></label> : null}
           <label>{selectedProject.pricingMode === "quantity" ? "Adet seçenekleri" : "Hazır tutarlar"}<input value={selectedProject.suggested.join(", ")} onChange={(event) => updateProject({ suggested: event.target.value.split(",").map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0).slice(0, 12) })} placeholder="250, 500, 1000" /></label>
