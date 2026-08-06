@@ -18,6 +18,56 @@ const clamp = (value: unknown, min: number, max: number, fallback: number) => {
 };
 const color = (value: unknown, fallback: string) => /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value) : fallback;
 const choice = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T => allowed.includes(value as T) ? value as T : fallback;
+const text = (value: unknown, fallback: string, max = 80) => {
+  const result = String(value ?? "").trim().slice(0, max);
+  return result || fallback;
+};
+
+function cleanLower(source: Record<string, unknown> | undefined, defaults: typeof defaultModuleSettings.donation.lowerDesktop) {
+  const input = source || {};
+  return {
+    enabled: input.enabled !== false,
+    showHeading: input.showHeading !== false,
+    headingEyebrow: text(input.headingEyebrow, defaults.headingEyebrow, 40),
+    headingTitle: text(input.headingTitle, defaults.headingTitle, 80),
+    layout: choice(input.layout, ["carousel", "grid"], defaults.layout),
+    columns: clamp(input.columns, 1, 6, defaults.columns),
+    sectionMaxWidth: clamp(input.sectionMaxWidth, 280, 1800, defaults.sectionMaxWidth),
+    sectionPadding: clamp(input.sectionPadding, 0, 80, defaults.sectionPadding),
+    sectionGap: clamp(input.sectionGap, 0, 100, defaults.sectionGap),
+    cardWidth: clamp(input.cardWidth, 180, 700, defaults.cardWidth),
+    cardRadius: clamp(input.cardRadius, 0, 60, defaults.cardRadius),
+    cardPadding: clamp(input.cardPadding, 0, 60, defaults.cardPadding),
+    cardGap: clamp(input.cardGap, 0, 60, defaults.cardGap),
+    cardBackground: color(input.cardBackground, defaults.cardBackground),
+    cardBorderColor: color(input.cardBorderColor, defaults.cardBorderColor),
+    cardBorderWidth: clamp(input.cardBorderWidth, 0, 8, defaults.cardBorderWidth),
+    cardShadow: choice(input.cardShadow, ["none", "soft", "medium", "strong"], defaults.cardShadow),
+    imageVisible: input.imageVisible !== false,
+    imageHeight: clamp(input.imageHeight, 80, 500, defaults.imageHeight),
+    imageRadius: clamp(input.imageRadius, 0, 60, defaults.imageRadius),
+    imageFit: choice(input.imageFit, ["cover", "contain"], defaults.imageFit),
+    titleSize: clamp(input.titleSize, 12, 48, defaults.titleSize),
+    titleColor: color(input.titleColor, defaults.titleColor),
+    titleWeight: clamp(input.titleWeight, 300, 900, defaults.titleWeight),
+    descriptionVisible: input.descriptionVisible !== false,
+    descriptionSize: clamp(input.descriptionSize, 9, 24, defaults.descriptionSize),
+    descriptionColor: color(input.descriptionColor, defaults.descriptionColor),
+    priceButtonHeight: clamp(input.priceButtonHeight, 28, 64, defaults.priceButtonHeight),
+    priceButtonRadius: clamp(input.priceButtonRadius, 0, 32, defaults.priceButtonRadius),
+    priceBackground: color(input.priceBackground, defaults.priceBackground),
+    priceTextColor: color(input.priceTextColor, defaults.priceTextColor),
+    selectedPriceBackground: color(input.selectedPriceBackground, defaults.selectedPriceBackground),
+    selectedPriceTextColor: color(input.selectedPriceTextColor, defaults.selectedPriceTextColor),
+    customAmountVisible: input.customAmountVisible !== false,
+    actionButtonText: text(input.actionButtonText, defaults.actionButtonText, 40),
+    actionButtonHeight: clamp(input.actionButtonHeight, 34, 72, defaults.actionButtonHeight),
+    actionButtonRadius: clamp(input.actionButtonRadius, 0, 36, defaults.actionButtonRadius),
+    actionButtonBackground: color(input.actionButtonBackground, defaults.actionButtonBackground),
+    actionButtonTextColor: color(input.actionButtonTextColor, defaults.actionButtonTextColor),
+    arrowsVisible: input.arrowsVisible !== false,
+  };
+}
 
 function clean(input: Partial<ModuleSettings>): ModuleSettings {
   const source = input.donation || defaultModuleSettings.donation;
@@ -87,6 +137,8 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       visibleCategories,
       placement: "home-after-slider",
       categoryImages,
+      lowerDesktop: cleanLower(source.lowerDesktop as unknown as Record<string, unknown>, defaultModuleSettings.donation.lowerDesktop),
+      lowerMobile: cleanLower(source.lowerMobile as unknown as Record<string, unknown>, defaultModuleSettings.donation.lowerMobile),
     },
   };
 }
@@ -104,3 +156,4 @@ export async function PUT(request: Request) {
   revalidatePath("/");
   return NextResponse.json({ settings });
 }
+
