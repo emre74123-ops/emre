@@ -238,7 +238,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <div className={styles.miniCategoryPreview}>
             {donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => {
               const projects = donation.projects.filter((project) => project.category === id);
-              const cover = projects.find((project) => project.image)?.image;
+              const cover = donation.categoryImages[id]?.[lowerDevice] || donation.categoryImages[id]?.desktop;
               const active = projectCategory === id;
               return <button type="button" key={id} className={active ? styles.activeMiniCategory : ""} onClick={() => {
                 const nextCategory = id as DonationProject["category"];
@@ -253,9 +253,14 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           </div>
           <div className={styles.miniProjectPreview}>
             {categoryProjects.length ? categoryProjects.map((project) => <button type="button" key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onClick={() => setSelectedProjectId(project.id)}>
-              <span>{project.image ? <Image src={project.image} alt="" fill sizes="52px" /> : project.title.slice(0, 1)}</span>
-              <strong>{project.title}</strong>
-              {!project.enabled ? <small>Kapalı</small> : null}
+              <span>{project.image ? <Image src={project.image} alt="" fill sizes="150px" /> : project.title.slice(0, 1)}</span>
+              <div>
+                {project.badge ? <em>{project.badge}</em> : null}
+                <strong>{project.title}</strong>
+                <p>{project.description}</p>
+                <small>{project.pricingMode === "quantity" ? `${project.fixedPrice.toLocaleString("tr-TR")} ₺` : `${project.suggested[0]?.toLocaleString("tr-TR") || 0} ₺'den başlayan`}</small>
+              </div>
+              {!project.enabled ? <i>Kapalı</i> : null}
             </button>) : <small>Bu kategoride henüz bağış kartı yok.</small>}
           </div>
           <label>Kategori<select value={projectCategory} onChange={(event) => {
