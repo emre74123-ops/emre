@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, type DonationModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, type DonationModuleSettings, type DonationProject } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Category = "all" | "general" | "qurban" | "water" | "zakat" | "orphan";
@@ -93,7 +93,7 @@ const arrowSymbols = {
   triangle: ["◀", "▶"],
 } as const;
 
-export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile" }) {
+export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice, previewCategory }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile"; previewCategory?: Category }) {
   const cardsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const categoryDirectionRef = useRef<1 | -1>(1);
@@ -103,10 +103,13 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (previewCategory) setCategory(previewCategory);
+  }, [previewCategory]);
 
   const visibleCategories = categories.filter((item) => settings.visibleCategories.includes(item.id));
   const effectiveCategory = settings.visibleCategories.includes(category) ? category : "all";
-  const filtered = effectiveCategory === "all" ? projects : projects.filter((project) => project.category === effectiveCategory);
+  const filtered = settings.projects.filter((project) => project.enabled && (effectiveCategory === "all" || project.category === effectiveCategory));
 
   useEffect(() => {
     const rail = categoriesRef.current;
@@ -129,11 +132,11 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     setCategoryProgress(max > 0 ? Math.min(100, Math.max(0, (rail.scrollLeft / max) * 100)) : 100);
   }
 
-  function addToCart(project: Project) {
+  function addToCart(project: DonationProject) {
     const picked = selected[project.id] ?? project.suggested[0];
-    const quantity = project.fixedPrice ? picked : 1;
+    const quantity = project.pricingMode === "quantity" ? picked : 1;
     const typed = Number(custom[project.id]?.replace(",", "."));
-    const amount = project.fixedPrice ?? (Number.isFinite(typed) && typed > 0 ? typed : picked);
+    const amount = project.pricingMode === "quantity" ? project.fixedPrice : (Number.isFinite(typed) && typed > 0 ? typed : picked);
     const id = `${project.id}-${amount}`;
     const current = readCart();
     const existing = current.find((item) => item.id === id);
@@ -330,28 +333,82 @@ export default function DonationModule({ embedded = false, settings = defaultMod
               <div className={styles.cards} ref={cardsRef}>
               {filtered.map((project) => {
                 const picked = selected[project.id] ?? project.suggested[0];
+                const sharedDesign = (projectDesign: typeof project.desktop, common: typeof settings.lowerDesktop) => projectDesign.useSharedDesign ? {
+                  ...projectDesign,
+                  cardBackground: common.cardBackground,
+                  cardRadius: common.cardRadius,
+                  cardBorderColor: common.cardBorderColor,
+                  cardBorderWidth: common.cardBorderWidth,
+                  imageHeight: common.imageHeight,
+                  imageRadius: common.imageRadius,
+                  titleColor: common.titleColor,
+                  titleSize: common.titleSize,
+                  descriptionColor: common.descriptionColor,
+                  descriptionSize: common.descriptionSize,
+                  priceBackground: common.priceBackground,
+                  priceTextColor: common.priceTextColor,
+                  selectedPriceBackground: common.selectedPriceBackground,
+                  selectedPriceTextColor: common.selectedPriceTextColor,
+                  actionBackground: common.actionButtonBackground,
+                  actionTextColor: common.actionButtonTextColor,
+                  actionText: common.actionButtonText,
+                  actionRadius: common.actionButtonRadius,
+                } : projectDesign;
+                const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
+                const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
                 return (
-                  <article className={styles.card} key={project.id}>
+                  <article className={styles.card} key={project.id} style={{
+                    "--dm-lower-desktop-card-bg": desktopDesign.cardBackground,
+                    "--dm-lower-mobile-card-bg": mobileDesign.cardBackground,
+                    "--dm-lower-desktop-card-radius": `${desktopDesign.cardRadius}px`,
+                    "--dm-lower-mobile-card-radius": `${mobileDesign.cardRadius}px`,
+                    "--dm-lower-desktop-border": `${desktopDesign.cardBorderWidth}px solid ${desktopDesign.cardBorderColor}`,
+                    "--dm-lower-mobile-border": `${mobileDesign.cardBorderWidth}px solid ${mobileDesign.cardBorderColor}`,
+                    "--dm-lower-desktop-image-height": `${desktopDesign.imageHeight}px`,
+                    "--dm-lower-mobile-image-height": `${mobileDesign.imageHeight}px`,
+                    "--dm-lower-desktop-title-color": desktopDesign.titleColor,
+                    "--dm-lower-mobile-title-color": mobileDesign.titleColor,
+                    "--dm-lower-desktop-title-size": `${desktopDesign.titleSize}px`,
+                    "--dm-lower-mobile-title-size": `${mobileDesign.titleSize}px`,
+                    "--dm-lower-desktop-description-color": desktopDesign.descriptionColor,
+                    "--dm-lower-mobile-description-color": mobileDesign.descriptionColor,
+                    "--dm-lower-desktop-description-size": `${desktopDesign.descriptionSize}px`,
+                    "--dm-lower-mobile-description-size": `${mobileDesign.descriptionSize}px`,
+                    "--dm-lower-desktop-choice-bg": desktopDesign.priceBackground,
+                    "--dm-lower-mobile-choice-bg": mobileDesign.priceBackground,
+                    "--dm-lower-desktop-choice-color": desktopDesign.priceTextColor,
+                    "--dm-lower-mobile-choice-color": mobileDesign.priceTextColor,
+                    "--dm-lower-desktop-selected-bg": desktopDesign.selectedPriceBackground,
+                    "--dm-lower-mobile-selected-bg": mobileDesign.selectedPriceBackground,
+                    "--dm-lower-desktop-selected-color": desktopDesign.selectedPriceTextColor,
+                    "--dm-lower-mobile-selected-color": mobileDesign.selectedPriceTextColor,
+                    "--dm-lower-desktop-action-bg": desktopDesign.actionBackground,
+                    "--dm-lower-mobile-action-bg": mobileDesign.actionBackground,
+                    "--dm-lower-desktop-action-color": desktopDesign.actionTextColor,
+                    "--dm-lower-mobile-action-color": mobileDesign.actionTextColor,
+                    "--dm-lower-desktop-action-radius": `${desktopDesign.actionRadius}px`,
+                    "--dm-lower-mobile-action-radius": `${mobileDesign.actionRadius}px`,
+                  } as CSSProperties}>
                     <div className={styles.cardImage} style={{ backgroundImage: `url("${project.image}")` }}>
                       <span>{project.badge}</span>
                     </div>
                     <div className={styles.cardBody}>
                       <h3>{project.title}</h3>
                       <p>{project.description}</p>
-                      <small>{project.fixedPrice ? "Hisse adedi" : "Bağış tutarı"}</small>
+                      <small>{project.pricingMode === "quantity" ? "Hisse adedi" : "Bağış tutarı"}</small>
                       <div className={styles.choices}>
                         {project.suggested.map((amount) => (
                           <button className={picked === amount ? styles.selectedChoice : ""} key={amount} onClick={() => setSelected((state) => ({ ...state, [project.id]: amount }))}>
-                            {project.fixedPrice ? amount : money.format(amount)}
+                            {project.pricingMode === "quantity" ? amount : money.format(amount)}
                           </button>
                         ))}
                       </div>
                       <div className={styles.cardAction}>
                         <label>
-                          <span>{project.fixedPrice ? money.format(project.fixedPrice * picked) : "₺"}</span>
-                          {!project.fixedPrice && <input inputMode="numeric" value={custom[project.id] || ""} onChange={(event) => setCustom((state) => ({ ...state, [project.id]: event.target.value.replace(/[^\d,]/g, "") }))} placeholder="Başka tutar" />}
+                          <span>{project.pricingMode === "quantity" ? money.format(project.fixedPrice * picked) : "₺"}</span>
+                          {project.pricingMode === "amount" && project.customAmountEnabled && <input inputMode="numeric" value={custom[project.id] || ""} onChange={(event) => setCustom((state) => ({ ...state, [project.id]: event.target.value.replace(/[^\d,]/g, "") }))} placeholder="Başka tutar" />}
                         </label>
-                        <button onClick={() => addToCart(project)}><span className={styles.desktopActionText}>{settings.lowerDesktop.actionButtonText}</span><span className={styles.mobileActionText}>{settings.lowerMobile.actionButtonText}</span> <b>+</b></button>
+                        <button onClick={() => addToCart(project)}><span className={styles.desktopActionText}>{desktopDesign.actionText}</span><span className={styles.mobileActionText}>{mobileDesign.actionText}</span> <b>+</b></button>
                       </div>
                     </div>
                   </article>
@@ -366,4 +423,3 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     </section>
   );
 }
-
