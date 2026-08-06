@@ -113,12 +113,12 @@ export type ModuleSettings = {
 };
 
 export const donationCategoryOptions = [
-  ["all", "Tüm Bağışlar"],
-  ["general", "Genel Bağış"],
+  ["all", "TÃ¼m BaÄŸÄ±ÅŸlar"],
+  ["general", "Genel BaÄŸÄ±ÅŸ"],
   ["qurban", "Kurban"],
   ["water", "Su Kuyusu"],
-  ["zakat", "Zekât & Fitre"],
-  ["orphan", "Yetim Desteği"],
+  ["zakat", "ZekÃ¢t & Fitre"],
+  ["orphan", "Yetim DesteÄŸi"],
 ] as const;
 
 export const defaultDonationCategoryImages = {
@@ -181,7 +181,7 @@ export const defaultModuleSettings: ModuleSettings = {
     placement: "home-after-slider",
     categoryImages: defaultDonationCategoryImages,
     lowerDesktop: {
-      enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
+      enabled: true, showHeading: true, headingEyebrow: "BAÄIÅ ALANLARI", headingTitle: "Destek projeleri",
       layout: "carousel", columns: 3, sectionMaxWidth: 1320, sectionPadding: 0, sectionGap: 22,
       cardWidth: 370, cardRadius: 18, cardPadding: 24, cardGap: 22, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
@@ -197,7 +197,7 @@ export const defaultModuleSettings: ModuleSettings = {
       arrowColor: "#123c35", arrowOpacity: 92, arrowBorderWidth: 1, arrowBorderColor: "#d8e2de", arrowShadow: "soft",
     },
     lowerMobile: {
-      enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
+      enabled: true, showHeading: true, headingEyebrow: "BAÄIÅ ALANLARI", headingTitle: "Destek projeleri",
       layout: "carousel", columns: 1, sectionMaxWidth: 640, sectionPadding: 12, sectionGap: 14,
       cardWidth: 330, cardRadius: 16, cardPadding: 20, cardGap: 14, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
@@ -214,4 +214,35 @@ export const defaultModuleSettings: ModuleSettings = {
     },
   },
 };
+
+export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null): ModuleSettings {
+  const donation = input?.donation;
+  const categoryImages = Object.fromEntries(
+    donationCategoryOptions.map(([id]) => [
+      id,
+      {
+        ...defaultDonationCategoryImages[id],
+        ...(donation?.categoryImages?.[id] || {}),
+      },
+    ]),
+  ) as DonationModuleSettings["categoryImages"];
+
+  return {
+    ...defaultModuleSettings,
+    ...input,
+    donation: {
+      ...defaultModuleSettings.donation,
+      ...donation,
+      categoryImages,
+      lowerDesktop: {
+        ...defaultModuleSettings.donation.lowerDesktop,
+        ...donation?.lowerDesktop,
+      },
+      lowerMobile: {
+        ...defaultModuleSettings.donation.lowerMobile,
+        ...donation?.lowerMobile,
+      },
+    },
+  };
+}
 
