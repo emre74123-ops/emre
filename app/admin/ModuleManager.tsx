@@ -280,7 +280,15 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
         </div> : null}
       </section>
-      <section style={{ order: 2 }} className={lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}>
+      <nav className={styles.projectSettingsTabs} aria-label="Seçili kart ayarları">
+        {[
+          ["project-measurements", "Kart ayarları"],
+          ["project-design", "Görsel ayarları"],
+          ["project-content", "Yazı ayarları"],
+          ["project-payment", "Fiyat ve düğme"],
+        ].map(([id, label]) => <button type="button" key={id} className={lowerGroup === id ? styles.activeProjectSettingsTab : ""} onClick={() => setLowerGroup(id)}>{label}</button>)}
+      </nav>
+      <section style={{ order: 2 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarları</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
         {lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
@@ -303,7 +311,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           </>}
         </div> : null}
       </section>
-      <section style={{ order: 4 }} className={lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}>
+      <section style={{ order: 4 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Yazı ayarları</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
         {lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
           <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
@@ -325,7 +333,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           </>}
         </div> : null}
       </section>
-      <section style={{ order: 3 }} className={lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}>
+      <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
         {lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.imageVisible} onChange={(event) => updateSharedImage({ imageVisible: event.target.checked })} /> Kart görselini göster</label>
@@ -340,7 +348,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           </>}
         </div> : null}
       </section>
-      <section style={{ order: 5 }} className={lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}>
+      <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-payment" ? "" : "project-payment")}><span>Fiyat ve düğme ayarları</span><b>{lowerGroup === "project-payment" ? "−" : "+"}</b></button>
         {lowerGroup === "project-payment" ? <div className={styles.lowerAccordionContent}>
           <label>Bağış biçimi<select value={selectedProject.pricingMode} onChange={(event) => updateProject({ pricingMode: event.target.value as DonationProject["pricingMode"] })}><option value="amount">Bağış tutarı</option><option value="quantity">Adet / hisse</option></select></label>
