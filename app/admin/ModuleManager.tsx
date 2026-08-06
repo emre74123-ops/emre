@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -29,6 +29,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [imageMeta, setImageMeta] = useState<Record<string, { width: number; height: number }>>({});
   const [uploading, setUploading] = useState(false);
+  const [projectVideoUrl, setProjectVideoUrl] = useState("");
+  const [projectVideoPoster, setProjectVideoPoster] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -93,6 +95,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       title: "Yeni bağış kartı",
       description: "Bağış kartı açıklamasını buradan düzenleyin.",
       badge: "Yeni",
+      desktopMedia: [],
+      mobileMedia: [],
       desktop: { ...base.desktop },
       mobile: { ...base.mobile },
     };
@@ -102,14 +106,23 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const duplicateProject = () => {
     if (!selectedProject) return;
     const id = `${selectedProject.id}-kopya-${Date.now()}`;
-    updateProjects([...donation.projects, { ...selectedProject, id, title: `${selectedProject.title} Kopyası`, desktop: { ...selectedProject.desktop }, mobile: { ...selectedProject.mobile } }]);
+    updateProjects([...donation.projects, { ...selectedProject, id, title: `${selectedProject.title} Kopyası`, desktopMedia: [], mobileMedia: [], desktop: { ...selectedProject.desktop }, mobile: { ...selectedProject.mobile } }]);
     setSelectedProjectId(id);
   };
   const deleteProject = () => {
-    if (!selectedProject || !window.confirm("Bu bağış kartı silinsin mi?")) return;
-    const next = donation.projects.filter((project) => project.id !== selectedProject.id);
-    updateProjects(next);
-    setSelectedProjectId(projectCategory === "all" ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
+    if (!selectedProject || !window.confirm("Bu bağış kartı ve karta ait web/mobil medya galerileri tamamen silinsin mi?")) return;
+    const removedId = selectedProject.id;
+    void fetch("/api/admin/modules/images", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: removedId, deleteAll: true }),
+    }).then(async (response) => {
+      if (!response.ok) return showToast((await response.json()).error || "Kart galerisi silinemedi.");
+      const next = donation.projects.filter((project) => project.id !== removedId);
+      updateProjects(next);
+      setSelectedProjectId(projectCategory === "all" ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
+      showToast("Kart ve karta ait medya galerisi silindi.");
+    });
   };
   const moveProject = (direction: -1 | 1) => {
     if (!selectedProject) return;
@@ -135,6 +148,43 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     [next[index], next[siblingIndex]] = [next[siblingIndex], next[index]];
     updateProjects(next);
   };
+
+  const projectMedia = (device: Device) => selectedProject?.[device === "desktop" ? "desktopMedia" : "mobileMedia"] || [];
+  const updateProjectMedia = (device: Device, media: DonationProjectMedia[]) => updateProject(device === "desktop" ? { desktopMedia: media } : { mobileMedia: media });
+  async function uploadProjectImage(file: File, device: Device) {
+    if (!selectedProject) return;
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("device", device);
+    body.append("projectId", selectedProject.id);
+    const response = await fetch("/api/admin/modules/upload", { method: "POST", body });
+    const result = await response.json();
+    setUploading(false);
+    if (!response.ok) return showToast(result.error || "Kart görseli yüklenemedi.");
+    updateProjectMedia(device, [...projectMedia(device), { id: crypto.randomUUID(), type: "image", url: result.url, path: result.path, alt: selectedProject.title }]);
+    showToast("Görsel bu karta ait galeriye eklendi.");
+  }
+  async function removeProjectMedia(device: Device, media: DonationProjectMedia) {
+    if (media.path) {
+      const response = await fetch("/api/admin/modules/images", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: media.path }) });
+      if (!response.ok) return showToast((await response.json()).error || "Medya silinemedi.");
+    }
+    updateProjectMedia(device, projectMedia(device).filter((item) => item.id !== media.id));
+  }
+  function moveProjectMedia(device: Device, index: number, direction: -1 | 1) {
+    const media = [...projectMedia(device)];
+    const target = index + direction;
+    if (!media[target]) return;
+    [media[index], media[target]] = [media[target], media[index]];
+    updateProjectMedia(device, media);
+  }
+  function addProjectVideo(device: Device) {
+    if (!projectVideoUrl.trim()) return showToast("Önce video bağlantısını yazın.");
+    updateProjectMedia(device, [...projectMedia(device), { id: crypto.randomUUID(), type: "video", url: projectVideoUrl.trim(), poster: projectVideoPoster.trim(), alt: selectedProject?.title }]);
+    setProjectVideoUrl("");
+    setProjectVideoPoster("");
+  }
   const dropProject = (targetId: string) => {
     if (!draggedProjectId || draggedProjectId === targetId) return setDraggedProjectId("");
     const source = donation.projects.find((project) => project.id === draggedProjectId);
@@ -371,7 +421,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Yazı ayarları</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
           <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
-          <label>Üst etiket<input value={selectedProject.badge} onChange={(event) => updateProject({ badge: event.target.value })} /></label>
           <label>Açıklama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
           <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
           {design.useSharedDesign ? <>
@@ -392,16 +441,26 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
-          <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.imageVisible} onChange={(event) => updateSharedImage({ imageVisible: event.target.checked })} /> Kart görselini göster</label>
-          <label>Görsel adresi<input value={selectedProject.image} onChange={(event) => updateProject({ image: event.target.value })} /></label>
-          <label>Görsel davranışı<select value={sharedImage.imageFit} onChange={(event) => updateSharedImage({ imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
-          {design.useSharedDesign ? <>
+          <label className={styles.headerCheck}><input type="checkbox" checked={design.imageVisible !== false} onChange={(event) => updateProjectDesign(device, { imageVisible: event.target.checked })} /> Kart medyasını göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedImageDesign !== false} onChange={(event) => updateProjectDesign(device, { useSharedImageDesign: event.target.checked })} /> Ortak görsel ayarlarını kullan</label>
+          <label>Görsel davranışı<select value={design.useSharedImageDesign !== false ? sharedImage.imageFit : design.imageFit || "cover"} onChange={(event) => design.useSharedImageDesign !== false ? updateSharedImage({ imageFit: event.target.value as "cover" | "contain" }) : updateProjectDesign(device, { imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
+          {design.useSharedImageDesign !== false ? <>
             {sharedRange("Görsel yüksekliği", "imageHeight", 80, 500)}
             {sharedRange("Görsel köşeleri", "imageRadius", 0, 60)}
           </> : <>
             {designRange("Görsel yüksekliği", "imageHeight", 80, 500)}
             {designRange("Görsel köşeleri", "imageRadius", 0, 60)}
           </>}
+          <div className={styles.projectMediaManager}>
+            <div className={styles.projectMediaHeader}><strong>{device === "desktop" ? "Web" : "Mobil"} kart galerisi</strong><label className={styles.primaryButton}>{uploading ? "Yükleniyor…" : "+ Görsel yükle"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.svg,image/*" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectImage(file, device); event.target.value = ""; }} /></label></div>
+            {projectMedia(device).length ? <div className={styles.projectMediaGrid}>{projectMedia(device).map((media, index) => <article key={media.id}>
+              <div>{media.type === "video" ? media.poster ? <Image src={media.poster} alt="" fill sizes="100px" /> : <span>▶</span> : <Image src={media.url} alt={media.alt || ""} fill sizes="100px" />}</div>
+              <small>{index === 0 ? "Ana kapak" : `${index + 1}. medya`} · {media.type === "video" ? "Video" : "Görsel"}</small>
+              <nav><button type="button" disabled={index === 0} onClick={() => moveProjectMedia(device, index, -1)}>←</button><button type="button" disabled={index === projectMedia(device).length - 1} onClick={() => moveProjectMedia(device, index, 1)}>→</button><button type="button" onClick={() => void removeProjectMedia(device, media)}>Sil</button></nav>
+            </article>)}</div> : <div className={styles.emptyModuleGallery}>Bu karta ait {device === "desktop" ? "web" : "mobil"} galerisi henüz boş.</div>}
+            <div className={styles.projectVideoFields}><input value={projectVideoUrl} onChange={(event) => setProjectVideoUrl(event.target.value)} placeholder="Video veya HLS bağlantısı" /><input value={projectVideoPoster} onChange={(event) => setProjectVideoPoster(event.target.value)} placeholder="Video kapak görseli bağlantısı" /><button type="button" onClick={() => addProjectVideo(device)}>Videoyu ekle</button></div>
+            <p className={styles.moduleHint}>İlk medya ana kapaktır. Videolar kapak görseliyle açılır ve kullanıcı oynatmadan indirilmez.</p>
+          </div>
         </div> : null}
       </section>
       <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>

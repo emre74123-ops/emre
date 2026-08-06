@@ -64,6 +64,8 @@ export type DonationProject = {
   description: string;
   image: string;
   badge: string;
+  desktopMedia?: DonationProjectMedia[];
+  mobileMedia?: DonationProjectMedia[];
   pricingMode: "amount" | "quantity";
   fixedPrice: number;
   suggested: number[];
@@ -72,8 +74,20 @@ export type DonationProject = {
   mobile: DonationProjectDesign;
 };
 
+export type DonationProjectMedia = {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  path?: string;
+  poster?: string;
+  alt?: string;
+};
+
 export type DonationProjectDesign = {
   useSharedDesign: boolean;
+  useSharedImageDesign?: boolean;
+  imageVisible?: boolean;
+  imageFit?: "cover" | "contain";
   cardWidth: number;
   cardPadding: number;
   cardBackground: string;
@@ -337,9 +351,11 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
           showInAllMobile: project.showInAllMobile !== false,
           allOrderDesktop: Number.isFinite(project.allOrderDesktop) ? project.allOrderDesktop : index,
           allOrderMobile: Number.isFinite(project.allOrderMobile) ? project.allOrderMobile : index,
+          desktopMedia: Array.isArray(project.desktopMedia) ? project.desktopMedia : [{ id: `${project.id}-desktop-cover`, type: "image", url: project.image }],
+          mobileMedia: Array.isArray(project.mobileMedia) ? project.mobileMedia : [{ id: `${project.id}-mobile-cover`, type: "image", url: project.image }],
           suggested: Array.isArray(project.suggested) && project.suggested.length ? project.suggested : fallback.suggested,
-          desktop: { ...fallback.desktop, ...project.desktop },
-          mobile: { ...fallback.mobile, ...project.mobile },
+          desktop: { ...fallback.desktop, useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.desktop },
+          mobile: { ...fallback.mobile, useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.mobile },
         };
       }),
     },

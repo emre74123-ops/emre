@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, type DonationModuleSettings, type DonationProject } from "../../lib/module-settings";
+import { defaultModuleSettings, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Category = "all" | "general" | "qurban" | "water" | "zakat" | "orphan";
@@ -27,6 +27,27 @@ const categories: { id: Category; label: string }[] = [
   { id: "zakat", label: "Zekât ve Fitre" },
   { id: "orphan", label: "Yetim Desteği" },
 ];
+
+function CardMedia({ media, fallback, className }: { media: DonationProjectMedia[]; fallback: string; className: string }) {
+  const items = media.length ? media : [{ id: "fallback", type: "image" as const, url: fallback }];
+  const [active, setActive] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const startX = useRef(0);
+  const current = items[Math.min(active, items.length - 1)];
+  const select = (index: number) => { setActive(index); setPlaying(false); };
+  return <div className={`${styles.cardMedia} ${className}`} onPointerDown={(event) => { startX.current = event.clientX; }} onPointerUp={(event) => {
+    const distance = event.clientX - startX.current;
+    if (Math.abs(distance) < 35) return;
+    select(Math.max(0, Math.min(items.length - 1, active + (distance < 0 ? 1 : -1))));
+  }}>
+    <div className={styles.cardMediaMain}>
+      {current.type === "video" && playing
+        ? <video src={current.url} poster={current.poster} controls autoPlay playsInline preload="none" />
+        : <div className={styles.cardMediaCover} role={current.type === "video" ? "button" : undefined} tabIndex={current.type === "video" ? 0 : undefined} style={{ backgroundImage: `url("${current.type === "video" ? current.poster || fallback : current.url}")` }} onClick={() => current.type === "video" && setPlaying(true)} onKeyDown={(event) => { if (current.type === "video" && (event.key === "Enter" || event.key === " ")) setPlaying(true); }}>{current.type === "video" ? <i>▶</i> : null}</div>}
+    </div>
+    {items.length > 1 ? <div className={styles.cardMediaThumbs}>{items.map((item, index) => <button type="button" key={item.id} className={index === active ? styles.activeMediaThumb : ""} onClick={() => select(index)} aria-label={`${index + 1}. medyayı göster`} style={{ backgroundImage: `url("${item.type === "video" ? item.poster || fallback : item.url}")` }}>{item.type === "video" ? <i>▶</i> : null}</button>)}</div> : null}
+  </div>;
+}
 
 const projects: Project[] = [
   {
@@ -369,8 +390,12 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     "--dm-lower-mobile-card-radius": `${mobileDesign.cardRadius}px`,
                     "--dm-lower-desktop-border": `${desktopDesign.cardBorderWidth}px solid ${desktopDesign.cardBorderColor}`,
                     "--dm-lower-mobile-border": `${mobileDesign.cardBorderWidth}px solid ${mobileDesign.cardBorderColor}`,
-                    "--dm-lower-desktop-image-height": `${desktopDesign.imageHeight}px`,
-                    "--dm-lower-mobile-image-height": `${mobileDesign.imageHeight}px`,
+                    "--dm-lower-desktop-image-height": `${desktopDesign.useSharedImageDesign !== false ? settings.lowerDesktop.imageHeight : desktopDesign.imageHeight}px`,
+                    "--dm-lower-mobile-image-height": `${mobileDesign.useSharedImageDesign !== false ? settings.lowerMobile.imageHeight : mobileDesign.imageHeight}px`,
+                    "--dm-lower-desktop-image-display": desktopDesign.imageVisible === false ? "none" : "block",
+                    "--dm-lower-mobile-image-display": mobileDesign.imageVisible === false ? "none" : "block",
+                    "--dm-lower-desktop-image-fit": desktopDesign.useSharedImageDesign !== false ? settings.lowerDesktop.imageFit : desktopDesign.imageFit || "cover",
+                    "--dm-lower-mobile-image-fit": mobileDesign.useSharedImageDesign !== false ? settings.lowerMobile.imageFit : mobileDesign.imageFit || "cover",
                     "--dm-lower-desktop-title-color": desktopDesign.titleColor,
                     "--dm-lower-mobile-title-color": mobileDesign.titleColor,
                     "--dm-lower-desktop-title-size": `${desktopDesign.titleSize}px`,
@@ -402,9 +427,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     "--dm-lower-desktop-action-radius": `${desktopDesign.actionRadius}px`,
                     "--dm-lower-mobile-action-radius": `${mobileDesign.actionRadius}px`,
                   } as CSSProperties}>
-                    <div className={styles.cardImage} style={{ backgroundImage: `url("${project.image}")` }}>
-                      <span>{project.badge}</span>
-                    </div>
+                    <CardMedia media={project.desktopMedia || []} fallback={project.image} className={styles.desktopCardMedia} />
+                    <CardMedia media={project.mobileMedia || []} fallback={project.image} className={styles.mobileCardMedia} />
                     <div className={styles.cardBody}>
                       <h3>{project.title}</h3>
                       <p>{project.description}</p>
