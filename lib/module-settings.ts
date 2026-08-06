@@ -92,6 +92,20 @@ export type DonationLowerDeviceSettings = {
   actionButtonBackground: string;
   actionButtonTextColor: string;
   arrowsVisible: boolean;
+  leftArrowVisible: boolean;
+  rightArrowVisible: boolean;
+  arrowIcon: "thin" | "chevron" | "bold" | "long" | "triangle";
+  arrowSize: number;
+  arrowIconSize: number;
+  arrowOffset: number;
+  arrowVerticalPosition: number;
+  arrowRadius: number;
+  arrowBackground: string;
+  arrowColor: string;
+  arrowOpacity: number;
+  arrowBorderWidth: number;
+  arrowBorderColor: string;
+  arrowShadow: "none" | "soft" | "medium" | "strong";
 };
 
 export type ModuleSettings = {
@@ -178,6 +192,9 @@ export const defaultModuleSettings: ModuleSettings = {
       selectedPriceBackground: "#e7f4ef", selectedPriceTextColor: "#0d7258", customAmountVisible: true,
       actionButtonText: "Sepete ekle", actionButtonHeight: 46, actionButtonRadius: 9,
       actionButtonBackground: "#128465", actionButtonTextColor: "#ffffff", arrowsVisible: true,
+      leftArrowVisible: true, rightArrowVisible: true, arrowIcon: "chevron", arrowSize: 44, arrowIconSize: 24,
+      arrowOffset: -14, arrowVerticalPosition: 50, arrowRadius: 50, arrowBackground: "#ffffff",
+      arrowColor: "#123c35", arrowOpacity: 92, arrowBorderWidth: 1, arrowBorderColor: "#d8e2de", arrowShadow: "soft",
     },
     lowerMobile: {
       enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
@@ -190,7 +207,10 @@ export const defaultModuleSettings: ModuleSettings = {
       priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
       selectedPriceBackground: "#e7f4ef", selectedPriceTextColor: "#0d7258", customAmountVisible: true,
       actionButtonText: "Sepete ekle", actionButtonHeight: 46, actionButtonRadius: 9,
-      actionButtonBackground: "#128465", actionButtonTextColor: "#ffffff", arrowsVisible: false,
+      actionButtonBackground: "#128465", actionButtonTextColor: "#ffffff", arrowsVisible: true,
+      leftArrowVisible: true, rightArrowVisible: true, arrowIcon: "chevron", arrowSize: 40, arrowIconSize: 22,
+      arrowOffset: -10, arrowVerticalPosition: 50, arrowRadius: 50, arrowBackground: "#ffffff",
+      arrowColor: "#123c35", arrowOpacity: 88, arrowBorderWidth: 1, arrowBorderColor: "#d8e2de", arrowShadow: "soft",
     },
   },
 };
