@@ -9,6 +9,7 @@ import styles from "./admin.module.css";
 type ModuleTab = "general" | "desktop" | "mobile" | "placement";
 type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
+type ProjectCategory = DonationProject["category"] | "all";
 type GalleryImage = { path: string; url: string; size: number; device: Device };
 
 export default function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
@@ -19,8 +20,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
   const [lowerGroup, setLowerGroup] = useState("visibility");
   const [projectSelectorOpen, setProjectSelectorOpen] = useState(true);
-  const [projectCategory, setProjectCategory] = useState<DonationProject["category"]>("general");
+  const [projectCategory, setProjectCategory] = useState<ProjectCategory>("all");
   const [selectedProjectId, setSelectedProjectId] = useState("general-support");
+  const [draggedProjectId, setDraggedProjectId] = useState("");
   const [tab, setTab] = useState<ModuleTab>("general");
   const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
   const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
@@ -41,7 +43,14 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }, []);
 
   const donation = settings.donation;
-  const categoryProjects = donation.projects.filter((project) => project.category === projectCategory);
+  const allOrderKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
+  const categoryProjects = (projectCategory === "all"
+    ? donation.projects
+    : donation.projects.filter((project) => project.category === projectCategory))
+    .slice()
+    .sort((a, b) => projectCategory === "all"
+      ? (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b))
+      : donation.projects.indexOf(a) - donation.projects.indexOf(b));
   const selectedProject = donation.projects.find((project) => project.id === selectedProjectId) || categoryProjects[0];
   const update = (changes: Partial<typeof donation>) => setSettings((current) => ({
     ...current,
@@ -67,12 +76,20 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     updateProject({ [device]: { ...selectedProject[device], ...changes } });
   };
   const addProject = () => {
+    if (projectCategory === "all") {
+      showToast("Yeni kart eklemek için önce gerçek bir bağış kategorisi seçin.");
+      return;
+    }
     const base = selectedProject || defaultModuleSettings.donation.projects[0];
     const id = `bagis-${Date.now()}`;
     const project: DonationProject = {
       ...base,
       id,
       category: projectCategory,
+      showInAllDesktop: true,
+      showInAllMobile: true,
+      allOrderDesktop: donation.projects.length,
+      allOrderMobile: donation.projects.length,
       title: "Yeni bağış kartı",
       description: "Bağış kartı açıklamasını buradan düzenleyin.",
       badge: "Yeni",
@@ -92,10 +109,23 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     if (!selectedProject || !window.confirm("Bu bağış kartı silinsin mi?")) return;
     const next = donation.projects.filter((project) => project.id !== selectedProject.id);
     updateProjects(next);
-    setSelectedProjectId(next.find((project) => project.category === projectCategory)?.id || "");
+    setSelectedProjectId(projectCategory === "all" ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
   };
   const moveProject = (direction: -1 | 1) => {
     if (!selectedProject) return;
+    if (projectCategory === "all") {
+      const currentIndex = categoryProjects.findIndex((project) => project.id === selectedProject.id);
+      const target = categoryProjects[currentIndex + direction];
+      if (!target) return;
+      const selectedOrder = selectedProject[allOrderKey] ?? currentIndex;
+      const targetOrder = target[allOrderKey] ?? currentIndex + direction;
+      updateProjects(donation.projects.map((project) => {
+        if (project.id === selectedProject.id) return { ...project, [allOrderKey]: targetOrder };
+        if (project.id === target.id) return { ...project, [allOrderKey]: selectedOrder };
+        return project;
+      }));
+      return;
+    }
     const index = donation.projects.findIndex((project) => project.id === selectedProject.id);
     const siblingIndex = direction < 0
       ? donation.projects.map((project, itemIndex) => ({ project, itemIndex })).filter((item) => item.itemIndex < index && item.project.category === projectCategory).at(-1)?.itemIndex
@@ -104,6 +134,24 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const next = [...donation.projects];
     [next[index], next[siblingIndex]] = [next[siblingIndex], next[index]];
     updateProjects(next);
+  };
+  const dropProject = (targetId: string) => {
+    if (!draggedProjectId || draggedProjectId === targetId) return setDraggedProjectId("");
+    const source = donation.projects.find((project) => project.id === draggedProjectId);
+    const target = donation.projects.find((project) => project.id === targetId);
+    if (!source || !target) return setDraggedProjectId("");
+    if (projectCategory === "all") {
+      const sourceOrder = source[allOrderKey] ?? categoryProjects.findIndex((project) => project.id === source.id);
+      const targetOrder = target[allOrderKey] ?? categoryProjects.findIndex((project) => project.id === target.id);
+      updateProjects(donation.projects.map((project) => project.id === source.id ? { ...project, [allOrderKey]: targetOrder } : project.id === target.id ? { ...project, [allOrderKey]: sourceOrder } : project));
+    } else {
+      const sourceIndex = donation.projects.findIndex((project) => project.id === source.id);
+      const targetIndex = donation.projects.findIndex((project) => project.id === target.id);
+      const next = [...donation.projects];
+      [next[sourceIndex], next[targetIndex]] = [next[targetIndex], next[sourceIndex]];
+      updateProjects(next);
+    }
+    setDraggedProjectId("");
   };
 
   async function save() {
@@ -242,14 +290,17 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
         {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
           <div className={styles.miniCategoryPreview}>
-            {donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => {
-              const projects = donation.projects.filter((project) => project.category === id);
+            {donationCategoryOptions.map(([id, label]) => {
+              const projects = id === "all" ? donation.projects : donation.projects.filter((project) => project.category === id);
               const cover = donation.categoryImages[id]?.[lowerDevice] || donation.categoryImages[id]?.desktop;
               const active = projectCategory === id;
               return <button type="button" key={id} className={active ? styles.activeMiniCategory : ""} onClick={() => {
-                const nextCategory = id as DonationProject["category"];
+                const nextCategory = id as ProjectCategory;
                 setProjectCategory(nextCategory);
-                setSelectedProjectId(projects[0]?.id || "");
+                const ordered = id === "all"
+                  ? projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
+                  : projects;
+                setSelectedProjectId(ordered[0]?.id || "");
               }}>
                 <span>{cover ? <Image src={cover} alt="" fill sizes="72px" /> : <b>{label.slice(0, 1)}</b>}</span>
                 <strong>{label}</strong>
@@ -258,21 +309,24 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             })}
           </div>
           <div className={styles.miniProjectPreview}>
-            {categoryProjects.length ? categoryProjects.map((project, index) => <button type="button" key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onClick={() => setSelectedProjectId(project.id)}>
+            {categoryProjects.length ? categoryProjects.map((project, index) => <button type="button" draggable key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onDragStart={() => setDraggedProjectId(project.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropProject(project.id)} onDragEnd={() => setDraggedProjectId("")} onClick={() => setSelectedProjectId(project.id)}>
               <strong>{index + 1}. Kart</strong>
-              {!project.enabled ? <small>Kapalı</small> : null}
+              <small>{donationCategoryOptions.find(([id]) => id === project.category)?.[1]}{!project.enabled ? " · Kapalı" : projectCategory === "all" && !(lowerDevice === "desktop" ? project.showInAllDesktop !== false : project.showInAllMobile !== false) ? " · Gizli" : ""}</small>
             </button>) : <small>Bu kategoride henüz bağış kartı yok.</small>}
           </div>
           <label>Kategori<select value={projectCategory} onChange={(event) => {
-            const nextCategory = event.target.value as DonationProject["category"];
+            const nextCategory = event.target.value as ProjectCategory;
             setProjectCategory(nextCategory);
-            setSelectedProjectId(donation.projects.find((project) => project.category === nextCategory)?.id || "");
-          }}>{donationCategoryOptions.filter(([id]) => id !== "all").map(([id, label]) => <option value={id} key={id}>{label} · {donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
+            const projects = nextCategory === "all"
+              ? donation.projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
+              : donation.projects.filter((project) => project.category === nextCategory);
+            setSelectedProjectId(projects[0]?.id || "");
+          }}>{donationCategoryOptions.map(([id, label]) => <option value={id} key={id}>{label} · {id === "all" ? donation.projects.length : donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
           <label>Bağış kartı<select value={selectedProject?.id || ""} onChange={(event) => setSelectedProjectId(event.target.value)}>
             {categoryProjects.length ? categoryProjects.map((project, index) => <option value={project.id} key={project.id}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</option>) : <option value="">Bu kategoride kart yok</option>}
           </select></label>
           <div className={styles.projectQuickActions}>
-            <button type="button" title="Yeni kart" aria-label="Yeni kart" onClick={addProject}>＋</button>
+            <button type="button" title={projectCategory === "all" ? "Yeni kart için gerçek kategori seçin" : "Yeni kart"} aria-label="Yeni kart" disabled={projectCategory === "all"} onClick={addProject}>＋</button>
             <button type="button" title="Kartı çoğalt" aria-label="Kartı çoğalt" disabled={!selectedProject} onClick={duplicateProject}>⧉</button>
             <button type="button" title="Sola taşı" aria-label="Sola taşı" disabled={!selectedProject} onClick={() => moveProject(-1)}>←</button>
             <button type="button" title="Sağa taşı" aria-label="Sağa taşı" disabled={!selectedProject} onClick={() => moveProject(1)}>→</button>
@@ -293,6 +347,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarları</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={device === "desktop" ? selectedProject.showInAllDesktop !== false : selectedProject.showInAllMobile !== false} onChange={(event) => updateProject(device === "desktop" ? { showInAllDesktop: event.target.checked } : { showInAllMobile: event.target.checked })} /> Tüm Bağışlar’da {device === "desktop" ? "webde" : "mobilde"} göster</label>
           <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart tasarımını kullan</label>
           {design.useSharedDesign ? <>
             {sharedRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
