@@ -348,17 +348,6 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                   titleWeight: common.titleWeight,
                   descriptionColor: common.descriptionColor,
                   descriptionSize: common.descriptionSize,
-                  priceButtonHeight: common.priceButtonHeight,
-                  priceButtonRadius: common.priceButtonRadius,
-                  priceBackground: common.priceBackground,
-                  priceTextColor: common.priceTextColor,
-                  selectedPriceBackground: common.selectedPriceBackground,
-                  selectedPriceTextColor: common.selectedPriceTextColor,
-                  actionBackground: common.actionButtonBackground,
-                  actionTextColor: common.actionButtonTextColor,
-                  actionText: common.actionButtonText,
-                  actionHeight: common.actionButtonHeight,
-                  actionRadius: common.actionButtonRadius,
                 } : projectDesign;
                 const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
                 const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
