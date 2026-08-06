@@ -195,6 +195,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       ["text", "Başlık ve açıklama"],
       ["price", "Fiyat seçenekleri"],
       ["action", "Tutar ve bağış butonu"],
+      ["arrows", "Kaydırma okları"],
     ] as const;
     const range = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
       <label>{label} <b>{String(value[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(value[key])} onChange={(event) => change({ [key]: Number(event.target.value) })} /></label>
@@ -256,6 +257,23 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             {range("Buton köşeleri", "actionButtonRadius", 0, 36)}
             <label>Buton rengi<input type="color" value={value.actionButtonBackground} onChange={(event) => change({ actionButtonBackground: event.target.value })} /></label>
             <label>Buton yazı rengi<input type="color" value={value.actionButtonTextColor} onChange={(event) => change({ actionButtonTextColor: event.target.value })} /></label>
+          </> : null}
+          {id === "arrows" ? <>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.leftArrowVisible} onChange={(event) => change({ leftArrowVisible: event.target.checked })} /> Sol oku göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.rightArrowVisible} onChange={(event) => change({ rightArrowVisible: event.target.checked })} /> Sağ oku göster</label>
+            <label>Hazır sembol<select value={value.arrowIcon} onChange={(event) => change({ arrowIcon: event.target.value as DonationLowerDeviceSettings["arrowIcon"] })}><option value="thin">İnce ok ← →</option><option value="chevron">Sade ok ‹ ›</option><option value="bold">Kalın ok ❮ ❯</option><option value="long">Uzun ok ⟵ ⟶</option><option value="triangle">Üçgen ◀ ▶</option></select></label>
+            {range("Ok kutusu boyutu", "arrowSize", 28, 72)}
+            {range("Sembol boyutu", "arrowIconSize", 12, 40)}
+            {range("Kenara bindirme", "arrowOffset", -36, 36)}
+            {range("Dikey konum", "arrowVerticalPosition", 10, 90, "%")}
+            {range("Köşe yuvarlaklığı", "arrowRadius", 0, 50, "%")}
+            {range("Şeffaflık", "arrowOpacity", 10, 100, "%")}
+            {range("Çerçeve kalınlığı", "arrowBorderWidth", 0, 6)}
+            <label>Arka plan rengi<input type="color" value={value.arrowBackground} onChange={(event) => change({ arrowBackground: event.target.value })} /></label>
+            <label>Sembol rengi<input type="color" value={value.arrowColor} onChange={(event) => change({ arrowColor: event.target.value })} /></label>
+            <label>Çerçeve rengi<input type="color" value={value.arrowBorderColor} onChange={(event) => change({ arrowBorderColor: event.target.value })} /></label>
+            <label>Gölge<select value={value.arrowShadow} onChange={(event) => change({ arrowShadow: event.target.value as DonationLowerDeviceSettings["arrowShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
           </> : null}
         </div> : null}
       </section>)}
