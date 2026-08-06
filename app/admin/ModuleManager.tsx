@@ -7,6 +7,7 @@ import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
 type ModuleTab = "general" | "desktop" | "mobile" | "placement";
+type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
 type GalleryImage = { path: string; url: string; size: number; device: Device };
 
@@ -14,6 +15,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [section, setSection] = useState<ModuleSection>("upper");
   const [tab, setTab] = useState<ModuleTab>("general");
   const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
   const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
@@ -263,6 +265,19 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         </button>
 
         {expanded ? <div className={styles.moduleManagerBody}>
+          <nav className={styles.moduleSectionTabs} aria-label="Bağış modülü ana bölümleri">
+            <button className={section === "upper" ? styles.activeModuleSectionTab : ""} type="button" onClick={() => setSection("upper")}>
+              <span>01</span><strong>Üst Bölüm</strong><small>Bağış kategorileri</small>
+            </button>
+            <button className={section === "lower" ? styles.activeModuleSectionTab : ""} type="button" onClick={() => setSection("lower")}>
+              <span>02</span><strong>Alt Bölüm</strong><small>Bağış seçenekleri</small>
+            </button>
+          </nav>
+
+          {section === "upper" ? <>
+          <div className={styles.moduleSectionIntro}>
+            <span>ÜST BÖLÜM</span><h2>Bağış Kategorileri</h2><p>Kategori kutularını, görselleri, kaydırma davranışını ve yerleşimi yönetin.</p>
+          </div>
           <nav className={styles.moduleTabs} aria-label="Bağış modülü ayar bölümleri">
             {([["general", "Genel"], ["desktop", "Web"], ["mobile", "Mobil"], ["placement", "Yerleşim"]] as const).map(([id, label]) => (
               <button className={tab === id ? styles.activeModuleTab : ""} type="button" key={id} onClick={() => setTab(id)}>{label}</button>
@@ -334,6 +349,29 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <div className={styles.moduleControls}><h3>Yerleşim</h3><label>Gösterileceği sayfa<select value="/" disabled><option>Ana sayfa</option></select></label><label>Konum<select value="after-slider" disabled><option>Sliderın hemen altında</option></select></label><label>Web kutucuk hizalama<select value={donation.desktopCategoryAlignment} onChange={(event) => update({ desktopCategoryAlignment: event.target.value as typeof donation.desktopCategoryAlignment })}><option value="left">Sola hizala</option><option value="center">Ortaya hizala</option></select></label><label>Web iki çizgi arası ek boşluk <b>{donation.desktopProgressExtraSpace} px</b><input type="range" min="0" max="160" value={donation.desktopProgressExtraSpace} onChange={(event) => update({ desktopProgressExtraSpace: Number(event.target.value) })} /></label><label>Mobil iki çizgi arası ek boşluk <b>{donation.mobileProgressExtraSpace} px</b><input type="range" min="0" max="120" value={donation.mobileProgressExtraSpace} onChange={(event) => update({ mobileProgressExtraSpace: Number(event.target.value) })} /></label><p className={styles.moduleHint}>Ek boşluk yalnızca ilerleme çizgisi konumu “Üstte ve altta” seçildiğinde uygulanır. Kutucuklar iki çizginin ortasında kalır.</p></div>
             <div className={styles.moduleInformation}><strong>↳</strong><h3>Ana sayfa akışı</h3><p>Header → Slider → Bağış Modülü → Diğer içerikler → Footer</p></div>
           </div> : null}
+          </> : null}
+
+          {section === "lower" ? <div className={styles.moduleLowerSection}>
+            <div className={styles.moduleSectionIntro}>
+              <span>ALT BÖLÜM</span><h2>Bağış Seçenekleri</h2><p>Seçilen kategoriye ait bağış kartları ve bağış işlemleri bu ayrı alanda yönetilecek.</p>
+            </div>
+            <div className={styles.moduleLowerGrid}>
+              <section>
+                <span className={styles.moduleLowerIcon}>02</span>
+                <div><h3>Alt Bölüm çalışma alanı hazır</h3><p>Bağış seçeneklerinin kart tasarımı, içerikleri, tutarları ve sepete ekleme ayarlarını burada adım adım oluşturacağız.</p></div>
+              </section>
+              <aside>
+                <strong>Bu bölümde geliştireceklerimiz</strong>
+                <ul>
+                  <li>Bağış kartları ve kategori bağlantıları</li>
+                  <li>Web ve mobil için ayrı tasarım</li>
+                  <li>Görsel, başlık ve açıklama alanları</li>
+                  <li>Sabit tutar, serbest tutar ve hisse seçenekleri</li>
+                  <li>Sepete ekleme ve canlı önizleme</li>
+                </ul>
+              </aside>
+            </div>
+          </div> : null}
         </div> : null}
       </section>
 
@@ -341,3 +379,4 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     </>
   );
 }
+
