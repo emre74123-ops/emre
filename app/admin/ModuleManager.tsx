@@ -228,6 +228,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const projectControls = (device: Device) => {
     if (!selectedProject) return <div className={styles.emptyModuleGallery}>Bu kategoride henüz bağış kartı yok. “Yeni Kart” düğmesiyle ilk kartı oluşturun.</div>;
     const design = selectedProject[device];
+    const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
+    const updateSharedImage = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
     const designRange = (label: string, key: keyof DonationProjectDesign, min: number, max: number) => (
       <label>{label} <b>{String(design[key])} px</b><input type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => updateProjectDesign(device, { [key]: Number(event.target.value) })} /></label>
     );
@@ -275,7 +277,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
         </div> : null}
       </section>
-      <section className={lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}>
+      <section style={{ order: 3 }} className={lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Kart içeriği ve bağış sistemi</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
         {lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
           <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
@@ -289,9 +291,13 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           {selectedProject.pricingMode === "amount" ? <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.customAmountEnabled} onChange={(event) => updateProject({ customAmountEnabled: event.target.checked })} /> Özel tutar girişini göster</label> : null}
         </div> : null}
       </section>
-      <section className={lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}>
-        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Bu karta özel tasarım</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
+      <section style={{ order: 2 }} className={lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ve bu karta özel tasarım</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
         {lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
+          <label className={styles.headerCheck}><input type="checkbox" checked={sharedImage.imageVisible} onChange={(event) => updateSharedImage({ imageVisible: event.target.checked })} /> Kart görselini göster</label>
+          <label>Ortak görsel yüksekliği <b>{sharedImage.imageHeight} px</b><input type="range" min="80" max="500" value={sharedImage.imageHeight} onChange={(event) => updateSharedImage({ imageHeight: Number(event.target.value) })} /></label>
+          <label>Ortak görsel köşeleri <b>{sharedImage.imageRadius} px</b><input type="range" min="0" max="60" value={sharedImage.imageRadius} onChange={(event) => updateSharedImage({ imageRadius: Number(event.target.value) })} /></label>
+          <label>Görsel davranışı<select value={sharedImage.imageFit} onChange={(event) => updateSharedImage({ imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
           <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak tasarımı kullan</label>
           {!design.useSharedDesign ? <>
             <label>Kart arka planı<input type="color" value={design.cardBackground} onChange={(event) => updateProjectDesign(device, { cardBackground: event.target.value })} /></label>
@@ -325,7 +331,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       ["visibility", "Görünürlük ve başlık"],
       ["layout", "Yerleşim ve ölçüler"],
       ["card", "Kart tasarımı"],
-      ["image", "Görsel alanı"],
       ["text", "Başlık ve açıklama"],
       ["price", "Fiyat seçenekleri"],
       ["action", "Tutar ve bağış butonu"],
@@ -361,12 +366,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <label>Kart arka planı<input type="color" value={value.cardBackground} onChange={(event) => change({ cardBackground: event.target.value })} /></label>
             <label>Çerçeve rengi<input type="color" value={value.cardBorderColor} onChange={(event) => change({ cardBorderColor: event.target.value })} /></label>
             <label>Gölge<select value={value.cardShadow} onChange={(event) => change({ cardShadow: event.target.value as DonationLowerDeviceSettings["cardShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
-          </> : null}
-          {id === "image" ? <>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.imageVisible} onChange={(event) => change({ imageVisible: event.target.checked })} /> Kart görselini göster</label>
-            {range("Görsel yüksekliği", "imageHeight", 80, 500)}
-            {range("Görsel köşeleri", "imageRadius", 0, 60)}
-            <label>Görsel davranışı<select value={value.imageFit} onChange={(event) => change({ imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
           </> : null}
           {id === "text" ? <>
             {range("Başlık boyutu", "titleSize", 12, 48)}
