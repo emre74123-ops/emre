@@ -252,15 +252,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             })}
           </div>
           <div className={styles.miniProjectPreview}>
-            {categoryProjects.length ? categoryProjects.map((project) => <button type="button" key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onClick={() => setSelectedProjectId(project.id)}>
-              <span>{donation.categoryImages[project.category]?.[lowerDevice] ? <Image src={donation.categoryImages[project.category][lowerDevice]} alt="" fill sizes="150px" /> : project.title.slice(0, 1)}</span>
-              <div>
-                {project.badge ? <em>{project.badge}</em> : null}
-                <strong>{project.title}</strong>
-                <p>{project.description}</p>
-                <small>{project.pricingMode === "quantity" ? `${project.fixedPrice.toLocaleString("tr-TR")} ₺` : `${project.suggested[0]?.toLocaleString("tr-TR") || 0} ₺'den başlayan`}</small>
-              </div>
-              {!project.enabled ? <i>Kapalı</i> : null}
+            {categoryProjects.length ? categoryProjects.map((project, index) => <button type="button" key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onClick={() => setSelectedProjectId(project.id)}>
+              <strong>{index + 1}. Kart</strong>
+              {!project.enabled ? <small>Kapalı</small> : null}
             </button>) : <small>Bu kategoride henüz bağış kartı yok.</small>}
           </div>
           <label>Kategori<select value={projectCategory} onChange={(event) => {
