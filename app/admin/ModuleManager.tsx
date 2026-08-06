@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { defaultModuleSettings, donationCategoryOptions, type DonationLowerDeviceSettings, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type DonationLowerDeviceSettings, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -31,18 +31,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       fetch("/api/admin/modules/images", { cache: "no-store" }).then((response) => response.json()),
     ]).then(([settingsResult, imageResult]) => {
       if (settingsResult.settings) {
-        setSettings({
-          ...defaultModuleSettings,
-          ...settingsResult.settings,
-          donation: {
-            ...defaultModuleSettings.donation,
-            ...settingsResult.settings.donation,
-            categoryImages: {
-              ...defaultModuleSettings.donation.categoryImages,
-              ...settingsResult.settings.donation?.categoryImages,
-            },
-          },
-        });
+        setSettings(normalizeModuleSettings(settingsResult.settings));
       }
       setImages(imageResult.images || []);
     }).catch(() => undefined);
@@ -74,7 +63,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const result = await response.json();
     setSaving(false);
     if (!response.ok) return showToast(result.error || "Modül ayarları kaydedilemedi.");
-    setSettings(result.settings);
+    setSettings(normalizeModuleSettings(result.settings));
     showToast("Modül ayarları canlı siteye kaydedildi.");
   }
 

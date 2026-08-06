@@ -214,3 +214,34 @@ export const defaultModuleSettings: ModuleSettings = {
     },
   },
 };
+
+export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null): ModuleSettings {
+  const donation = input?.donation;
+  const categoryImages = Object.fromEntries(
+    donationCategoryOptions.map(([id]) => [
+      id,
+      {
+        ...defaultDonationCategoryImages[id],
+        ...(donation?.categoryImages?.[id] || {}),
+      },
+    ]),
+  ) as DonationModuleSettings["categoryImages"];
+
+  return {
+    ...defaultModuleSettings,
+    ...input,
+    donation: {
+      ...defaultModuleSettings.donation,
+      ...donation,
+      categoryImages,
+      lowerDesktop: {
+        ...defaultModuleSettings.donation.lowerDesktop,
+        ...donation?.lowerDesktop,
+      },
+      lowerMobile: {
+        ...defaultModuleSettings.donation.lowerMobile,
+        ...donation?.lowerMobile,
+      },
+    },
+  };
+}

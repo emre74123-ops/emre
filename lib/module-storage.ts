@@ -1,5 +1,5 @@
 import { createAdminClient } from "./supabase/admin";
-import { defaultModuleSettings, type ModuleSettings } from "./module-settings";
+import { defaultModuleSettings, normalizeModuleSettings, type ModuleSettings } from "./module-settings";
 
 const bucket = "slider-images";
 const settingsPath = "settings/modules.json";
@@ -11,11 +11,7 @@ export async function readModuleSettings(): Promise<ModuleSettings> {
   if (error || !data) return defaultModuleSettings;
   try {
     const parsed = JSON.parse(await data.text());
-    return {
-      ...defaultModuleSettings,
-      ...parsed,
-      donation: { ...defaultModuleSettings.donation, ...(parsed.donation || {}) },
-    };
+    return normalizeModuleSettings(parsed);
   } catch {
     return defaultModuleSettings;
   }
@@ -24,7 +20,7 @@ export async function readModuleSettings(): Promise<ModuleSettings> {
 export async function writeModuleSettings(settings: ModuleSettings) {
   const supabase = createAdminClient();
   await supabase.storage.createBucket(bucket, { public: true, fileSizeLimit: 5 * 1024 * 1024 }).catch(() => undefined);
-  const file = new Blob([JSON.stringify(settings)], { type: "application/json" });
+  const file = new Blob([JSON.stringify(normalizeModuleSettings(settings))], { type: "application/json" });
   const { error } = await supabase.storage.from(bucket).upload(settingsPath, file, {
     contentType: "application/json",
     cacheControl: "0",
