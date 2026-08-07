@@ -383,7 +383,226 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
     const updateSharedImage = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
     const designRange = (label: string, key: keyof DonationProjectDesign, min: number, max: number, suffix = "px") => (
-      <label>{label} <b>{Str…6462 tokens truncated….mobileCardGap;
+      <label>{label} <b>{String(design[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => updateProjectDesign(device, { [key]: Number(event.target.value) })} /></label>
+    );
+    const sharedRange = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
+      <label>{label} <b>{String(sharedImage[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(sharedImage[key])} onChange={(event) => updateSharedImage({ [key]: Number(event.target.value) })} /></label>
+    );
+    return <div className={styles.lowerAccordion}>
+      <section className={projectSelectorOpen ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
+        {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
+          <div className={styles.miniCategoryPreview}>
+            {donationCategoryOptions.map(([id, label]) => {
+              const projects = id === "all" ? donation.projects : donation.projects.filter((project) => project.category === id);
+              const cover = donation.categoryImages[id]?.[lowerDevice] || donation.categoryImages[id]?.desktop;
+              const active = projectCategory === id;
+              return <button type="button" key={id} className={active ? styles.activeMiniCategory : ""} onClick={() => {
+                const nextCategory = id as ProjectCategory;
+                setProjectCategory(nextCategory);
+                const ordered = id === "all"
+                  ? projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
+                  : projects;
+                setSelectedProjectId(ordered[0]?.id || "");
+              }}>
+                <span>{cover ? <Image src={cover} alt="" fill sizes="72px" /> : <b>{label.slice(0, 1)}</b>}</span>
+                <strong>{label}</strong>
+                <small>{projects.length} kart</small>
+              </button>;
+            })}
+          </div>
+          <div className={styles.miniProjectPreview}>
+            {categoryProjects.length ? categoryProjects.map((project, index) => <button type="button" draggable key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onDragStart={() => setDraggedProjectId(project.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropProject(project.id)} onDragEnd={() => setDraggedProjectId("")} onClick={() => setSelectedProjectId(project.id)}>
+              <strong>{index + 1}. Kart</strong>
+              <small>{donationCategoryOptions.find(([id]) => id === project.category)?.[1]}{!project.enabled ? " · Kapalı" : projectCategory === "all" && !(lowerDevice === "desktop" ? project.showInAllDesktop !== false : project.showInAllMobile !== false) ? " · Gizli" : ""}</small>
+            </button>) : <small>Bu kategoride henüz bağış kartı yok.</small>}
+          </div>
+          <label>Kategori<select value={projectCategory} onChange={(event) => {
+            const nextCategory = event.target.value as ProjectCategory;
+            setProjectCategory(nextCategory);
+            const projects = nextCategory === "all"
+              ? donation.projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
+              : donation.projects.filter((project) => project.category === nextCategory);
+            setSelectedProjectId(projects[0]?.id || "");
+          }}>{donationCategoryOptions.map(([id, label]) => <option value={id} key={id}>{label} · {id === "all" ? donation.projects.length : donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
+          <label>Bağış kartı<select value={selectedProject?.id || ""} onChange={(event) => setSelectedProjectId(event.target.value)}>
+            {categoryProjects.length ? categoryProjects.map((project, index) => <option value={project.id} key={project.id}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</option>) : <option value="">Bu kategoride kart yok</option>}
+          </select></label>
+          <div className={styles.projectQuickActions}>
+            <button type="button" title={projectCategory === "all" ? "Yeni kart için gerçek kategori seçin" : "Yeni kart"} aria-label="Yeni kart" disabled={projectCategory === "all"} onClick={addProject}>＋</button>
+            <button type="button" title="Kartı çoğalt" aria-label="Kartı çoğalt" disabled={!selectedProject} onClick={duplicateProject}>⧉</button>
+            <button type="button" title="Sola taşı" aria-label="Sola taşı" disabled={!selectedProject} onClick={() => moveProject(-1)}>←</button>
+            <button type="button" title="Sağa taşı" aria-label="Sağa taşı" disabled={!selectedProject} onClick={() => moveProject(1)}>→</button>
+            <button type="button" title="Kartı sil" aria-label="Kartı sil" disabled={!selectedProject} onClick={deleteProject}>×</button>
+          </div>
+          <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
+          <nav className={styles.projectSettingsTabs} aria-label="Seçili kart ayarları">
+            {[
+              ["project-measurements", "Kart ayarları"],
+              ["project-design", "Görsel ayarları"],
+              ["project-content", "Yazı ayarları"],
+              ["project-payment", "Fiyat ve düğme"],
+            ].map(([id, label]) => <button type="button" key={id} className={lowerGroup === id ? styles.activeProjectSettingsTab : ""} onClick={() => setLowerGroup(id)}>{label}</button>)}
+          </nav>
+        </div> : null}
+      </section>
+      <section style={{ order: 2 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}`}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarları</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
+        {projectSelectorOpen && lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.showHeading} onChange={(event) => updateSharedImage({ showHeading: event.target.checked })} /> Bölüm başlığını göster</label>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.titleVisible} onChange={(event) => updateSharedImage({ titleVisible: event.target.checked })} /> Kart başlığını göster</label>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={device === "desktop" ? selectedProject.showInAllDesktop !== false : selectedProject.showInAllMobile !== false} onChange={(event) => updateProject(device === "desktop" ? { showInAllDesktop: event.target.checked } : { showInAllMobile: event.target.checked })} /> Tüm Bağışlar’da {device === "desktop" ? "webde" : "mobilde"} göster</label>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart tasarımını kullan</label>
+          {design.useSharedDesign ? <>
+            {sharedRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
+            {sharedRange("Kart iç boşluğu", "cardPadding", 0, 60)}
+            {sharedRange("Kart köşeleri", "cardRadius", 0, 60)}
+            {sharedRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
+            <label>Kart arka planı<input type="color" value={sharedImage.cardBackground} onChange={(event) => updateSharedImage({ cardBackground: event.target.value })} /></label>
+            <label>Çerçeve rengi<input type="color" value={sharedImage.cardBorderColor} onChange={(event) => updateSharedImage({ cardBorderColor: event.target.value })} /></label>
+            <label>Gölge<select value={sharedImage.cardShadow} onChange={(event) => updateSharedImage({ cardShadow: event.target.value as DonationLowerDeviceSettings["cardShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
+          </> : <>
+            {designRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
+            {designRange("Kart iç boşluğu", "cardPadding", 0, 60)}
+            {designRange("Kart köşeleri", "cardRadius", 0, 60)}
+            {designRange("Çerçeve kalınlığı", "cardBorderWidth", 0, 8)}
+            <label>Kart arka planı<input type="color" value={design.cardBackground} onChange={(event) => updateProjectDesign(device, { cardBackground: event.target.value })} /></label>
+            <label>Çerçeve rengi<input type="color" value={design.cardBorderColor} onChange={(event) => updateProjectDesign(device, { cardBorderColor: event.target.value })} /></label>
+          </>}
+        </div> : null}
+      </section>
+      <section style={{ order: 4 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}`}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>Yazı ayarları</span><b>{lowerGroup === "project-content" ? "−" : "+"}</b></button>
+        {projectSelectorOpen && lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
+          <div className={styles.moduleTextSettingsGroup}>
+            <strong>Bölüm başlığı metinleri</strong>
+            <label>Üst etiket<input type="text" value={sharedImage.headingEyebrow} onChange={(event) => updateSharedImage({ headingEyebrow: event.target.value })} /></label>
+            <label>Ana başlık<input type="text" value={sharedImage.headingTitle} onChange={(event) => updateSharedImage({ headingTitle: event.target.value })} /></label>
+          </div>
+          <div className={styles.moduleTextSettingsGroup}>
+            <strong>Seçili kartın yazıları</strong>
+          <label>Kart başlığı<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
+          <label>Açıklama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
+          {design.useSharedDesign ? <>
+            {sharedRange("Başlık boyutu", "titleSize", 12, 48)}
+            {sharedRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}
+            {sharedRange("Açıklama boyutu", "descriptionSize", 9, 24)}
+            <label>Başlık rengi<input type="color" value={sharedImage.titleColor} onChange={(event) => updateSharedImage({ titleColor: event.target.value })} /></label>
+            <label>Açıklama rengi<input type="color" value={sharedImage.descriptionColor} onChange={(event) => updateSharedImage({ descriptionColor: event.target.value })} /></label>
+          </> : <>
+            {designRange("Başlık boyutu", "titleSize", 12, 48)}
+            {designRange("Başlık kalınlığı", "titleWeight", 300, 900, "")}
+            {designRange("Açıklama boyutu", "descriptionSize", 9, 24)}
+            <label>Başlık rengi<input type="color" value={design.titleColor} onChange={(event) => updateProjectDesign(device, { titleColor: event.target.value })} /></label>
+            <label>Açıklama rengi<input type="color" value={design.descriptionColor} onChange={(event) => updateProjectDesign(device, { descriptionColor: event.target.value })} /></label>
+          </>}
+          </div>
+        </div> : null}
+      </section>
+      <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
+        {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
+          <label className={styles.headerCheck}><input type="checkbox" checked={design.imageVisible !== false} onChange={(event) => updateProjectDesign(device, { imageVisible: event.target.checked })} /> Kart medyasını göster</label>
+          <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedImageDesign !== false} onChange={(event) => updateProjectDesign(device, { useSharedImageDesign: event.target.checked })} /> Ortak görsel ayarlarını kullan</label>
+          <label>Görsel davranışı<select value={design.useSharedImageDesign !== false ? sharedImage.imageFit : design.imageFit || "cover"} onChange={(event) => design.useSharedImageDesign !== false ? updateSharedImage({ imageFit: event.target.value as "cover" | "contain" }) : updateProjectDesign(device, { imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
+          {design.useSharedImageDesign !== false ? <>
+            {sharedRange("Görsel yüksekliği", "imageHeight", 80, 500)}
+            {sharedRange("Görsel köşeleri", "imageRadius", 0, 60)}
+          </> : <>
+            {designRange("Görsel yüksekliği", "imageHeight", 80, 500)}
+            {designRange("Görsel köşeleri", "imageRadius", 0, 60)}
+          </>}
+          <div className={styles.projectMediaManager}>
+            <div className={styles.projectMediaHeader}><strong>{device === "desktop" ? "Web" : "Mobil"} kart galerisi</strong><label className={styles.primaryButton}>{uploading ? "Yükleniyor…" : "+ Fotoğraf / video"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,.mp4,image/webp,image/jpeg,image/png,image/avif,video/mp4" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectMedia(file, device); event.target.value = ""; }} /></label></div>
+            {projectMedia(device).length ? <div className={styles.projectMediaGrid}>{projectMedia(device).map((media, index) => <article key={media.id}>
+              <div>{media.type === "video" ? media.poster ? <Image src={media.poster} alt="" fill sizes="100px" /> : <span>▶</span> : <Image src={media.url} alt={media.alt || ""} fill sizes="100px" />}</div>
+              <small>{index === 0 ? "Ana kapak" : `${index + 1}. medya`} · {media.type === "video" ? "Video" : "Görsel"}</small>
+              {media.type === "video" ? <label className={styles.projectPosterButton}>{uploadingPosterId === media.id ? "Kapak yükleniyor…" : media.poster ? "Kapağı değiştir" : "Kapak görseli yükle"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={Boolean(uploadingPosterId)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectPoster(file, device, media); event.target.value = ""; }} /></label> : null}
+              <nav><button type="button" disabled={index === 0} onClick={() => moveProjectMedia(device, index, -1)}>←</button><button type="button" disabled={index === projectMedia(device).length - 1} onClick={() => moveProjectMedia(device, index, 1)}>→</button><button type="button" onClick={() => void removeProjectMedia(device, media)}>Sil</button></nav>
+            </article>)}</div> : <div className={styles.emptyModuleGallery}>Bu karta ait {device === "desktop" ? "web" : "mobil"} galerisi henüz boş.</div>}
+            <p className={styles.moduleHint}>İlk medya ana kapaktır. Video için MP4 (720p önerilir, en fazla 150 MB), görsel için WebP/JPG/PNG/AVIF (en fazla 5 MB) kullanın. Videolar kapak görseliyle açılır ve kullanıcı oynatmadan indirilmez.</p>
+          </div>
+        </div> : null}
+      </section>
+      <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>
+        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-payment" ? "" : "project-payment")}><span>Fiyat ve düğme ayarları</span><b>{lowerGroup === "project-payment" ? "−" : "+"}</b></button>
+        {projectSelectorOpen && lowerGroup === "project-payment" ? <div className={styles.lowerAccordionContent}>
+          <label>Bağış biçimi<select value={selectedProject.pricingMode} onChange={(event) => updateProject({ pricingMode: event.target.value as DonationProject["pricingMode"] })}><option value="amount">Bağış tutarı</option><option value="quantity">Adet / hisse</option></select></label>
+          {selectedProject.pricingMode === "quantity" ? <label>Birim fiyat<input type="number" min="0" value={selectedProject.fixedPrice} onChange={(event) => updateProject({ fixedPrice: Number(event.target.value) })} /></label> : null}
+          <label>{selectedProject.pricingMode === "quantity" ? "Adet seçenekleri" : "Hazır tutarlar"}<input value={selectedProject.suggested.join(", ")} onChange={(event) => updateProject({ suggested: event.target.value.split(",").map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0).slice(0, 12) })} placeholder="250, 500, 1000" /></label>
+          {selectedProject.pricingMode === "amount" ? <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.customAmountEnabled} onChange={(event) => updateProject({ customAmountEnabled: event.target.checked })} /> Özel tutar girişini göster</label> : null}
+          {designRange("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
+          {designRange("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
+          <label>Normal fiyat zemini<input type="color" value={design.priceBackground} onChange={(event) => updateProjectDesign(device, { priceBackground: event.target.value })} /></label>
+          <label>Normal fiyat yazısı<input type="color" value={design.priceTextColor} onChange={(event) => updateProjectDesign(device, { priceTextColor: event.target.value })} /></label>
+          <label>Seçili fiyat zemini<input type="color" value={design.selectedPriceBackground} onChange={(event) => updateProjectDesign(device, { selectedPriceBackground: event.target.value })} /></label>
+          <label>Seçili fiyat yazısı<input type="color" value={design.selectedPriceTextColor} onChange={(event) => updateProjectDesign(device, { selectedPriceTextColor: event.target.value })} /></label>
+          <label>Bağış düğmesi yazısı<input value={design.actionText} onChange={(event) => updateProjectDesign(device, { actionText: event.target.value })} /></label>
+          {designRange("Bağış düğmesi yüksekliği", "actionHeight", 34, 72)}
+          {designRange("Bağış düğmesi köşeleri", "actionRadius", 0, 36)}
+          <label>Bağış düğmesi rengi<input type="color" value={design.actionBackground} onChange={(event) => updateProjectDesign(device, { actionBackground: event.target.value })} /></label>
+          <label>Düğme yazı rengi<input type="color" value={design.actionTextColor} onChange={(event) => updateProjectDesign(device, { actionTextColor: event.target.value })} /></label>
+        </div> : null}
+      </section>
+    </div>;
+  };
+
+  const lowerControls = (device: Device) => {
+    const value = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
+    const change = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
+    const groups = [
+      ["layout", "Yerleşim ve ölçüler"],
+      ["arrows", "Kaydırma okları"],
+    ] as const;
+    const range = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
+      <label>{label} <b>{String(value[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(value[key])} onChange={(event) => change({ [key]: Number(event.target.value) })} /></label>
+    );
+    return <div className={styles.lowerAccordion}>
+      {groups.map(([id, label]) => <section key={id} className={lowerGroup === id ? styles.lowerAccordionOpen : ""}>
+        <button type="button" onClick={() => setLowerGroup((current) => current === id ? "" : id)}><span>{label}</span><b>{lowerGroup === id ? "−" : "+"}</b></button>
+        {lowerGroup === id ? <div className={styles.lowerAccordionContent}>
+          {id === "layout" ? <>
+            <label>Gösterim biçimi<select value={value.layout} onChange={(event) => change({ layout: event.target.value as "carousel" | "grid" })}><option value="carousel">Yatay kaydırma</option><option value="grid">Izgara</option></select></label>
+            {value.layout === "grid" ? range("Sütun sayısı", "columns", 1, device === "desktop" ? 6 : 2, "") : null}
+            {range("Bölüm genişliği", "sectionMaxWidth", device === "desktop" ? 700 : 280, device === "desktop" ? 1800 : 640)}
+            {range("Yan iç boşluk", "sectionPadding", 0, 80)}
+            {range("Üst bölümle mesafe", "sectionGap", 0, 100)}
+            {range("Başlık ile kartlar arası mesafe", "headingGap", 0, 100)}
+            {range("Alt bölümle mesafe", "sectionBottomGap", 0, 160)}
+            {range("Kartlar arası boşluk", "cardGap", 0, 60)}
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
+          </> : null}
+          {id === "arrows" ? <>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.leftArrowVisible} onChange={(event) => change({ leftArrowVisible: event.target.checked })} /> Sol oku göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.rightArrowVisible} onChange={(event) => change({ rightArrowVisible: event.target.checked })} /> Sağ oku göster</label>
+            <label>Hazır sembol<select value={value.arrowIcon} onChange={(event) => change({ arrowIcon: event.target.value as DonationLowerDeviceSettings["arrowIcon"] })}><option value="thin">İnce ok ← →</option><option value="chevron">Sade ok ‹ ›</option><option value="bold">Kalın ok ❮ ❯</option><option value="long">Uzun ok ⟵ ⟶</option><option value="triangle">Üçgen ◀ ▶</option></select></label>
+            {range("Ok kutusu boyutu", "arrowSize", 28, 72)}
+            {range("Sembol boyutu", "arrowIconSize", 12, 40)}
+            {range("Kenara bindirme", "arrowOffset", -36, 36)}
+            {range("Dikey konum", "arrowVerticalPosition", 10, 90, "%")}
+            {range("Köşe yuvarlaklığı", "arrowRadius", 0, 50, "%")}
+            {range("Şeffaflık", "arrowOpacity", 10, 100, "%")}
+            {range("Çerçeve kalınlığı", "arrowBorderWidth", 0, 6)}
+            <label>Arka plan rengi<input type="color" value={value.arrowBackground} onChange={(event) => change({ arrowBackground: event.target.value })} /></label>
+            <label>Sembol rengi<input type="color" value={value.arrowColor} onChange={(event) => change({ arrowColor: event.target.value })} /></label>
+            <label>Çerçeve rengi<input type="color" value={value.arrowBorderColor} onChange={(event) => change({ arrowBorderColor: event.target.value })} /></label>
+            <label>Gölge<select value={value.arrowShadow} onChange={(event) => change({ arrowShadow: event.target.value as DonationLowerDeviceSettings["arrowShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
+          </> : null}
+        </div> : null}
+      </section>)}
+    </div>;
+  };
+
+  const gallery = (device: Device) => {
+    const deviceImages = images.filter((image) => image.device === device);
+    const deviceLabel = device === "desktop" ? "Web" : "Mobil";
+    const aspectRatio = device === "desktop" ? donation.desktopAspectRatio : donation.mobileAspectRatio;
+    const cardWidth = device === "desktop" ? donation.desktopCardWidth : donation.mobileCardWidth;
+    const cardHeight = device === "desktop" ? donation.desktopCardHeight : donation.mobileCardHeight;
+    const cardGap = device === "desktop" ? donation.desktopCardGap : donation.mobileCardGap;
     const imageFit = device === "desktop" ? donation.desktopImageFit : donation.mobileImageFit;
     const imagePosition = device === "desktop" ? donation.desktopImagePosition : donation.mobileImagePosition;
     const borderRadius = device === "desktop" ? donation.desktopBorderRadius : donation.mobileBorderRadius;
@@ -582,4 +801,3 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     </>
   );
 }
-
