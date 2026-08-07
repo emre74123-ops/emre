@@ -35,6 +35,8 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
     sectionMaxWidth: clamp(input.sectionMaxWidth, 280, 1800, defaults.sectionMaxWidth),
     sectionPadding: clamp(input.sectionPadding, 0, 80, defaults.sectionPadding),
     sectionGap: clamp(input.sectionGap, 0, 100, defaults.sectionGap),
+    headingGap: clamp(input.headingGap, 0, 100, defaults.headingGap),
+    sectionBottomGap: clamp(input.sectionBottomGap, 0, 160, defaults.sectionBottomGap),
     cardWidth: clamp(input.cardWidth, 180, 700, defaults.cardWidth),
     cardRadius: clamp(input.cardRadius, 0, 60, defaults.cardRadius),
     cardPadding: clamp(input.cardPadding, 0, 60, defaults.cardPadding),

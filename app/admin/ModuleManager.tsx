@@ -563,6 +563,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             {range("Bölüm genişliği", "sectionMaxWidth", device === "desktop" ? 700 : 280, device === "desktop" ? 1800 : 640)}
             {range("Yan iç boşluk", "sectionPadding", 0, 80)}
             {range("Üst bölümle mesafe", "sectionGap", 0, 100)}
+            {range("Başlık ile kartlar arası mesafe", "headingGap", 0, 100)}
+            {range("Alt bölüm alt boşluğu", "sectionBottomGap", 0, 160)}
             {range("Kartlar arası boşluk", "cardGap", 0, 60)}
             <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
           </> : null}

@@ -125,6 +125,8 @@ export type DonationLowerDeviceSettings = {
   sectionMaxWidth: number;
   sectionPadding: number;
   sectionGap: number;
+  headingGap: number;
+  sectionBottomGap: number;
   cardWidth: number;
   cardRadius: number;
   cardPadding: number;
@@ -284,7 +286,7 @@ export const defaultModuleSettings: ModuleSettings = {
     projects: defaultDonationProjects,
     lowerDesktop: {
       enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
-      layout: "carousel", columns: 3, sectionMaxWidth: 1320, sectionPadding: 0, sectionGap: 22,
+      layout: "carousel", columns: 3, sectionMaxWidth: 1320, sectionPadding: 0, sectionGap: 22, headingGap: 24, sectionBottomGap: 50,
       cardWidth: 370, cardRadius: 18, cardPadding: 24, cardGap: 22, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
       imageVisible: true, imageHeight: 218, imageRadius: 0, imageFit: "cover",
@@ -300,7 +302,7 @@ export const defaultModuleSettings: ModuleSettings = {
     },
     lowerMobile: {
       enabled: true, showHeading: true, headingEyebrow: "BAĞIŞ ALANLARI", headingTitle: "Destek projeleri",
-      layout: "carousel", columns: 1, sectionMaxWidth: 640, sectionPadding: 12, sectionGap: 14,
+      layout: "carousel", columns: 1, sectionMaxWidth: 640, sectionPadding: 12, sectionGap: 14, headingGap: 24, sectionBottomGap: 50,
       cardWidth: 330, cardRadius: 16, cardPadding: 20, cardGap: 14, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
       imageVisible: true, imageHeight: 205, imageRadius: 0, imageFit: "cover",
