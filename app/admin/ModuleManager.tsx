@@ -12,6 +12,7 @@ type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
 type ProjectCategory = DonationProject["category"] | "all";
 type GalleryImage = { path: string; url: string; size: number; device: Device };
+type UpperSettingsGroupRenderer = (id: string, title: string, content: ReactNode) => ReactNode;
 
 export default function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
   const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
@@ -25,8 +26,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [selectedProjectId, setSelectedProjectId] = useState("general-support");
   const [draggedProjectId, setDraggedProjectId] = useState("");
   const [tab, setTab] = useState<ModuleTab>("desktop");
-  const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
-  const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
   const [upperDesktopGroup, setUpperDesktopGroup] = useState("publishing");
   const [upperMobileGroup, setUpperMobileGroup] = useState("publishing");
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -596,7 +595,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     </div>;
   };
 
-  const gallery = (device: Device) => {
+  const upperGallerySections = (device: Device, group: UpperSettingsGroupRenderer) => {
     const deviceImages = images.filter((image) => image.device === device);
     const deviceLabel = device === "desktop" ? "Web" : "Mobil";
     const aspectRatio = device === "desktop" ? donation.desktopAspectRatio : donation.mobileAspectRatio;
@@ -610,8 +609,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const borderColor = device === "desktop" ? donation.desktopBorderColor : donation.mobileBorderColor;
     const shadow = device === "desktop" ? donation.desktopShadow : donation.mobileShadow;
     const backgroundColor = device === "desktop" ? donation.desktopImageBackgroundColor : donation.mobileImageBackgroundColor;
-    return (
-      <div className={styles.deviceGallery}>
+    return <>
+      {group("visual-design", "Görsel tasarımı", <div className={styles.upperVisualDesign}>
         <div className={styles.compactImageSettings}>
           <div className={styles.compactSettingGroup}>
             <strong>Boyut ve oran</strong>
@@ -634,10 +633,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <label>Gölge<select value={shadow} onChange={(event) => update(device === "desktop" ? { desktopShadow: event.target.value as typeof donation.desktopShadow } : { mobileShadow: event.target.value as typeof donation.mobileShadow })}><option value="none">Kapalı</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
           </div>
         </div>
-        <div className={styles.moduleUpload}>
-          <div><h3>{deviceLabel} görsel galerisi</h3><p>WebP önerilir. 250 KB üzerindeki dosyalarda boyut uyarısı gösterilir.</p></div>
-          <label className={styles.primaryButton}>{uploading ? "Yükleniyor..." : "+ Görsel Yükle"}<input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.svg,image/webp,image/jpeg,image/png,image/svg+xml" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file, device); event.target.value = ""; }} /></label>
-        </div>
+      </div>)}
+      {group("visual-categories", "Kategori görselleri", <div className={styles.upperVisualLibrary}>
         <div className={styles.compactCategoryAssignments}>
           {donationCategoryOptions.map(([id, label]) => <section className={styles.deviceCategoryImageRow} key={id}>
             <div><strong>{label}</strong><small>Aktif {deviceLabel.toLocaleLowerCase("tr-TR")} görseli</small></div>
@@ -647,6 +644,12 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               {deviceImages.map((image, index) => <option value={image.url} key={image.path}>Galeri görseli {index + 1} · {formatSize(image.size)}</option>)}
             </select>
           </section>)}
+        </div>
+      </div>)}
+      {group("visual-library", "Görsel galerisi", <div className={styles.upperVisualLibrary}>
+        <div className={styles.moduleUpload}>
+          <div><h3>{deviceLabel} görsel galerisi</h3><p>WebP önerilir. 250 KB üzerindeki dosyalarda boyut uyarısı gösterilir.</p></div>
+          <label className={styles.primaryButton}>{uploading ? "Yükleniyor..." : "+ Görsel Yükle"}<input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.svg,image/webp,image/jpeg,image/png,image/svg+xml" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file, device); event.target.value = ""; }} /></label>
         </div>
         {deviceImages.length ? <div className={styles.compactGalleryGrid}>
           {deviceImages.map((image) => {
@@ -667,8 +670,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             </article>;
           })}
         </div> : <div className={styles.emptyModuleGallery}>Bu bölümde henüz özel görsel yok. Mevcut örnek görseller kullanılmaya devam ediyor.</div>}
-      </div>
-    );
+      </div>)}
+    </>;
   };
 
   const upperDesignSettings = (device: Device) => {
@@ -685,7 +688,13 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       </section>
     );
 
-    return <div className={`${styles.lowerAccordion} ${styles.upperSettingsAccordion}`}>
+    return <div className={styles.upperUnifiedPanel}>
+      <header className={styles.upperUnifiedHeader}>
+        <span>{desktop ? "WEB" : "MOBİL"}</span>
+        <div><strong>{desktop ? "Web Ayarları" : "Mobil Ayarları"}</strong><small>Tasarım, görseller ve galeri tek merkezde</small></div>
+        <i>7 BÖLÜM</i>
+      </header>
+      <div className={`${styles.lowerAccordion} ${styles.upperSettingsAccordion}`}>
       {group("publishing", "Yayın ve kaydırma", <>
         <label className={styles.headerCheck}><input type="checkbox" checked={donation.enabled} onChange={(event) => update({ enabled: event.target.checked })} /> Modülü ana sayfada göster</label>
         <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Kategorileri otomatik kaydır</label>
@@ -710,6 +719,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       {group("categories", "Görünen kategoriler", <>
         {donationCategoryOptions.map(([id, label]) => <label className={styles.headerCheck} key={id}><input type="checkbox" checked={donation.visibleCategories.includes(id)} onChange={() => toggleCategory(id)} /> {label}</label>)}
       </>)}
+      {upperGallerySections(device, group)}
+      </div>
     </div>;
   };
 
@@ -752,12 +763,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           {tab === "desktop" ? <>
             <div className={styles.moduleEditorGrid}>
               <div className={styles.moduleConfigurationPanel}>
-                <nav className={styles.deviceSettingsTabs} aria-label="Web ayar bölümleri">
-                  <button type="button" className={desktopPanel === "design" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("design")}>Web Tasarımı</button>
-                  <button type="button" className={desktopPanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setDesktopPanel("gallery")}>Web Görsel Ayarları</button>
-                </nav>
-                {desktopPanel === "design" ? upperDesignSettings("desktop") : null}
-                {desktopPanel === "gallery" ? gallery("desktop") : null}
+                {upperDesignSettings("desktop")}
               </div>
               {preview("desktop")}
             </div>
@@ -766,12 +772,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           {tab === "mobile" ? <>
             <div className={styles.moduleEditorGrid}>
               <div className={styles.moduleConfigurationPanel}>
-                <nav className={styles.deviceSettingsTabs} aria-label="Mobil ayar bölümleri">
-                  <button type="button" className={mobilePanel === "design" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("design")}>Mobil Tasarımı</button>
-                  <button type="button" className={mobilePanel === "gallery" ? styles.activeDeviceSettingsTab : ""} onClick={() => setMobilePanel("gallery")}>Mobil Görsel Ayarları</button>
-                </nav>
-                {mobilePanel === "design" ? upperDesignSettings("mobile") : null}
-                {mobilePanel === "gallery" ? gallery("mobile") : null}
+                {upperDesignSettings("mobile")}
               </div>
               {preview("mobile")}
             </div>
