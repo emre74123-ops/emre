@@ -6,7 +6,7 @@ import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
-type ModuleTab = "general" | "desktop" | "mobile" | "placement";
+type ModuleTab = "desktop" | "mobile";
 type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
 type ProjectCategory = DonationProject["category"] | "all";
@@ -23,7 +23,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [projectCategory, setProjectCategory] = useState<ProjectCategory>("all");
   const [selectedProjectId, setSelectedProjectId] = useState("general-support");
   const [draggedProjectId, setDraggedProjectId] = useState("");
-  const [tab, setTab] = useState<ModuleTab>("general");
+  const [tab, setTab] = useState<ModuleTab>("desktop");
   const [desktopPanel, setDesktopPanel] = useState<"design" | "gallery">("design");
   const [mobilePanel, setMobilePanel] = useState<"design" | "gallery">("design");
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -699,24 +699,10 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <div className={styles.moduleSectionIntro}>
             <span>ÜST BÖLÜM</span><h2>Bağış Kategorileri</h2><p>Kategori kutularını, görselleri, kaydırma davranışını ve yerleşimi yönetin.</p>
           </div>
-          <nav className={styles.moduleTabs} aria-label="Bağış modülü ayar bölümleri">
-            {([["general", "Genel"], ["desktop", "Web"], ["mobile", "Mobil"], ["placement", "Yerleşim"]] as const).map(([id, label]) => (
-              <button className={tab === id ? styles.activeModuleTab : ""} type="button" key={id} onClick={() => setTab(id)}>{label}</button>
-            ))}
+          <nav className={styles.lowerDeviceTabs} aria-label="Üst bölüm cihaz ayarları">
+            <button className={tab === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => setTab("desktop")}><span>WEB</span><strong>Web Ayarları</strong><small>Masaüstü görünümü</small></button>
+            <button className={tab === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => setTab("mobile")}><span>MOBİL</span><strong>Mobil Ayarları</strong><small>Telefon görünümü</small></button>
           </nav>
-
-          {tab === "general" ? <div className={styles.moduleSettingsPane}>
-            <div className={styles.moduleControls}>
-              <h3>Genel ayarlar</h3>
-              <label className={styles.headerCheck}><input type="checkbox" checked={donation.enabled} onChange={(event) => update({ enabled: event.target.checked })} /> Modülü ana sayfada göster</label>
-              <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Kategorileri otomatik kaydır</label>
-              <label className={styles.headerCheck}><input type="checkbox" checked={donation.showProgress} onChange={(event) => update({ showProgress: event.target.checked })} /> İlerleme çizgisini göster</label>
-              <label>Kaydırma hızı <b>{donation.autoScrollSpeed.toFixed(2)}×</b><input type="range" min=".25" max="4" step=".25" value={donation.autoScrollSpeed} onChange={(event) => update({ autoScrollSpeed: Number(event.target.value) })} /></label>
-              <h3>Görünen kategoriler</h3>
-              {donationCategoryOptions.map(([id, label]) => <label className={styles.headerCheck} key={id}><input type="checkbox" checked={donation.visibleCategories.includes(id)} onChange={() => toggleCategory(id)} /> {label}</label>)}
-            </div>
-            <div className={styles.moduleInformation}><strong>01</strong><h3>Bağış Modülü</h3><p>Web ve mobil tasarımları ayrı ayrı yönetilir. Değişiklikler kaydetmeden önce ilgili canlı görünümde izlenebilir.</p></div>
-          </div> : null}
 
           {tab === "desktop" ? <>
             <div className={styles.moduleEditorGrid}>
@@ -727,14 +713,22 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                 </nav>
                 {desktopPanel === "design" ? <div className={styles.moduleControls}>
                   <h3>Web Ayarları</h3>
+                  <label className={styles.headerCheck}><input type="checkbox" checked={donation.enabled} onChange={(event) => update({ enabled: event.target.checked })} /> Modülü ana sayfada göster</label>
+                  <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Kategorileri otomatik kaydır</label>
+                  <label className={styles.headerCheck}><input type="checkbox" checked={donation.showProgress} onChange={(event) => update({ showProgress: event.target.checked })} /> İlerleme çizgisini göster</label>
+                  <label>Kaydırma hızı <b>{donation.autoScrollSpeed.toFixed(2)}×</b><input type="range" min=".25" max="4" step=".25" value={donation.autoScrollSpeed} onChange={(event) => update({ autoScrollSpeed: Number(event.target.value) })} /></label>
                   <label>Slider üzerine bindirme <b>{donation.desktopOverlap} px</b><input type="range" min="0" max="100" value={donation.desktopOverlap} onChange={(event) => update({ desktopOverlap: Number(event.target.value) })} /></label>
                   <label>Bağış alanıyla mesafe <b>{donation.desktopContentGap} px</b><input type="range" min="0" max="120" value={donation.desktopContentGap} onChange={(event) => update({ desktopContentGap: Number(event.target.value) })} /></label>
+                  <label>Kutucuk hizalama<select value={donation.desktopCategoryAlignment} onChange={(event) => update({ desktopCategoryAlignment: event.target.value as typeof donation.desktopCategoryAlignment })}><option value="left">Sola hizala</option><option value="center">Ortaya hizala</option></select></label>
+                  <label>İki çizgi arası ek boşluk <b>{donation.desktopProgressExtraSpace} px</b><input type="range" min="0" max="160" value={donation.desktopProgressExtraSpace} onChange={(event) => update({ desktopProgressExtraSpace: Number(event.target.value) })} /></label>
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.desktopProgressStartColor} onChange={(event) => update({ desktopProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.desktopProgressEndColor} onChange={(event) => update({ desktopProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.desktopProgressTrackColor} onChange={(event) => update({ desktopProgressTrackColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi konumu<select value={donation.desktopProgressPosition} onChange={(event) => update({ desktopProgressPosition: event.target.value as typeof donation.desktopProgressPosition })}><option value="top">Yalnızca üstte</option><option value="bottom">Yalnızca altta</option><option value="both">Üstte ve altta</option></select></label>
                   <label>Çizgi ile kart aralığı <b>{donation.desktopProgressGap} px</b><input type="range" min="0" max="60" value={donation.desktopProgressGap} onChange={(event) => update({ desktopProgressGap: Number(event.target.value) })} /></label>
                   <label>Çizgi kalınlığı <b>{donation.desktopProgressThickness} px</b><input type="range" min="1" max="8" value={donation.desktopProgressThickness} onChange={(event) => update({ desktopProgressThickness: Number(event.target.value) })} /></label>
+                  <h3>Görünen kategoriler</h3>
+                  {donationCategoryOptions.map(([id, label]) => <label className={styles.headerCheck} key={id}><input type="checkbox" checked={donation.visibleCategories.includes(id)} onChange={() => toggleCategory(id)} /> {label}</label>)}
                 </div> : null}
                 {desktopPanel === "gallery" ? gallery("desktop") : null}
               </div>
@@ -751,25 +745,27 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                 </nav>
                 {mobilePanel === "design" ? <div className={styles.moduleControls}>
                   <h3>Mobil Ayarları</h3>
+                  <label className={styles.headerCheck}><input type="checkbox" checked={donation.enabled} onChange={(event) => update({ enabled: event.target.checked })} /> Modülü ana sayfada göster</label>
+                  <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Kategorileri otomatik kaydır</label>
+                  <label className={styles.headerCheck}><input type="checkbox" checked={donation.showProgress} onChange={(event) => update({ showProgress: event.target.checked })} /> İlerleme çizgisini göster</label>
+                  <label>Kaydırma hızı <b>{donation.autoScrollSpeed.toFixed(2)}×</b><input type="range" min=".25" max="4" step=".25" value={donation.autoScrollSpeed} onChange={(event) => update({ autoScrollSpeed: Number(event.target.value) })} /></label>
                   <label>Slider üzerine bindirme <b>{donation.mobileOverlap} px</b><input type="range" min="0" max="60" value={donation.mobileOverlap} onChange={(event) => update({ mobileOverlap: Number(event.target.value) })} /></label>
                   <label>Bağış alanıyla mesafe <b>{donation.mobileContentGap} px</b><input type="range" min="0" max="100" value={donation.mobileContentGap} onChange={(event) => update({ mobileContentGap: Number(event.target.value) })} /></label>
+                  <label>İki çizgi arası ek boşluk <b>{donation.mobileProgressExtraSpace} px</b><input type="range" min="0" max="120" value={donation.mobileProgressExtraSpace} onChange={(event) => update({ mobileProgressExtraSpace: Number(event.target.value) })} /></label>
                   <label>İlerleme başlangıç rengi<input type="color" value={donation.mobileProgressStartColor} onChange={(event) => update({ mobileProgressStartColor: event.target.value })} /></label>
                   <label>İlerleme bitiş rengi<input type="color" value={donation.mobileProgressEndColor} onChange={(event) => update({ mobileProgressEndColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi zemini<input type="color" value={donation.mobileProgressTrackColor} onChange={(event) => update({ mobileProgressTrackColor: event.target.value })} /></label>
                   <label>İlerleme çizgisi konumu<select value={donation.mobileProgressPosition} onChange={(event) => update({ mobileProgressPosition: event.target.value as typeof donation.mobileProgressPosition })}><option value="top">Yalnızca üstte</option><option value="bottom">Yalnızca altta</option><option value="both">Üstte ve altta</option></select></label>
                   <label>Çizgi ile kart aralığı <b>{donation.mobileProgressGap} px</b><input type="range" min="0" max="50" value={donation.mobileProgressGap} onChange={(event) => update({ mobileProgressGap: Number(event.target.value) })} /></label>
                   <label>Çizgi kalınlığı <b>{donation.mobileProgressThickness} px</b><input type="range" min="1" max="8" value={donation.mobileProgressThickness} onChange={(event) => update({ mobileProgressThickness: Number(event.target.value) })} /></label>
+                  <h3>Görünen kategoriler</h3>
+                  {donationCategoryOptions.map(([id, label]) => <label className={styles.headerCheck} key={id}><input type="checkbox" checked={donation.visibleCategories.includes(id)} onChange={() => toggleCategory(id)} /> {label}</label>)}
                 </div> : null}
                 {mobilePanel === "gallery" ? gallery("mobile") : null}
               </div>
               {preview("mobile")}
             </div>
           </> : null}
-
-          {tab === "placement" ? <div className={styles.moduleSettingsPane}>
-            <div className={styles.moduleControls}><h3>Yerleşim</h3><label>Gösterileceği sayfa<select value="/" disabled><option>Ana sayfa</option></select></label><label>Konum<select value="after-slider" disabled><option>Sliderın hemen altında</option></select></label><label>Web kutucuk hizalama<select value={donation.desktopCategoryAlignment} onChange={(event) => update({ desktopCategoryAlignment: event.target.value as typeof donation.desktopCategoryAlignment })}><option value="left">Sola hizala</option><option value="center">Ortaya hizala</option></select></label><label>Web iki çizgi arası ek boşluk <b>{donation.desktopProgressExtraSpace} px</b><input type="range" min="0" max="160" value={donation.desktopProgressExtraSpace} onChange={(event) => update({ desktopProgressExtraSpace: Number(event.target.value) })} /></label><label>Mobil iki çizgi arası ek boşluk <b>{donation.mobileProgressExtraSpace} px</b><input type="range" min="0" max="120" value={donation.mobileProgressExtraSpace} onChange={(event) => update({ mobileProgressExtraSpace: Number(event.target.value) })} /></label><p className={styles.moduleHint}>Ek boşluk yalnızca ilerleme çizgisi konumu “Üstte ve altta” seçildiğinde uygulanır. Kutucuklar iki çizginin ortasında kalır.</p></div>
-            <div className={styles.moduleInformation}><strong>↳</strong><h3>Ana sayfa akışı</h3><p>Header → Slider → Bağış Modülü → Diğer içerikler → Footer</p></div>
-          </div> : null}
           </> : null}
 
           {section === "lower" ? <div className={styles.moduleLowerSection}>
