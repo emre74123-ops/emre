@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import Link from "next/link";
 import type { HeaderSettings } from "../lib/header-settings";
 import { managedPageHref, type ManagedPage } from "../lib/page-settings";
-import { readCart, writeCart, type CartItem } from "../lib/cart";
+import { CART_MAX_QUANTITY, readCart, writeCart, type CartItem } from "../lib/cart";
 import AccountPanel from "./components/AccountPanel";
 import CartPanel from "./components/CartPanel";
 import MemberAccountNav from "./components/MemberAccountNav";
@@ -75,6 +75,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
   const [donationOpen, setDonationOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutIntent, setCheckoutIntent] = useState(0);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartHydrated, setCartHydrated] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState("500");
@@ -120,11 +121,18 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
       setCartItems(readCart());
       setCartOpen(true);
     };
+    const openCheckout = () => {
+      setCartItems(readCart());
+      setCheckoutIntent((current) => current + 1);
+      setCartOpen(true);
+    };
     window.addEventListener("iyilik-cart-updated", syncCart);
     window.addEventListener("iyilik-cart-open", openCart);
+    window.addEventListener("iyilik-cart-checkout", openCheckout);
     return () => {
       window.removeEventListener("iyilik-cart-updated", syncCart);
       window.removeEventListener("iyilik-cart-open", openCart);
+      window.removeEventListener("iyilik-cart-checkout", openCheckout);
     };
   }, []);
   const [sliderAnimated, setSliderAnimated] = useState(true);
@@ -286,7 +294,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
     setCartItems((current) => {
       const existing = current.find((item) => item.id === id);
       return existing
-        ? current.map((item) => item.id === id ? { ...item, quantity: Math.min(99, item.quantity + 1) } : item)
+        ? current.map((item) => item.id === id ? { ...item, quantity: Math.min(CART_MAX_QUANTITY, item.quantity + 1) } : item)
         : [...current, { id, project: selectedProject, amount, quantity: 1 }];
     });
     setDonationOpen(false);
@@ -298,7 +306,7 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
       setCartItems((current) => current.filter((item) => item.id !== id));
       return;
     }
-    setCartItems((current) => current.map((item) => item.id === id ? { ...item, quantity: Math.min(99, quantity) } : item));
+    setCartItems((current) => current.map((item) => item.id === id ? { ...item, quantity: Math.min(CART_MAX_QUANTITY, quantity) } : item));
   }
 
   return (
@@ -587,7 +595,9 @@ export default function HomeClient({ initialSlides, headerSettings, managedPages
 
       <AccountPanel open={accountOpen} onClose={() => setAccountOpen(false)} />
       <CartPanel
+        key={`cart-${checkoutIntent}`}
         open={cartOpen}
+        checkoutIntent={checkoutIntent}
         items={cartItems}
         onClose={() => setCartOpen(false)}
         onQuantity={updateCartQuantity}
