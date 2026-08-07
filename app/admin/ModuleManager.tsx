@@ -367,7 +367,10 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const preview = (device: "desktop" | "mobile") => (
     <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
       <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlı görünüm" : "Web canlı görünüm"}</div>
-      <div className={styles.modulePreviewViewport}><DonationModule embedded settings={donation} previewDevice={device} previewCategory={projectCategory} /></div>
+      <div className={styles.modulePreviewViewport}>
+        <DonationModule embedded settings={donation} previewDevice={device} previewCategory={projectCategory} />
+        <div className={styles.previewFollowingSection}><span>SONRAKİ BÖLÜM</span></div>
+      </div>
     </div>
   );
 
@@ -564,7 +567,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             {range("Yan iç boşluk", "sectionPadding", 0, 80)}
             {range("Üst bölümle mesafe", "sectionGap", 0, 100)}
             {range("Başlık ile kartlar arası mesafe", "headingGap", 0, 100)}
-            {range("Alt bölüm alt boşluğu", "sectionBottomGap", 0, 160)}
+            {range("Alt bölümle mesafe", "sectionBottomGap", 0, 160)}
             {range("Kartlar arası boşluk", "cardGap", 0, 60)}
             <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
           </> : null}

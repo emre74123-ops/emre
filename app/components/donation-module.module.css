@@ -12,6 +12,7 @@
 .categoryRail .activeCategory{border-color:#128465;background:#edf6f2;box-shadow:0 0 0 3px rgba(18,132,101,.14),0 10px 28px rgba(18,60,53,.18)}
 .categoryRail button{min-height:150px}
 .embedded .moduleShell{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.embedded .moduleShell{margin-bottom:0}.embedded .cards{padding-bottom:4px}
 .categoryRail{justify-content:var(--dm-desktop-category-alignment,flex-start);padding:var(--dm-desktop-progress-top-space,0) 0 var(--dm-desktop-progress-bottom-space,10px);border:0;border-radius:0;background:transparent;box-shadow:none}
 .embedded .moduleShell{margin-top:calc(var(--dm-desktop-overlap,28px) * -1)}
 .categoryRail{gap:var(--dm-desktop-card-gap,10px)}
