@@ -112,10 +112,14 @@ export async function deleteR2Keys(keys: string[]) {
   const uniqueKeys = [...new Set(keys.filter(Boolean))];
   if (!uniqueKeys.length) return;
   for (let index = 0; index < uniqueKeys.length; index += 1000) {
-    await client().send(new DeleteObjectsCommand({
+    const result = await client().send(new DeleteObjectsCommand({
       Bucket: bucket,
       Delete: { Objects: uniqueKeys.slice(index, index + 1000).map((Key) => ({ Key })), Quiet: true },
     }));
+    if (result.Errors?.length) {
+      const failedKeys = result.Errors.map((error) => error.Key).filter(Boolean).join(", ");
+      throw new Error(`R2 medya dosyaları tamamen silinemedi: ${failedKeys || "bilinmeyen dosya"}`);
+    }
   }
 }
 
