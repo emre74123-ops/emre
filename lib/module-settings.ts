@@ -97,8 +97,16 @@ export type DonationProjectMedia = {
   type: "image" | "video";
   url: string;
   path?: string;
+  width?: number;
+  height?: number;
+  size?: number;
+  originalName?: string;
   poster?: string;
   posterPath?: string;
+  posterWidth?: number;
+  posterHeight?: number;
+  posterSize?: number;
+  posterOriginalName?: string;
   alt?: string;
 };
 
@@ -107,6 +115,14 @@ export type DonationProjectDesign = {
   useSharedImageDesign?: boolean;
   imageVisible?: boolean;
   imageFit?: "cover" | "contain";
+  mediaThumbnailsVisible: boolean;
+  mediaThumbnailSize: number;
+  mediaThumbnailGap: number;
+  mediaThumbnailRadius: number;
+  mediaThumbnailBottom: number;
+  videoModalWidth: number;
+  videoModalRadius: number;
+  videoModalBackdropOpacity: number;
   cardWidth: number;
   cardPadding: number;
   cardBackground: string;
@@ -157,6 +173,14 @@ export type DonationLowerDeviceSettings = {
   imageHeight: number;
   imageRadius: number;
   imageFit: "cover" | "contain";
+  mediaThumbnailsVisible: boolean;
+  mediaThumbnailSize: number;
+  mediaThumbnailGap: number;
+  mediaThumbnailRadius: number;
+  mediaThumbnailBottom: number;
+  videoModalWidth: number;
+  videoModalRadius: number;
+  videoModalBackdropOpacity: number;
   titleSize: number;
   titleColor: string;
   titleWeight: number;
@@ -272,6 +296,14 @@ export const defaultDonationCategoryImages = {
 
 const defaultProjectDesign: DonationProjectDesign = {
   useSharedDesign: true,
+  mediaThumbnailsVisible: true,
+  mediaThumbnailSize: 54,
+  mediaThumbnailGap: 8,
+  mediaThumbnailRadius: 8,
+  mediaThumbnailBottom: 10,
+  videoModalWidth: 960,
+  videoModalRadius: 18,
+  videoModalBackdropOpacity: 84,
   cardWidth: 370,
   cardPadding: 24,
   cardBackground: "#ffffff",
@@ -371,6 +403,9 @@ export const defaultModuleSettings: ModuleSettings = {
       cardWidth: 370, cardRadius: 18, cardPadding: 24, cardGap: 22, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
       imageVisible: true, imageHeight: 218, imageRadius: 0, imageFit: "cover",
+      mediaThumbnailsVisible: true, mediaThumbnailSize: 54, mediaThumbnailGap: 8,
+      mediaThumbnailRadius: 8, mediaThumbnailBottom: 10,
+      videoModalWidth: 960, videoModalRadius: 18, videoModalBackdropOpacity: 84,
       titleSize: 26, titleColor: "#143b34", titleWeight: 500, titleVisible: true,
       descriptionVisible: true, descriptionSize: 12, descriptionColor: "#6e827d",
       priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
@@ -387,6 +422,9 @@ export const defaultModuleSettings: ModuleSettings = {
       cardWidth: 330, cardRadius: 16, cardPadding: 20, cardGap: 14, cardBackground: "#ffffff",
       cardBorderColor: "#e2e8e4", cardBorderWidth: 1, cardShadow: "soft",
       imageVisible: true, imageHeight: 205, imageRadius: 0, imageFit: "cover",
+      mediaThumbnailsVisible: true, mediaThumbnailSize: 44, mediaThumbnailGap: 6,
+      mediaThumbnailRadius: 7, mediaThumbnailBottom: 8,
+      videoModalWidth: 640, videoModalRadius: 14, videoModalBackdropOpacity: 86,
       titleSize: 24, titleColor: "#143b34", titleWeight: 500, titleVisible: true,
       descriptionVisible: true, descriptionSize: 12, descriptionColor: "#6e827d",
       priceButtonHeight: 38, priceButtonRadius: 8, priceBackground: "#ffffff", priceTextColor: "#365f57",
@@ -399,6 +437,125 @@ export const defaultModuleSettings: ModuleSettings = {
     },
   },
 };
+
+function boundedNumber(value: unknown, min: number, max: number, fallback: number) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+function optionalPositiveInteger(value: unknown, max: number) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? Math.min(max, number) : undefined;
+}
+
+function optionalFileName(value: unknown) {
+  const name = String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 180);
+  return name || undefined;
+}
+
+function normalizeProjectDesign(
+  input: Partial<DonationProjectDesign> | undefined,
+  defaults: DonationProjectDesign,
+): DonationProjectDesign {
+  const source = input || {};
+  return {
+    ...defaults,
+    ...source,
+    mediaThumbnailsVisible: typeof source.mediaThumbnailsVisible === "boolean"
+      ? source.mediaThumbnailsVisible
+      : defaults.mediaThumbnailsVisible,
+    mediaThumbnailSize: boundedNumber(source.mediaThumbnailSize, 24, 160, defaults.mediaThumbnailSize),
+    mediaThumbnailGap: boundedNumber(source.mediaThumbnailGap, 0, 40, defaults.mediaThumbnailGap),
+    mediaThumbnailRadius: boundedNumber(source.mediaThumbnailRadius, 0, 40, defaults.mediaThumbnailRadius),
+    mediaThumbnailBottom: boundedNumber(source.mediaThumbnailBottom, 0, 80, defaults.mediaThumbnailBottom),
+    videoModalWidth: boundedNumber(source.videoModalWidth, 280, 1800, defaults.videoModalWidth),
+    videoModalRadius: boundedNumber(source.videoModalRadius, 0, 60, defaults.videoModalRadius),
+    videoModalBackdropOpacity: boundedNumber(
+      source.videoModalBackdropOpacity,
+      0,
+      100,
+      defaults.videoModalBackdropOpacity,
+    ),
+  };
+}
+
+function normalizeLowerDeviceSettings(
+  input: Partial<DonationLowerDeviceSettings> | undefined,
+  defaults: DonationLowerDeviceSettings,
+): DonationLowerDeviceSettings {
+  const source = input || {};
+  return {
+    ...defaults,
+    ...source,
+    enabled: true,
+    mediaThumbnailsVisible: typeof source.mediaThumbnailsVisible === "boolean"
+      ? source.mediaThumbnailsVisible
+      : defaults.mediaThumbnailsVisible,
+    mediaThumbnailSize: boundedNumber(source.mediaThumbnailSize, 24, 160, defaults.mediaThumbnailSize),
+    mediaThumbnailGap: boundedNumber(source.mediaThumbnailGap, 0, 40, defaults.mediaThumbnailGap),
+    mediaThumbnailRadius: boundedNumber(source.mediaThumbnailRadius, 0, 40, defaults.mediaThumbnailRadius),
+    mediaThumbnailBottom: boundedNumber(source.mediaThumbnailBottom, 0, 80, defaults.mediaThumbnailBottom),
+    videoModalWidth: boundedNumber(source.videoModalWidth, 280, 1800, defaults.videoModalWidth),
+    videoModalRadius: boundedNumber(source.videoModalRadius, 0, 60, defaults.videoModalRadius),
+    videoModalBackdropOpacity: boundedNumber(
+      source.videoModalBackdropOpacity,
+      0,
+      100,
+      defaults.videoModalBackdropOpacity,
+    ),
+  };
+}
+
+function normalizeProjectMedia(
+  value: unknown,
+  legacyImage: unknown,
+  legacyId: string,
+): DonationProjectMedia[] {
+  const source = Array.isArray(value)
+    ? value
+    : typeof legacyImage === "string" && legacyImage.trim()
+      ? [{ id: legacyId, type: "image", url: legacyImage }]
+      : [];
+  const usedIds = new Set<string>();
+  return source.slice(0, 20).flatMap((candidate, index): DonationProjectMedia[] => {
+    if (!candidate || typeof candidate !== "object") return [];
+    const media = candidate as Partial<DonationProjectMedia>;
+    const url = String(media.url || "").trim().slice(0, 1500);
+    if (!url) return [];
+    const requestedId = String(media.id || `${legacyId}-${index + 1}`)
+      .trim()
+      .replace(/[^a-z0-9_-]/gi, "-")
+      .slice(0, 100) || `${legacyId}-${index + 1}`;
+    let id = requestedId;
+    let suffix = 2;
+    while (usedIds.has(id)) {
+      id = `${requestedId.slice(0, Math.max(1, 99 - String(suffix).length))}-${suffix}`;
+      suffix += 1;
+    }
+    usedIds.add(id);
+    const path = String(media.path || "").trim().slice(0, 500) || undefined;
+    const poster = String(media.poster || "").trim().slice(0, 1500) || undefined;
+    const posterPath = String(media.posterPath || "").trim().slice(0, 500) || undefined;
+    const alt = String(media.alt || "").trim().slice(0, 160) || undefined;
+    return [{
+      id,
+      type: media.type === "video" ? "video" : "image",
+      url,
+      ...(path ? { path } : {}),
+      ...(optionalPositiveInteger(media.width, 8192) ? { width: optionalPositiveInteger(media.width, 8192) } : {}),
+      ...(optionalPositiveInteger(media.height, 8192) ? { height: optionalPositiveInteger(media.height, 8192) } : {}),
+      ...(optionalPositiveInteger(media.size, 150 * 1024 * 1024) ? { size: optionalPositiveInteger(media.size, 150 * 1024 * 1024) } : {}),
+      ...(optionalFileName(media.originalName) ? { originalName: optionalFileName(media.originalName) } : {}),
+      ...(poster ? { poster } : {}),
+      ...(posterPath ? { posterPath } : {}),
+      ...(optionalPositiveInteger(media.posterWidth, 8192) ? { posterWidth: optionalPositiveInteger(media.posterWidth, 8192) } : {}),
+      ...(optionalPositiveInteger(media.posterHeight, 8192) ? { posterHeight: optionalPositiveInteger(media.posterHeight, 8192) } : {}),
+      ...(optionalPositiveInteger(media.posterSize, 5 * 1024 * 1024) ? { posterSize: optionalPositiveInteger(media.posterSize, 5 * 1024 * 1024) } : {}),
+      ...(optionalFileName(media.posterOriginalName) ? { posterOriginalName: optionalFileName(media.posterOriginalName) } : {}),
+      ...(alt ? { alt } : {}),
+    }];
+  });
+}
 
 export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null): ModuleSettings {
   const donation = input?.donation;
@@ -532,17 +689,15 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
       desktopCategoryOrder,
       mobileCategoryOrder,
       categoryImages,
-      lowerDesktop: {
-        ...defaultModuleSettings.donation.lowerDesktop,
-        ...donation?.lowerDesktop,
-        enabled: true,
-      },
-      lowerMobile: {
-        ...defaultModuleSettings.donation.lowerMobile,
-        ...donation?.lowerMobile,
-        enabled: true,
-      },
-      projects: (donation?.projects?.length ? donation.projects : defaultDonationProjects).map((project, index) => {
+      lowerDesktop: normalizeLowerDeviceSettings(
+        donation?.lowerDesktop,
+        defaultModuleSettings.donation.lowerDesktop,
+      ),
+      lowerMobile: normalizeLowerDeviceSettings(
+        donation?.lowerMobile,
+        defaultModuleSettings.donation.lowerMobile,
+      ),
+      projects: (Array.isArray(donation?.projects) ? donation.projects : defaultDonationProjects).map((project, index) => {
         const fallback = defaultDonationProjects.find((item) => item.id === project.id) || defaultDonationProjects[index] || defaultDonationProjects[0];
         return {
           ...fallback,
@@ -552,11 +707,25 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
           showInAllMobile: project.showInAllMobile !== false,
           allOrderDesktop: Number.isFinite(project.allOrderDesktop) ? project.allOrderDesktop : index,
           allOrderMobile: Number.isFinite(project.allOrderMobile) ? project.allOrderMobile : index,
-          desktopMedia: Array.isArray(project.desktopMedia) ? project.desktopMedia : [{ id: `${project.id}-desktop-cover`, type: "image", url: project.image }],
-          mobileMedia: Array.isArray(project.mobileMedia) ? project.mobileMedia : [{ id: `${project.id}-mobile-cover`, type: "image", url: project.image }],
+          desktopMedia: normalizeProjectMedia(
+            project.desktopMedia,
+            project.image,
+            `${project.id}-desktop-cover`,
+          ),
+          mobileMedia: normalizeProjectMedia(
+            project.mobileMedia,
+            project.image,
+            `${project.id}-mobile-cover`,
+          ),
           suggested: Array.isArray(project.suggested) && project.suggested.length ? project.suggested : fallback.suggested,
-          desktop: { ...fallback.desktop, useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.desktop },
-          mobile: { ...fallback.mobile, useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.mobile },
+          desktop: normalizeProjectDesign(
+            { useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.desktop },
+            fallback.desktop,
+          ),
+          mobile: normalizeProjectDesign(
+            { useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.mobile },
+            fallback.mobile,
+          ),
         };
       }),
     },
