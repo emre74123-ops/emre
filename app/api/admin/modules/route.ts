@@ -1,7 +1,15 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
-import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type DonationProjectDesign, type ModuleSettings } from "../../../../lib/module-settings";
+import {
+  defaultModuleSettings,
+  normalizeDonationCategoryId,
+  normalizeModuleSettings,
+  resolveDonationProjectCommerce,
+  type DonationCategory,
+  type DonationProjectDesign,
+  type ModuleSettings,
+} from "../../../../lib/module-settings";
 import { readModuleSettings, writeModuleSettings } from "../../../../lib/module-storage";
 
 async function isAdmin() {
@@ -263,8 +271,11 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
         showInAllMobile: project.showInAllMobile !== false,
         allOrderDesktop: clamp(project.allOrderDesktop, 0, 9999, 0),
         allOrderMobile: clamp(project.allOrderMobile, 0, 9999, 0),
+        pricingMode: choice(project.pricingMode, ["amount", "quantity"] as const, "amount"),
         fixedPrice: clamp(project.fixedPrice, 0, 100000000, 0),
         suggested: project.suggested.slice(0, 12).map((value) => clamp(value, 1, 100000000, 1)),
+        customAmountEnabled: project.customAmountEnabled === true,
+        commerce: resolveDonationProjectCommerce(project),
         desktopMedia: (project.desktopMedia || []).slice(0, 20).map((media) => ({
           id: text(media.id, crypto.randomUUID(), 100),
           type: choice(media.type, ["image", "video"], "image"),
