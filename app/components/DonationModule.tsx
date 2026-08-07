@@ -121,6 +121,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const categoryPausedRef = useRef(false);
   const categoryPositionRef = useRef(0);
   const categoryInitializedRef = useRef(false);
+  const categoryPointerActiveRef = useRef(false);
+  const categoryResumeAtRef = useRef(0);
   const [categoryProgress, setCategoryProgress] = useState(0);
   const [category, setCategory] = useState<Category>("all");
   const [selected, setSelected] = useState<Record<string, number>>({});
@@ -155,7 +157,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     const animate = (time: number) => {
       const elapsed = Math.min(68, Math.max(0, time - previousTime));
       previousTime = time;
-      if (!settings.autoScroll || categoryPausedRef.current || rail.scrollWidth <= rail.clientWidth) {
+      if (!settings.autoScroll || categoryPausedRef.current || time < categoryResumeAtRef.current || rail.scrollWidth <= rail.clientWidth) {
         animationFrame = window.requestAnimationFrame(animate);
         return;
       }
@@ -179,8 +181,35 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   function updateCategoryProgress() {
     const rail = categoriesRef.current;
     if (!rail) return;
+    const time = performance.now();
+    if (categoryPointerActiveRef.current || time < categoryResumeAtRef.current) {
+      const nextPosition = rail.scrollLeft;
+      if (nextPosition > categoryPositionRef.current + .25) categoryDirectionRef.current = 1;
+      if (nextPosition < categoryPositionRef.current - .25) categoryDirectionRef.current = -1;
+      categoryPositionRef.current = nextPosition;
+      if (!categoryPointerActiveRef.current) categoryResumeAtRef.current = time + 900;
+    }
     const max = rail.scrollWidth - rail.clientWidth;
     setCategoryProgress(max > 0 ? Math.min(100, Math.max(0, (rail.scrollLeft / max) * 100)) : 100);
+  }
+
+  function startCategoryInteraction() {
+    categoryPointerActiveRef.current = true;
+    categoryPausedRef.current = true;
+    categoryResumeAtRef.current = Number.POSITIVE_INFINITY;
+    categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0;
+  }
+
+  function finishCategoryInteraction() {
+    categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0;
+    categoryPointerActiveRef.current = false;
+    categoryPausedRef.current = false;
+    categoryResumeAtRef.current = performance.now() + 900;
+  }
+
+  function pauseCategoryForWheel() {
+    categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0;
+    categoryResumeAtRef.current = performance.now() + 900;
   }
 
   function addToCart(project: DonationProject) {
@@ -360,11 +389,16 @@ export default function DonationModule({ embedded = false, settings = defaultMod
             aria-label="Bağış kategorileri"
             ref={categoriesRef}
             onScroll={updateCategoryProgress}
-            onPointerDown={() => { categoryPausedRef.current = true; categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; }}
-            onPointerUp={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; categoryPausedRef.current = false; }}
-            onPointerCancel={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; categoryPausedRef.current = false; }}
-            onPointerLeave={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; categoryPausedRef.current = false; }}
-            onWheel={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; }}
+            onPointerDown={(event) => {
+              startCategoryInteraction();
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+            }}
+            onPointerUp={(event) => {
+              finishCategoryInteraction();
+              if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+            onPointerCancel={finishCategoryInteraction}
+            onWheel={pauseCategoryForWheel}
           >
             {visibleCategories.map((item) => (
               <button
