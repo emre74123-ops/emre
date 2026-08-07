@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationLowerDeviceSettings, type DonationOptionGroup, type DonationPriceRule, type DonationProject, type DonationProjectAction, type DonationProjectCommerce, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -12,6 +12,7 @@ type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
 type ProjectCategory = DonationProject["category"];
 type DonationCategoryId = string;
+type PaymentWorkspace = "model" | "options" | "rules" | "actions";
 type GalleryImage = {
   path: string;
   url: string;
@@ -27,6 +28,90 @@ type GalleryImage = {
   legacy?: boolean;
 };
 type UpperSettingsGroupRenderer = (id: string, title: string, content: ReactNode) => ReactNode;
+
+const COMMERCE_LIMITS = {
+  amountPresets: 12,
+  quantityPresets: 12,
+  optionGroups: 8,
+  optionsPerGroup: 20,
+  priceRules: 40,
+  actions: 4,
+} as const;
+
+function commerceId(prefix: string) {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function moveCommerceItem<T>(items: T[], index: number, direction: -1 | 1) {
+  const target = index + direction;
+  if (target < 0 || target >= items.length) return items;
+  const next = [...items];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
+function toMinor(value: string | number) {
+  const number = typeof value === "number" ? value : Number(value.replace(",", "."));
+  return Number.isFinite(number) ? Math.max(0, Math.round(number * 100)) : 0;
+}
+
+function fromMinor(value: number) {
+  return Number((Math.max(0, value) / 100).toFixed(2));
+}
+
+function formatMinor(value: number) {
+  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(fromMinor(value))} ₺`;
+}
+
+function cloneOptionGroup(group: DonationOptionGroup): DonationOptionGroup {
+  const groupId = commerceId("grup");
+  const optionIds = new Map(group.options.map((option) => [option.id, commerceId("secenek")]));
+  return {
+    ...group,
+    id: groupId,
+    label: `${group.label} kopyası`,
+    defaultOptionId: group.defaultOptionId ? optionIds.get(group.defaultOptionId) : undefined,
+    visibleWhen: group.visibleWhen
+      ? {
+        groupId: group.visibleWhen.groupId === group.id ? groupId : group.visibleWhen.groupId,
+        optionIds: group.visibleWhen.optionIds.map((id) => optionIds.get(id) || id),
+      }
+      : undefined,
+    options: group.options.map((option) => ({ ...option, id: optionIds.get(option.id)! })),
+  };
+}
+
+function cloneCommerce(commerce: DonationProjectCommerce): DonationProjectCommerce {
+  const groupIds = new Map(commerce.optionGroups.map((group) => [group.id, commerceId("grup")]));
+  const optionIds = new Map(commerce.optionGroups.flatMap((group) => group.options.map((option) => [option.id, commerceId("secenek")] as const)));
+  return {
+    ...commerce,
+    amountPresets: commerce.amountPresets.map((preset) => ({ ...preset, id: commerceId("tutar") })),
+    optionGroups: commerce.optionGroups.map((group) => ({
+      ...group,
+      id: groupIds.get(group.id)!,
+      defaultOptionId: group.defaultOptionId ? optionIds.get(group.defaultOptionId) : undefined,
+      visibleWhen: group.visibleWhen
+        ? {
+          groupId: groupIds.get(group.visibleWhen.groupId) || group.visibleWhen.groupId,
+          optionIds: group.visibleWhen.optionIds.map((id) => optionIds.get(id) || id),
+        }
+        : undefined,
+      options: group.options.map((option) => ({ ...option, id: optionIds.get(option.id)! })),
+    })),
+    priceRules: commerce.priceRules.map((rule) => ({
+      ...rule,
+      id: commerceId("kural"),
+      optionIds: rule.optionIds.map((id) => optionIds.get(id) || id),
+    })),
+    actions: commerce.actions.map((action) => ({
+      ...action,
+      id: commerceId("dugme"),
+      desktop: { ...action.desktop },
+      mobile: { ...action.mobile },
+    })),
+  };
+}
 
 function ModulePreview({
   device,
@@ -137,6 +222,10 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [uploadingPosterId, setUploadingPosterId] = useState("");
   const [selectedMediaIds, setSelectedMediaIds] = useState<Record<Device, string>>({ desktop: "", mobile: "" });
   const [mediaSettingsGroup, setMediaSettingsGroup] = useState<"gallery" | "appearance" | "video">("gallery");
+  const [paymentWorkspace, setPaymentWorkspace] = useState<PaymentWorkspace>("model");
+  const [expandedOptionGroupId, setExpandedOptionGroupId] = useState("");
+  const [expandedPriceRuleId, setExpandedPriceRuleId] = useState("");
+  const [expandedActionId, setExpandedActionId] = useState("");
   const [pendingProjectMediaDeletes, setPendingProjectMediaDeletes] = useState<string[]>([]);
   const [pendingProjectFolderDeletes, setPendingProjectFolderDeletes] = useState<string[]>([]);
   const categoryStripRefs = useRef<Record<Device, HTMLDivElement | null>>({ desktop: null, mobile: null });
@@ -218,13 +307,24 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     },
   }));
   const updateProjects = (projects: DonationProject[]) => update({ projects });
+  const updateProjectById = (projectId: string, updater: (project: DonationProject) => DonationProject) => setSettings((current) => ({
+    ...current,
+    donation: {
+      ...current.donation,
+      projects: current.donation.projects.map((project) => project.id === projectId ? updater(project) : project),
+    },
+  }));
   const updateProject = (changes: Partial<DonationProject>) => {
     if (!selectedProject) return;
-    updateProjects(donation.projects.map((project) => project.id === selectedProject.id ? { ...project, ...changes } : project));
+    updateProjectById(selectedProject.id, (project) => ({ ...project, ...changes }));
   };
   const updateProjectDesign = (device: Device, changes: Partial<DonationProjectDesign>) => {
     if (!selectedProject) return;
-    updateProject({ [device]: { ...selectedProject[device], ...changes } });
+    updateProjectById(selectedProject.id, (project) => ({ ...project, [device]: { ...project[device], ...changes } }));
+  };
+  const updateProjectCommerce = (updater: (commerce: DonationProjectCommerce) => DonationProjectCommerce) => {
+    if (!selectedProject) return;
+    updateProjectById(selectedProject.id, (project) => ({ ...project, commerce: updater(resolveDonationProjectCommerce(project)) }));
   };
   const addProject = () => {
     if (aggregateCategorySelected) {
@@ -248,6 +348,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       mobileMedia: [],
       desktop: { ...base.desktop },
       mobile: { ...base.mobile },
+      commerce: cloneCommerce(resolveDonationProjectCommerce(base)),
     };
     updateProjects([...donation.projects, project]);
     setSelectedProjectId(id);
@@ -267,6 +368,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       mobileMedia: [],
       desktop: { ...selectedProject.desktop },
       mobile: { ...selectedProject.mobile },
+      commerce: cloneCommerce(resolveDonationProjectCommerce(selectedProject)),
     }]);
     setSelectedProjectId(id);
   };
@@ -901,7 +1003,12 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }
 
   const projectControls = (device: Device) => {
-    const design = (selectedProject || defaultModuleSettings.donation.projects[0])[device];
+    const currentProject = selectedProject || defaultModuleSettings.donation.projects[0];
+    const design = currentProject[device];
+    const commerce = resolveDonationProjectCommerce(currentProject);
+    const actionDeviceKey = device;
+    const actionLayoutKey = device === "desktop" ? "actionLayoutDesktop" : "actionLayoutMobile";
+    const actionGapKey = device === "desktop" ? "actionGapDesktop" : "actionGapMobile";
     const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
     const mediaItems = projectMedia(device);
     const selectedMedia = mediaItems.find((media) => media.id === selectedMediaIds[device]) || mediaItems[0];
@@ -915,6 +1022,726 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const sharedRange = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
       <label>{label} <b>{String(sharedImage[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(sharedImage[key])} onChange={(event) => updateSharedImage({ [key]: Number(event.target.value) })} /></label>
     );
+    const changeCommerce = (updater: (current: DonationProjectCommerce) => DonationProjectCommerce) => updateProjectCommerce(updater);
+    const changeCommerceAndLegacy = (
+      updater: (current: DonationProjectCommerce) => DonationProjectCommerce,
+      legacy: (project: DonationProject, next: DonationProjectCommerce) => Partial<DonationProject>,
+    ) => {
+      if (!selectedProject) return;
+      updateProjectById(selectedProject.id, (project) => {
+        const next = updater(resolveDonationProjectCommerce(project));
+        return { ...project, ...legacy(project, next), commerce: next };
+      });
+    };
+    const updateOptionGroup = (groupId: string, changes: Partial<DonationOptionGroup>) => changeCommerce((current) => ({
+      ...current,
+      optionGroups: current.optionGroups.map((group) => group.id === groupId ? { ...group, ...changes } : group),
+    }));
+    const updateOption = (groupId: string, optionId: string, changes: Partial<DonationOptionGroup["options"][number]>) => changeCommerce((current) => ({
+      ...current,
+      optionGroups: current.optionGroups.map((group) => group.id === groupId
+        ? { ...group, options: group.options.map((option) => option.id === optionId ? { ...option, ...changes } : option) }
+        : group),
+    }));
+    const updatePriceRule = (ruleId: string, changes: Partial<DonationPriceRule>) => changeCommerce((current) => ({
+      ...current,
+      priceRules: current.priceRules.map((rule) => rule.id === ruleId ? { ...rule, ...changes } : rule),
+    }));
+    const updateAction = (actionId: string, changes: Partial<DonationProjectAction>) => changeCommerce((current) => ({
+      ...current,
+      actions: current.actions.map((action) => action.id === actionId ? { ...action, ...changes } : action),
+    }));
+    const updateActionDevice = (actionId: string, changes: Partial<DonationProjectAction[Device]>) => changeCommerce((current) => ({
+      ...current,
+      actions: current.actions.map((action) => action.id === actionId
+        ? { ...action, [actionDeviceKey]: { ...action[actionDeviceKey], ...changes } }
+        : action),
+    }));
+    const addOptionGroup = () => {
+      if (commerce.optionGroups.length >= COMMERCE_LIMITS.optionGroups) {
+        showToast(`En fazla ${COMMERCE_LIMITS.optionGroups} seçenek grubu eklenebilir.`);
+        return;
+      }
+      const groupId = commerceId("grup");
+      const optionId = commerceId("secenek");
+      changeCommerce((current) => ({
+        ...current,
+        optionGroups: [...current.optionGroups, {
+          id: groupId,
+          label: "Yeni seçenek grubu",
+          description: "",
+          enabled: true,
+          required: true,
+          display: "buttons",
+          defaultOptionId: optionId,
+          options: [{ id: optionId, label: "1. seçenek", description: "", enabled: true, priceMinor: 0 }],
+        }],
+      }));
+      setExpandedOptionGroupId(groupId);
+    };
+    const addPriceRule = () => {
+      if (commerce.priceRules.length >= COMMERCE_LIMITS.priceRules) {
+        showToast(`En fazla ${COMMERCE_LIMITS.priceRules} fiyat kuralı eklenebilir.`);
+        return;
+      }
+      const id = commerceId("kural");
+      changeCommerce((current) => ({
+        ...current,
+        priceRules: [...current.priceRules, {
+          id,
+          label: "Yeni fiyat kuralı",
+          enabled: true,
+          optionIds: [],
+          amountMinor: current.baseAmountMinor,
+        }],
+      }));
+      setExpandedPriceRuleId(id);
+    };
+    const addAction = () => {
+      if (commerce.actions.length >= COMMERCE_LIMITS.actions) {
+        showToast(`En fazla ${COMMERCE_LIMITS.actions} düğme eklenebilir.`);
+        return;
+      }
+      const id = commerceId("dugme");
+      const nextOrder = commerce.actions.length;
+      changeCommerce((current) => ({
+        ...current,
+        actions: [...current.actions, {
+          id,
+          enabled: true,
+          kind: "add-to-cart",
+          icon: "plus",
+          href: "",
+          requiresValidSelection: true,
+          variant: "solid",
+          background: design.actionBackground,
+          backgroundEnd: design.actionBackground,
+          textColor: design.actionTextColor,
+          borderColor: design.actionBackground,
+          desktop: {
+            visible: true,
+            label: "Sepete ekle",
+            width: "full",
+            align: "center",
+            height: currentProject.desktop.actionHeight,
+            radius: currentProject.desktop.actionRadius,
+            order: nextOrder,
+          },
+          mobile: {
+            visible: true,
+            label: "Sepete ekle",
+            width: "full",
+            align: "center",
+            height: currentProject.mobile.actionHeight,
+            radius: currentProject.mobile.actionRadius,
+            order: nextOrder,
+          },
+        }],
+      }));
+      setExpandedActionId(id);
+    };
+    const orderedActions = commerce.actions
+      .map((action, index) => ({ action, index }))
+      .sort((a, b) => a.action[actionDeviceKey].order - b.action[actionDeviceKey].order || a.index - b.index)
+      .map(({ action }) => action);
+    const moveAction = (actionId: string, direction: -1 | 1) => changeCommerce((current) => {
+      const sorted = current.actions
+        .map((action, index) => ({ action, index }))
+        .sort((a, b) => a.action[actionDeviceKey].order - b.action[actionDeviceKey].order || a.index - b.index)
+        .map(({ action }) => action);
+      const index = sorted.findIndex((action) => action.id === actionId);
+      const next = moveCommerceItem(sorted, index, direction);
+      if (next === sorted) return current;
+      const orders = new Map(next.map((action, order) => [action.id, order]));
+      return {
+        ...current,
+        actions: current.actions.map((action) => ({
+          ...action,
+          [actionDeviceKey]: { ...action[actionDeviceKey], order: orders.get(action.id) ?? action[actionDeviceKey].order },
+        })),
+      };
+    });
+    const setActionOrder = (actionId: string, targetOrder: number) => changeCommerce((current) => {
+      const sorted = current.actions
+        .map((action, index) => ({ action, index }))
+        .sort((a, b) => a.action[actionDeviceKey].order - b.action[actionDeviceKey].order || a.index - b.index)
+        .map(({ action }) => action);
+      const currentIndex = sorted.findIndex((action) => action.id === actionId);
+      if (currentIndex < 0) return current;
+      const [moved] = sorted.splice(currentIndex, 1);
+      sorted.splice(Math.max(0, Math.min(targetOrder, sorted.length)), 0, moved);
+      const orders = new Map(sorted.map((action, order) => [action.id, order]));
+      return {
+        ...current,
+        actions: current.actions.map((action) => ({
+          ...action,
+          [actionDeviceKey]: { ...action[actionDeviceKey], order: orders.get(action.id) ?? action[actionDeviceKey].order },
+        })),
+      };
+    });
+    const commerceRowActions = ({
+      label,
+      index,
+      total,
+      onDuplicate,
+      onMove,
+      onDelete,
+    }: {
+      label: string;
+      index: number;
+      total: number;
+      onDuplicate: () => void;
+      onMove: (direction: -1 | 1) => void;
+      onDelete: () => void;
+    }) => (
+      <nav className={styles.paymentRowActions} aria-label={`${label} işlemleri`}>
+        <button type="button" title="Çoğalt" aria-label={`${label} çoğalt`} onClick={onDuplicate}>⧉</button>
+        <button type="button" title="Yukarı taşı" aria-label={`${label} yukarı taşı`} disabled={index === 0} onClick={() => onMove(-1)}>↑</button>
+        <button type="button" title="Aşağı taşı" aria-label={`${label} aşağı taşı`} disabled={index === total - 1} onClick={() => onMove(1)}>↓</button>
+        <button className={styles.paymentDeleteButton} type="button" title="Sil" aria-label={`${label} sil`} onClick={onDelete}>×</button>
+      </nav>
+    );
+    const modeLabel = {
+      amount: "Tutar",
+      quantity: "Adet / hisse",
+      fixed: "Sabit",
+      configured: "Seçenekli",
+    }[commerce.mode];
+    const paymentControls = <div className={styles.paymentWorkspace}>
+      <header className={styles.paymentWorkspaceHeader}>
+        <div>
+          <span>{device === "desktop" ? "WEB" : "MOBİL"} · COMMERCE V2</span>
+          <strong>Fiyat ve düğme merkezi</strong>
+          <small>Bağış akışını tek, düzenli çalışma alanından yönetin.</small>
+        </div>
+        <div className={styles.paymentSummary} aria-label="Bağış akışı özeti">
+          <span><b>{modeLabel}</b> model</span>
+          <span><b>{commerce.optionGroups.length}</b> grup</span>
+          <span><b>{commerce.priceRules.length}</b> kural</span>
+          <span><b>{commerce.actions.length}</b> düğme</span>
+        </div>
+      </header>
+
+      <nav className={styles.paymentSubtabs} aria-label="Fiyat ve düğme ayar grupları">
+        {([
+          ["model", "Bağış modeli", "₺"],
+          ["options", "Seçenekler", "⌘"],
+          ["rules", "Fiyat kuralları", "≋"],
+          ["actions", "Düğmeler", "↗"],
+        ] as const).map(([id, label, icon]) => <button type="button" key={id} className={paymentWorkspace === id ? styles.paymentSubtabActive : ""} aria-pressed={paymentWorkspace === id} onClick={() => setPaymentWorkspace(id)}>
+          <i>{icon}</i><span>{label}</span>
+        </button>)}
+      </nav>
+
+      {paymentWorkspace === "model" ? <div className={styles.paymentPanel}>
+        <div className={styles.paymentSectionHeading}>
+          <div><strong>Temel bağış modeli</strong><small>Tutarın nasıl seçileceğini ve doğrulama metinlerini belirleyin.</small></div>
+          <span className={styles.paymentLimitBadge}>TRY · kuruş hassasiyeti</span>
+        </div>
+        <div className={styles.paymentFieldGrid}>
+          <label>Bağış modeli<select value={commerce.mode} onChange={(event) => {
+            const mode = event.target.value as DonationProjectCommerce["mode"];
+            changeCommerceAndLegacy(
+              (current) => ({ ...current, mode }),
+              () => ({ pricingMode: mode === "quantity" ? "quantity" : "amount" }),
+            );
+          }}>
+            <option value="amount">Hazır / özel tutar</option>
+            <option value="quantity">Adet veya hisse</option>
+            <option value="fixed">Sabit tutar</option>
+            <option value="configured">Seçeneklere göre</option>
+          </select></label>
+          <label>Para birimi<input value="Türk lirası (TRY)" disabled /></label>
+          <label>Bölüm etiketi<input maxLength={50} value={commerce.sectionLabel} onChange={(event) => changeCommerce((current) => ({ ...current, sectionLabel: event.target.value }))} /></label>
+          <label>Temel / sabit tutar<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.baseAmountMinor)} onChange={(event) => {
+            const baseAmountMinor = toMinor(event.target.value);
+            changeCommerceAndLegacy(
+              (current) => ({ ...current, baseAmountMinor }),
+              () => ({ fixedPrice: fromMinor(baseAmountMinor) }),
+            );
+          }} /></div></label>
+          <label className={styles.paymentFieldWide}>Doğrulama mesajı<input maxLength={140} value={commerce.validationMessage} onChange={(event) => changeCommerce((current) => ({ ...current, validationMessage: event.target.value }))} placeholder="Lütfen gerekli seçimleri tamamlayın." /></label>
+        </div>
+
+        {commerce.mode === "amount" ? <div className={styles.paymentCollection}>
+          <div className={styles.paymentCollectionHeader}>
+            <div><strong>Hazır tutarlar</strong><small>Ziyaretçinin tek dokunuşla seçebileceği tutarlar.</small></div>
+            <button type="button" disabled={commerce.amountPresets.length >= COMMERCE_LIMITS.amountPresets} onClick={() => {
+              if (commerce.amountPresets.length >= COMMERCE_LIMITS.amountPresets) return;
+              changeCommerceAndLegacy(
+                (current) => {
+                  const last = current.amountPresets.at(-1)?.amountMinor || 0;
+                  return {
+                    ...current,
+                    amountPresets: [...current.amountPresets, {
+                      id: commerceId("tutar"),
+                      label: "",
+                      amountMinor: last ? last + 25000 : 25000,
+                      enabled: true,
+                      featured: false,
+                    }],
+                  };
+                },
+                (_, next) => ({ suggested: next.amountPresets.map((preset) => fromMinor(preset.amountMinor)) }),
+              );
+            }}>＋ Tutar</button>
+          </div>
+          <div className={styles.paymentBuilderList}>
+            {commerce.amountPresets.length ? commerce.amountPresets.map((preset, index) => <article className={styles.paymentPresetRow} key={preset.id}>
+              <span className={styles.paymentDragIndex}>{String(index + 1).padStart(2, "0")}</span>
+              <label>Etiket<input maxLength={30} value={preset.label} onChange={(event) => changeCommerce((current) => ({
+                ...current,
+                amountPresets: current.amountPresets.map((item) => item.id === preset.id ? { ...item, label: event.target.value } : item),
+              }))} placeholder={formatMinor(preset.amountMinor)} /></label>
+              <label>Tutar<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="1" step=".01" value={fromMinor(preset.amountMinor)} onChange={(event) => {
+                const amountMinor = toMinor(event.target.value);
+                changeCommerceAndLegacy(
+                  (current) => ({ ...current, amountPresets: current.amountPresets.map((item) => item.id === preset.id ? { ...item, amountMinor } : item) }),
+                  (_, next) => ({ suggested: next.amountPresets.map((item) => fromMinor(item.amountMinor)) }),
+                );
+              }} /></div></label>
+              <div className={styles.paymentMiniToggles}>
+                <label><input type="checkbox" checked={preset.enabled} onChange={(event) => changeCommerce((current) => ({ ...current, amountPresets: current.amountPresets.map((item) => item.id === preset.id ? { ...item, enabled: event.target.checked } : item) }))} /><span>Aktif</span></label>
+                <label><input type="checkbox" checked={preset.featured} onChange={(event) => changeCommerce((current) => ({ ...current, amountPresets: current.amountPresets.map((item) => item.id === preset.id ? { ...item, featured: event.target.checked } : item) }))} /><span>Öne çıkar</span></label>
+              </div>
+              {commerceRowActions({
+                label: `${index + 1}. tutar`,
+                index,
+                total: commerce.amountPresets.length,
+                onDuplicate: () => {
+                  if (commerce.amountPresets.length >= COMMERCE_LIMITS.amountPresets) return showToast(`En fazla ${COMMERCE_LIMITS.amountPresets} hazır tutar eklenebilir.`);
+                  changeCommerceAndLegacy(
+                    (current) => {
+                      const itemIndex = current.amountPresets.findIndex((item) => item.id === preset.id);
+                      const next = [...current.amountPresets];
+                      next.splice(itemIndex + 1, 0, { ...preset, id: commerceId("tutar"), label: preset.label ? `${preset.label} kopyası` : "" });
+                      return { ...current, amountPresets: next };
+                    },
+                    (_, next) => ({ suggested: next.amountPresets.map((item) => fromMinor(item.amountMinor)) }),
+                  );
+                },
+                onMove: (direction) => changeCommerceAndLegacy(
+                  (current) => ({ ...current, amountPresets: moveCommerceItem(current.amountPresets, current.amountPresets.findIndex((item) => item.id === preset.id), direction) }),
+                  (_, next) => ({ suggested: next.amountPresets.map((item) => fromMinor(item.amountMinor)) }),
+                ),
+                onDelete: () => changeCommerceAndLegacy(
+                  (current) => ({ ...current, amountPresets: current.amountPresets.filter((item) => item.id !== preset.id) }),
+                  (_, next) => ({ suggested: next.amountPresets.map((item) => fromMinor(item.amountMinor)) }),
+                ),
+              })}
+            </article>) : <div className={styles.paymentEmpty}><b>Hazır tutar yok</b><span>“＋ Tutar” ile ilk seçeneği ekleyin.</span></div>}
+          </div>
+        </div> : null}
+
+        {commerce.mode === "quantity" ? <div className={styles.paymentCollection}>
+          <div className={styles.paymentCollectionHeader}>
+            <div><strong>Adet / hisse seçenekleri</strong><small>Birim fiyat, seçilen adet ile otomatik çarpılır.</small></div>
+            <button type="button" disabled={commerce.quantityPresets.length >= COMMERCE_LIMITS.quantityPresets} onClick={() => changeCommerceAndLegacy(
+              (current) => ({ ...current, quantityPresets: [...current.quantityPresets, Math.max(1, (current.quantityPresets.at(-1) || 0) + 1)] }),
+              (_, next) => ({ suggested: next.quantityPresets }),
+            )}>＋ Adet</button>
+          </div>
+          <div className={styles.paymentQuantityGrid}>
+            {commerce.quantityPresets.map((quantity, index) => <article key={`${quantity}-${index}`}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <label>Adet<input type="number" min="1" max="999" value={quantity} onChange={(event) => changeCommerceAndLegacy(
+                (current) => ({ ...current, quantityPresets: current.quantityPresets.map((item, itemIndex) => itemIndex === index ? Math.max(1, Math.min(999, Number(event.target.value))) : item) }),
+                (_, next) => ({ suggested: next.quantityPresets }),
+              )} /></label>
+              {commerceRowActions({
+                label: `${index + 1}. adet`,
+                index,
+                total: commerce.quantityPresets.length,
+                onDuplicate: () => {
+                  if (commerce.quantityPresets.length >= COMMERCE_LIMITS.quantityPresets) return showToast(`En fazla ${COMMERCE_LIMITS.quantityPresets} adet seçeneği eklenebilir.`);
+                  changeCommerceAndLegacy(
+                    (current) => {
+                      const next = [...current.quantityPresets];
+                      next.splice(index + 1, 0, quantity);
+                      return { ...current, quantityPresets: next };
+                    },
+                    (_, next) => ({ suggested: next.quantityPresets }),
+                  );
+                },
+                onMove: (direction) => changeCommerceAndLegacy(
+                  (current) => ({ ...current, quantityPresets: moveCommerceItem(current.quantityPresets, index, direction) }),
+                  (_, next) => ({ suggested: next.quantityPresets }),
+                ),
+                onDelete: () => changeCommerceAndLegacy(
+                  (current) => ({ ...current, quantityPresets: current.quantityPresets.filter((_, itemIndex) => itemIndex !== index) }),
+                  (_, next) => ({ suggested: next.quantityPresets }),
+                ),
+              })}
+            </article>)}
+          </div>
+        </div> : null}
+
+        {commerce.mode === "amount" || commerce.mode === "configured" ? <div className={styles.paymentCollection}>
+          <div className={styles.paymentCollectionHeader}>
+            <div><strong>Özel tutar</strong><small>Ziyaretçinin kendi bağış tutarını yazmasına izin verin.</small></div>
+            <label className={styles.paymentSwitch}><input type="checkbox" checked={commerce.customAmountEnabled} onChange={(event) => changeCommerceAndLegacy(
+              (current) => ({ ...current, customAmountEnabled: event.target.checked }),
+              (_, next) => ({ customAmountEnabled: next.customAmountEnabled }),
+            )} /><span /></label>
+          </div>
+          {commerce.customAmountEnabled ? <div className={styles.paymentFieldGrid}>
+            <label>Alan içi örnek<input maxLength={40} value={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountPlaceholder: event.target.value }))} /></label>
+            <label>En az<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.customAmountMinMinor)} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountMinMinor: toMinor(event.target.value) }))} /></div></label>
+            <label>En fazla<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.customAmountMaxMinor)} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountMaxMinor: toMinor(event.target.value) }))} /></div></label>
+          </div> : null}
+        </div> : null}
+
+        <div className={styles.paymentCollection}>
+          <div className={styles.paymentCollectionHeader}><div><strong>Fiyat seçeneklerinin görünümü</strong><small>Bu ayarlar yalnız {device === "desktop" ? "web" : "mobil"} kartlarda kullanılır.</small></div></div>
+          <div className={styles.paymentDesignGrid}>
+            {designRange("Yükseklik", "priceButtonHeight", 28, 64)}
+            {designRange("Köşe", "priceButtonRadius", 0, 32)}
+            <label className={styles.paymentColorField}>Normal zemin<span><input type="color" value={design.priceBackground} onChange={(event) => updateProjectDesign(device, { priceBackground: event.target.value })} /><code>{design.priceBackground}</code></span></label>
+            <label className={styles.paymentColorField}>Normal yazı<span><input type="color" value={design.priceTextColor} onChange={(event) => updateProjectDesign(device, { priceTextColor: event.target.value })} /><code>{design.priceTextColor}</code></span></label>
+            <label className={styles.paymentColorField}>Seçili zemin<span><input type="color" value={design.selectedPriceBackground} onChange={(event) => updateProjectDesign(device, { selectedPriceBackground: event.target.value })} /><code>{design.selectedPriceBackground}</code></span></label>
+            <label className={styles.paymentColorField}>Seçili yazı<span><input type="color" value={design.selectedPriceTextColor} onChange={(event) => updateProjectDesign(device, { selectedPriceTextColor: event.target.value })} /><code>{design.selectedPriceTextColor}</code></span></label>
+          </div>
+        </div>
+      </div> : null}
+
+      {paymentWorkspace === "options" ? <div className={styles.paymentPanel}>
+        <div className={styles.paymentSectionHeading}>
+          <div><strong>Seçenek grupları</strong><small>Ülke, proje türü veya paket gibi seçimleri küçük gruplar halinde kurun.</small></div>
+          <button type="button" disabled={commerce.optionGroups.length >= COMMERCE_LIMITS.optionGroups} onClick={addOptionGroup}>＋ Grup</button>
+        </div>
+        <div className={styles.paymentBuilderList}>
+          {commerce.optionGroups.length ? commerce.optionGroups.map((group, groupIndex) => {
+            const open = expandedOptionGroupId === group.id;
+            const conditionGroup = commerce.optionGroups.find((item) => item.id === group.visibleWhen?.groupId);
+            return <article className={`${styles.paymentBuilderItem} ${open ? styles.paymentBuilderItemOpen : ""}`} key={group.id}>
+              <header>
+                <button type="button" aria-expanded={open} onClick={() => setExpandedOptionGroupId(open ? "" : group.id)}>
+                  <span className={styles.paymentDragIndex}>{String(groupIndex + 1).padStart(2, "0")}</span>
+                  <span><strong>{group.label || "İsimsiz grup"}</strong><small>{group.options.length} seçenek · {group.required ? "zorunlu" : "isteğe bağlı"} · {group.display === "buttons" ? "düğme" : group.display === "cards" ? "kart" : "liste"}</small></span>
+                  <i>{group.enabled ? "Aktif" : "Kapalı"}</i><b>{open ? "−" : "+"}</b>
+                </button>
+                {commerceRowActions({
+                  label: group.label || "Seçenek grubu",
+                  index: groupIndex,
+                  total: commerce.optionGroups.length,
+                  onDuplicate: () => {
+                    if (commerce.optionGroups.length >= COMMERCE_LIMITS.optionGroups) return showToast(`En fazla ${COMMERCE_LIMITS.optionGroups} seçenek grubu eklenebilir.`);
+                    const copy = cloneOptionGroup(group);
+                    changeCommerce((current) => {
+                      const index = current.optionGroups.findIndex((item) => item.id === group.id);
+                      const next = [...current.optionGroups];
+                      next.splice(index + 1, 0, copy);
+                      return { ...current, optionGroups: next };
+                    });
+                    setExpandedOptionGroupId(copy.id);
+                  },
+                  onMove: (direction) => changeCommerce((current) => ({
+                    ...current,
+                    optionGroups: moveCommerceItem(current.optionGroups, current.optionGroups.findIndex((item) => item.id === group.id), direction),
+                  })),
+                  onDelete: () => {
+                    if (!window.confirm(`“${group.label || "Bu grup"}” ve bağlı fiyat koşulları silinsin mi?`)) return;
+                    const removedOptionIds = new Set(group.options.map((option) => option.id));
+                    changeCommerce((current) => ({
+                      ...current,
+                      optionGroups: current.optionGroups
+                        .filter((item) => item.id !== group.id)
+                        .map((item) => item.visibleWhen?.groupId === group.id ? { ...item, visibleWhen: undefined } : item),
+                      priceRules: current.priceRules.map((rule) => ({ ...rule, optionIds: rule.optionIds.filter((id) => !removedOptionIds.has(id)) })),
+                    }));
+                    setExpandedOptionGroupId("");
+                  },
+                })}
+              </header>
+              {open ? <div className={styles.paymentBuilderBody}>
+                <div className={styles.paymentFieldGrid}>
+                  <label>Grup adı<input maxLength={60} value={group.label} onChange={(event) => updateOptionGroup(group.id, { label: event.target.value })} /></label>
+                  <label>Gösterim<select value={group.display} onChange={(event) => updateOptionGroup(group.id, { display: event.target.value as DonationOptionGroup["display"] })}><option value="buttons">Düğmeler</option><option value="select">Açılır liste</option><option value="cards">Mini kartlar</option></select></label>
+                  <label>Varsayılan seçim<select value={group.defaultOptionId || ""} onChange={(event) => updateOptionGroup(group.id, { defaultOptionId: event.target.value || undefined })}><option value="">Seçili gelmesin</option>{group.options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+                  <label className={styles.paymentFieldWide}>Kısa açıklama<input maxLength={120} value={group.description} onChange={(event) => updateOptionGroup(group.id, { description: event.target.value })} /></label>
+                </div>
+                <div className={styles.paymentMiniToggles}>
+                  <label><input type="checkbox" checked={group.enabled} onChange={(event) => updateOptionGroup(group.id, { enabled: event.target.checked })} /><span>Grup aktif</span></label>
+                  <label><input type="checkbox" checked={group.required} onChange={(event) => updateOptionGroup(group.id, { required: event.target.checked })} /><span>Seçim zorunlu</span></label>
+                </div>
+                <div className={styles.paymentConditionBox}>
+                  <div><strong>Görünürlük koşulu</strong><small>Bu grubu başka bir seçim yapıldığında gösterin.</small></div>
+                  <label>Bağlı grup<select value={group.visibleWhen?.groupId || ""} onChange={(event) => updateOptionGroup(group.id, {
+                    visibleWhen: event.target.value ? { groupId: event.target.value, optionIds: [] } : undefined,
+                  })}><option value="">Her zaman göster</option>{commerce.optionGroups.filter((item) => item.id !== group.id).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+                  {conditionGroup ? <div className={styles.paymentConditionOptions}>
+                    {conditionGroup.options.map((option) => {
+                      const checked = group.visibleWhen?.optionIds.includes(option.id) || false;
+                      return <label key={option.id}><input type="checkbox" checked={checked} onChange={(event) => updateOptionGroup(group.id, {
+                        visibleWhen: {
+                          groupId: conditionGroup.id,
+                          optionIds: event.target.checked
+                            ? [...new Set([...(group.visibleWhen?.optionIds || []), option.id])]
+                            : (group.visibleWhen?.optionIds || []).filter((id) => id !== option.id),
+                        },
+                      })} /><span>{option.label}</span></label>;
+                    })}
+                  </div> : null}
+                </div>
+                <div className={styles.paymentCollectionHeader}>
+                  <div><strong>Grup seçenekleri</strong><small>Her seçeneğin kendi ek fiyatı olabilir.</small></div>
+                  <button type="button" disabled={group.options.length >= COMMERCE_LIMITS.optionsPerGroup} onClick={() => {
+                    if (group.options.length >= COMMERCE_LIMITS.optionsPerGroup) return;
+                    const id = commerceId("secenek");
+                    updateOptionGroup(group.id, {
+                      options: [...group.options, { id, label: `${group.options.length + 1}. seçenek`, description: "", enabled: true, priceMinor: 0 }],
+                      defaultOptionId: group.defaultOptionId || id,
+                    });
+                  }}>＋ Seçenek</button>
+                </div>
+                <div className={styles.paymentOptionList}>
+                  {group.options.map((option, optionIndex) => <article key={option.id}>
+                    <span className={styles.paymentDragIndex}>{String(optionIndex + 1).padStart(2, "0")}</span>
+                    <label>Seçenek adı<input maxLength={60} value={option.label} onChange={(event) => updateOption(group.id, option.id, { label: event.target.value })} /></label>
+                    <label>Açıklama<input maxLength={100} value={option.description} onChange={(event) => updateOption(group.id, option.id, { description: event.target.value })} /></label>
+                    <label>Ek / özel fiyat<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(option.priceMinor)} onChange={(event) => updateOption(group.id, option.id, { priceMinor: toMinor(event.target.value) })} /></div></label>
+                    <label className={styles.paymentCompactCheck}><input type="checkbox" checked={option.enabled} onChange={(event) => updateOption(group.id, option.id, { enabled: event.target.checked })} /> Aktif</label>
+                    {commerceRowActions({
+                      label: option.label || "Seçenek",
+                      index: optionIndex,
+                      total: group.options.length,
+                      onDuplicate: () => {
+                        if (group.options.length >= COMMERCE_LIMITS.optionsPerGroup) return showToast(`Bir grupta en fazla ${COMMERCE_LIMITS.optionsPerGroup} seçenek olabilir.`);
+                        const copy = { ...option, id: commerceId("secenek"), label: `${option.label} kopyası` };
+                        const next = [...group.options];
+                        next.splice(optionIndex + 1, 0, copy);
+                        updateOptionGroup(group.id, { options: next });
+                      },
+                      onMove: (direction) => updateOptionGroup(group.id, { options: moveCommerceItem(group.options, optionIndex, direction) }),
+                      onDelete: () => {
+                        const remaining = group.options.filter((item) => item.id !== option.id);
+                        changeCommerce((current) => ({
+                          ...current,
+                          optionGroups: current.optionGroups.map((item) => ({
+                            ...item,
+                            defaultOptionId: item.id === group.id && item.defaultOptionId === option.id ? remaining[0]?.id : item.defaultOptionId,
+                            visibleWhen: item.visibleWhen?.groupId === group.id
+                              ? { ...item.visibleWhen, optionIds: item.visibleWhen.optionIds.filter((id) => id !== option.id) }
+                              : item.visibleWhen,
+                            options: item.id === group.id ? remaining : item.options,
+                          })),
+                          priceRules: current.priceRules.map((rule) => ({ ...rule, optionIds: rule.optionIds.filter((id) => id !== option.id) })),
+                        }));
+                      },
+                    })}
+                  </article>)}
+                </div>
+              </div> : null}
+            </article>;
+          }) : <div className={styles.paymentEmpty}><b>Henüz seçenek grubu yok</b><span>Ülke, bağış türü veya paket gibi ilk grubu ekleyin.</span><button type="button" onClick={addOptionGroup}>＋ İlk grubu ekle</button></div>}
+        </div>
+        <footer className={styles.paymentPanelFooter}><span>{commerce.optionGroups.length}/{COMMERCE_LIMITS.optionGroups} grup</span><span>Grup başına en fazla {COMMERCE_LIMITS.optionsPerGroup} seçenek</span></footer>
+      </div> : null}
+
+      {paymentWorkspace === "rules" ? <div className={styles.paymentPanel}>
+        <div className={styles.paymentSectionHeading}>
+          <div><strong>Fiyat kuralları</strong><small>Seçenek birleşimlerine kesin bir bağış tutarı atayın. Üstteki ilk eşleşme uygulanır.</small></div>
+          <button type="button" disabled={commerce.priceRules.length >= COMMERCE_LIMITS.priceRules || !commerce.optionGroups.length} onClick={addPriceRule}>＋ Kural</button>
+        </div>
+        {!commerce.optionGroups.length ? <div className={styles.paymentNotice}><i>i</i><div><strong>Önce seçenek oluşturun</strong><small>Fiyat kuralı, seçenek gruplarındaki tercihlere bağlanır.</small></div><button type="button" onClick={() => setPaymentWorkspace("options")}>Seçeneklere git</button></div> : null}
+        <div className={styles.paymentBuilderList}>
+          {commerce.priceRules.length ? commerce.priceRules.map((rule, ruleIndex) => {
+            const open = expandedPriceRuleId === rule.id;
+            const selectedLabels = commerce.optionGroups.flatMap((group) => group.options.filter((option) => rule.optionIds.includes(option.id)).map((option) => option.label));
+            return <article className={`${styles.paymentBuilderItem} ${open ? styles.paymentBuilderItemOpen : ""}`} key={rule.id}>
+              <header>
+                <button type="button" aria-expanded={open} onClick={() => setExpandedPriceRuleId(open ? "" : rule.id)}>
+                  <span className={styles.paymentDragIndex}>{String(ruleIndex + 1).padStart(2, "0")}</span>
+                  <span><strong>{rule.label || "İsimsiz kural"}</strong><small>{selectedLabels.length ? selectedLabels.join(" + ") : "Tüm seçimler"} → {formatMinor(rule.amountMinor)}</small></span>
+                  <i>{rule.enabled ? "Aktif" : "Kapalı"}</i><b>{open ? "−" : "+"}</b>
+                </button>
+                {commerceRowActions({
+                  label: rule.label || "Fiyat kuralı",
+                  index: ruleIndex,
+                  total: commerce.priceRules.length,
+                  onDuplicate: () => {
+                    if (commerce.priceRules.length >= COMMERCE_LIMITS.priceRules) return showToast(`En fazla ${COMMERCE_LIMITS.priceRules} fiyat kuralı eklenebilir.`);
+                    const copy = { ...rule, id: commerceId("kural"), label: `${rule.label} kopyası`, optionIds: [...rule.optionIds] };
+                    changeCommerce((current) => {
+                      const index = current.priceRules.findIndex((item) => item.id === rule.id);
+                      const next = [...current.priceRules];
+                      next.splice(index + 1, 0, copy);
+                      return { ...current, priceRules: next };
+                    });
+                    setExpandedPriceRuleId(copy.id);
+                  },
+                  onMove: (direction) => changeCommerce((current) => ({
+                    ...current,
+                    priceRules: moveCommerceItem(current.priceRules, current.priceRules.findIndex((item) => item.id === rule.id), direction),
+                  })),
+                  onDelete: () => {
+                    if (!window.confirm(`“${rule.label || "Bu kural"}” silinsin mi?`)) return;
+                    changeCommerce((current) => ({ ...current, priceRules: current.priceRules.filter((item) => item.id !== rule.id) }));
+                    setExpandedPriceRuleId("");
+                  },
+                })}
+              </header>
+              {open ? <div className={styles.paymentBuilderBody}>
+                <div className={styles.paymentFieldGrid}>
+                  <label>Kural adı<input maxLength={70} value={rule.label} onChange={(event) => updatePriceRule(rule.id, { label: event.target.value })} /></label>
+                  <label>Sonuç tutarı<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(rule.amountMinor)} onChange={(event) => updatePriceRule(rule.id, { amountMinor: toMinor(event.target.value) })} /></div></label>
+                  <label className={styles.paymentCompactCheck}><input type="checkbox" checked={rule.enabled} onChange={(event) => updatePriceRule(rule.id, { enabled: event.target.checked })} /> Kural aktif</label>
+                </div>
+                <div className={styles.paymentRuleBuilder}>
+                  <div><strong>Kombinasyon</strong><small>Boş bırakılan grup bu kuralı sınırlandırmaz.</small></div>
+                  <div>
+                    {commerce.optionGroups.filter((group) => group.enabled).map((group) => {
+                      const groupOptionIds = new Set(group.options.map((option) => option.id));
+                      const selectedOptionId = rule.optionIds.find((id) => groupOptionIds.has(id)) || "";
+                      return <label key={group.id}>{group.label}<select value={selectedOptionId} onChange={(event) => {
+                        const withoutGroup = rule.optionIds.filter((id) => !groupOptionIds.has(id));
+                        updatePriceRule(rule.id, { optionIds: event.target.value ? [...withoutGroup, event.target.value] : withoutGroup });
+                      }}><option value="">Herhangi biri</option>{group.options.filter((option) => option.enabled).map((option) => <option key={option.id} value={option.id}>{option.label}{option.priceMinor ? ` · ${formatMinor(option.priceMinor)}` : ""}</option>)}</select></label>;
+                    })}
+                  </div>
+                  <p><b>Öncelik {ruleIndex + 1}:</b> Birden fazla kural eşleşirse listede daha yukarıdaki uygulanır.</p>
+                </div>
+              </div> : null}
+            </article>;
+          }) : <div className={styles.paymentEmpty}><b>Henüz fiyat kuralı yok</b><span>Seçeneklere göre değişmeyen projelerde bu alanı boş bırakabilirsiniz.</span>{commerce.optionGroups.length ? <button type="button" onClick={addPriceRule}>＋ İlk kuralı ekle</button> : null}</div>}
+        </div>
+        <footer className={styles.paymentPanelFooter}><span>{commerce.priceRules.length}/{COMMERCE_LIMITS.priceRules} kural</span><span>Fiyatlar güvenli biçimde kuruş olarak saklanır.</span></footer>
+      </div> : null}
+
+      {paymentWorkspace === "actions" ? <div className={styles.paymentPanel}>
+        <div className={styles.paymentSectionHeading}>
+          <div><strong>Çoklu düğmeler</strong><small>Sepet, ödeme, bağlantı ve WhatsApp eylemlerini birlikte yönetin.</small></div>
+          <button type="button" disabled={commerce.actions.length >= COMMERCE_LIMITS.actions} onClick={addAction}>＋ Düğme</button>
+        </div>
+        <div className={styles.paymentActionLayout}>
+          <div>
+            <span>{device === "desktop" ? "Web" : "Mobil"} düğme yerleşimi</span>
+            <small>Yalnız aktif cihaz görünümünü değiştirir.</small>
+          </div>
+          <label>Dizilim<select value={commerce[actionLayoutKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionLayoutKey]: event.target.value as "row" | "stack" }))}><option value="row">Yan yana</option><option value="stack">Alt alta</option></select></label>
+          <label>Aralık <b>{commerce[actionGapKey]} px</b><input type="range" min="0" max="32" value={commerce[actionGapKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionGapKey]: Number(event.target.value) }))} /></label>
+        </div>
+        <div className={styles.paymentBuilderList}>
+          {orderedActions.length ? orderedActions.map((action, actionIndex) => {
+            const open = expandedActionId === action.id;
+            const actionDevice = action[actionDeviceKey];
+            const actionKindLabel = {
+              "add-to-cart": "Sepete ekle",
+              checkout: "Direkt ödeme",
+              "internal-link": "Site içi bağlantı",
+              "external-link": "Dış bağlantı",
+              whatsapp: "WhatsApp",
+            }[action.kind];
+            const actionIcon = { none: "", plus: "＋", cart: "🛒", heart: "♥", arrow: "→" }[action.icon];
+            const previewBackground = action.variant === "gradient"
+              ? `linear-gradient(135deg, ${action.background}, ${action.backgroundEnd})`
+              : action.variant === "outline"
+                ? "transparent"
+                : action.variant === "soft"
+                  ? `${action.background}22`
+                  : action.background;
+            return <article className={`${styles.paymentBuilderItem} ${open ? styles.paymentBuilderItemOpen : ""}`} key={action.id}>
+              <header>
+                <button type="button" aria-expanded={open} onClick={() => setExpandedActionId(open ? "" : action.id)}>
+                  <span className={styles.paymentDragIndex}>{String(actionIndex + 1).padStart(2, "0")}</span>
+                  <span><strong>{actionDevice.label || actionKindLabel}</strong><small>{actionKindLabel} · {action.variant === "solid" ? "dolu" : action.variant === "outline" ? "çizgili" : action.variant === "soft" ? "yumuşak" : "geçişli"} · {device === "desktop" ? "web" : "mobil"}</small></span>
+                  <i>{action.enabled && actionDevice.visible ? "Görünür" : "Kapalı"}</i><b>{open ? "−" : "+"}</b>
+                </button>
+                {commerceRowActions({
+                  label: actionDevice.label || "Düğme",
+                  index: actionIndex,
+                  total: orderedActions.length,
+                  onDuplicate: () => {
+                    if (commerce.actions.length >= COMMERCE_LIMITS.actions) return showToast(`En fazla ${COMMERCE_LIMITS.actions} düğme eklenebilir.`);
+                    const copy: DonationProjectAction = {
+                      ...action,
+                      id: commerceId("dugme"),
+                      desktop: { ...action.desktop, label: `${action.desktop.label} kopyası`, order: commerce.actions.length },
+                      mobile: { ...action.mobile, label: `${action.mobile.label} kopyası`, order: commerce.actions.length },
+                    };
+                    changeCommerce((current) => ({ ...current, actions: [...current.actions, copy] }));
+                    setExpandedActionId(copy.id);
+                  },
+                  onMove: (direction) => moveAction(action.id, direction),
+                  onDelete: () => {
+                    if (!window.confirm(`“${actionDevice.label || "Bu düğme"}” silinsin mi?`)) return;
+                    changeCommerce((current) => {
+                      const remaining = current.actions.filter((item) => item.id !== action.id);
+                      const desktopOrders = new Map(
+                        [...remaining]
+                          .sort((first, second) => first.desktop.order - second.desktop.order)
+                          .map((item, order) => [item.id, order]),
+                      );
+                      const mobileOrders = new Map(
+                        [...remaining]
+                          .sort((first, second) => first.mobile.order - second.mobile.order)
+                          .map((item, order) => [item.id, order]),
+                      );
+                      return {
+                        ...current,
+                        actions: remaining.map((item) => ({
+                          ...item,
+                          desktop: { ...item.desktop, order: desktopOrders.get(item.id) || 0 },
+                          mobile: { ...item.mobile, order: mobileOrders.get(item.id) || 0 },
+                        })),
+                      };
+                    });
+                    setExpandedActionId("");
+                  },
+                })}
+              </header>
+              {open ? <div className={styles.paymentBuilderBody}>
+                <div className={styles.paymentFieldGrid}>
+                  <label>Eylem türü<select value={action.kind} onChange={(event) => updateAction(action.id, { kind: event.target.value as DonationProjectAction["kind"] })}><option value="add-to-cart">Sepete ekle</option><option value="checkout">Direkt ödeme</option><option value="internal-link">Site içi bağlantı</option><option value="external-link">Dış bağlantı</option><option value="whatsapp">WhatsApp</option></select></label>
+                  <label>İkon<select value={action.icon} onChange={(event) => updateAction(action.id, { icon: event.target.value as DonationProjectAction["icon"] })}><option value="none">İkonsuz</option><option value="plus">Artı</option><option value="cart">Sepet</option><option value="heart">Kalp</option><option value="arrow">Ok</option></select></label>
+                  <label>Stil<select value={action.variant} onChange={(event) => updateAction(action.id, { variant: event.target.value as DonationProjectAction["variant"] })}><option value="solid">Dolu</option><option value="outline">Çizgili</option><option value="soft">Yumuşak</option><option value="gradient">İki renk geçişli</option></select></label>
+                  {action.kind === "internal-link" || action.kind === "external-link" || action.kind === "whatsapp" ? <label className={styles.paymentFieldWide}>{action.kind === "whatsapp" ? "WhatsApp bağlantısı / numarası" : "Bağlantı"}<input maxLength={300} value={action.href} onChange={(event) => updateAction(action.id, { href: event.target.value })} placeholder={action.kind === "internal-link" ? "/bagislar" : action.kind === "whatsapp" ? "https://wa.me/90..." : "https://..."} /></label> : null}
+                </div>
+                <div className={styles.paymentMiniToggles}>
+                  <label><input type="checkbox" checked={action.enabled} onChange={(event) => updateAction(action.id, { enabled: event.target.checked })} /><span>Düğme aktif</span></label>
+                  <label><input type="checkbox" checked={action.requiresValidSelection} onChange={(event) => updateAction(action.id, { requiresValidSelection: event.target.checked })} /><span>Geçerli seçim iste</span></label>
+                </div>
+
+                <div className={styles.paymentDeviceCard}>
+                  <div><span>{device === "desktop" ? "WEB" : "MOBİL"}</span><div><strong>{device === "desktop" ? "Web görünümü" : "Mobil görünüm"}</strong><small>Etiket, boyut ve sıra bu cihaza özeldir.</small></div><label className={styles.paymentSwitch}><input type="checkbox" checked={actionDevice.visible} onChange={(event) => updateActionDevice(action.id, { visible: event.target.checked })} /><span /></label></div>
+                  <div className={styles.paymentFieldGrid}>
+                    <label>Düğme yazısı<input maxLength={40} value={actionDevice.label} onChange={(event) => updateActionDevice(action.id, { label: event.target.value })} /></label>
+                    <label>Genişlik<select value={actionDevice.width} onChange={(event) => updateActionDevice(action.id, { width: event.target.value as DonationProjectAction[Device]["width"] })}><option value="auto">İçerik kadar</option><option value="half">Yarım alan</option><option value="full">Tam alan</option></select></label>
+                    <label>Hizalama<select value={actionDevice.align} onChange={(event) => updateActionDevice(action.id, { align: event.target.value as DonationProjectAction[Device]["align"] })}><option value="start">Sol / başlangıç</option><option value="center">Orta</option><option value="end">Sağ / bitiş</option></select></label>
+                    <label>Sıra<select value={actionIndex} onChange={(event) => setActionOrder(action.id, Number(event.target.value))}>{orderedActions.map((_, index) => <option key={index} value={index}>{index + 1}. sıra</option>)}</select></label>
+                  </div>
+                  <div className={styles.paymentDesignGrid}>
+                    <label>Yükseklik <b>{actionDevice.height} px</b><input type="range" min="34" max="72" value={actionDevice.height} onChange={(event) => updateActionDevice(action.id, { height: Number(event.target.value) })} /></label>
+                    <label>Köşe <b>{actionDevice.radius} px</b><input type="range" min="0" max="36" value={actionDevice.radius} onChange={(event) => updateActionDevice(action.id, { radius: Number(event.target.value) })} /></label>
+                  </div>
+                </div>
+
+                <div className={styles.paymentColorGrid}>
+                  <label className={styles.paymentColorField}>Ana renk<span><input type="color" value={action.background} onChange={(event) => updateAction(action.id, { background: event.target.value })} /><code>{action.background}</code></span></label>
+                  {action.variant === "gradient" ? <label className={styles.paymentColorField}>Bitiş rengi<span><input type="color" value={action.backgroundEnd} onChange={(event) => updateAction(action.id, { backgroundEnd: event.target.value })} /><code>{action.backgroundEnd}</code></span></label> : null}
+                  <label className={styles.paymentColorField}>Yazı rengi<span><input type="color" value={action.textColor} onChange={(event) => updateAction(action.id, { textColor: event.target.value })} /><code>{action.textColor}</code></span></label>
+                  <label className={styles.paymentColorField}>Çerçeve<span><input type="color" value={action.borderColor} onChange={(event) => updateAction(action.id, { borderColor: event.target.value })} /><code>{action.borderColor}</code></span></label>
+                </div>
+                <div className={styles.paymentActionPreview}>
+                  <span>Canlı düğme örneği</span>
+                  <div style={{ justifyContent: actionDevice.align === "start" ? "flex-start" : actionDevice.align === "end" ? "flex-end" : "center" }}>
+                    <i style={{
+                      width: actionDevice.width === "full" ? "100%" : actionDevice.width === "half" ? "50%" : "auto",
+                      minHeight: actionDevice.height,
+                      borderRadius: actionDevice.radius,
+                      background: previewBackground,
+                      color: action.textColor,
+                      borderColor: action.borderColor,
+                    }}>{actionIcon ? <b>{actionIcon}</b> : null}{actionDevice.label || actionKindLabel}</i>
+                  </div>
+                </div>
+              </div> : null}
+            </article>;
+          }) : <div className={styles.paymentEmpty}><b>Henüz düğme yok</b><span>Sepete ekle veya direkt ödeme düğmesi oluşturun.</span><button type="button" onClick={addAction}>＋ İlk düğmeyi ekle</button></div>}
+        </div>
+        <footer className={styles.paymentPanelFooter}><span>{commerce.actions.length}/{COMMERCE_LIMITS.actions} düğme</span><span>Sıra ve görünürlük {device === "desktop" ? "web" : "mobil"} için özeldir.</span></footer>
+      </div> : null}
+    </div>;
     return <div className={styles.lowerAccordion}>
       <section className={projectSelectorOpen ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
@@ -1119,23 +1946,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       </section>
       <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-payment" ? "" : "project-payment")}><span>Fiyat ve düğme ayarları</span><b>{lowerGroup === "project-payment" ? "−" : "+"}</b></button>
-        {projectSelectorOpen && lowerGroup === "project-payment" ? <div className={styles.lowerAccordionContent}>
-          <label>Bağış biçimi<select value={selectedProject.pricingMode} onChange={(event) => updateProject({ pricingMode: event.target.value as DonationProject["pricingMode"] })}><option value="amount">Bağış tutarı</option><option value="quantity">Adet / hisse</option></select></label>
-          {selectedProject.pricingMode === "quantity" ? <label>Birim fiyat<input type="number" min="0" value={selectedProject.fixedPrice} onChange={(event) => updateProject({ fixedPrice: Number(event.target.value) })} /></label> : null}
-          <label>{selectedProject.pricingMode === "quantity" ? "Adet seçenekleri" : "Hazır tutarlar"}<input value={selectedProject.suggested.join(", ")} onChange={(event) => updateProject({ suggested: event.target.value.split(",").map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0).slice(0, 12) })} placeholder="250, 500, 1000" /></label>
-          {selectedProject.pricingMode === "amount" ? <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.customAmountEnabled} onChange={(event) => updateProject({ customAmountEnabled: event.target.checked })} /> Özel tutar girişini göster</label> : null}
-          {designRange("Fiyat düğmesi yüksekliği", "priceButtonHeight", 28, 64)}
-          {designRange("Fiyat düğmesi köşeleri", "priceButtonRadius", 0, 32)}
-          <label>Normal fiyat zemini<input type="color" value={design.priceBackground} onChange={(event) => updateProjectDesign(device, { priceBackground: event.target.value })} /></label>
-          <label>Normal fiyat yazısı<input type="color" value={design.priceTextColor} onChange={(event) => updateProjectDesign(device, { priceTextColor: event.target.value })} /></label>
-          <label>Seçili fiyat zemini<input type="color" value={design.selectedPriceBackground} onChange={(event) => updateProjectDesign(device, { selectedPriceBackground: event.target.value })} /></label>
-          <label>Seçili fiyat yazısı<input type="color" value={design.selectedPriceTextColor} onChange={(event) => updateProjectDesign(device, { selectedPriceTextColor: event.target.value })} /></label>
-          <label>Bağış düğmesi yazısı<input value={design.actionText} onChange={(event) => updateProjectDesign(device, { actionText: event.target.value })} /></label>
-          {designRange("Bağış düğmesi yüksekliği", "actionHeight", 34, 72)}
-          {designRange("Bağış düğmesi köşeleri", "actionRadius", 0, 36)}
-          <label>Bağış düğmesi rengi<input type="color" value={design.actionBackground} onChange={(event) => updateProjectDesign(device, { actionBackground: event.target.value })} /></label>
-          <label>Düğme yazı rengi<input type="color" value={design.actionTextColor} onChange={(event) => updateProjectDesign(device, { actionTextColor: event.target.value })} /></label>
-        </div> : null}
+        {projectSelectorOpen && lowerGroup === "project-payment" ? paymentControls : null}
       </section>
       </> : <div className={styles.emptyModuleGallery}>Bu kategoride henüz bağış kartı yok. Yukarıdaki “＋” düğmesiyle ilk kartı oluşturun.</div>}
     </div>;
