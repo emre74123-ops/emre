@@ -261,5 +261,254 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-mobile-border-width": `${settings.mobileBorderWidth}px`,
         "--dm-desktop-border-color": settings.desktopBorderColor,
         "--dm-mobile-border-color": settings.mobileBorderColor,
-        "--dm-desktop-shadow": shadoÛMü¶‰žËkºwµç]•Èµ‘•Í­Ñ½Àµ…Ñ¥½¸µ½±½ÈˆèÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…Ñ¥½¹	ÕÑÑ½¹Q•áÑ½±½È°4(€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…Ñ¥½¸µ½±½ÈˆèÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…Ñ¥½¹	ÕÑÑ½¹Q•áÑ½±½È°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½ÀµÍ¥é”ˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½ÝM¥é•õÁá€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µÍ¥é”ˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½ÝM¥é•õÁá€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµ¥½¸µÍ¥é”ˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý%½¹M¥é•õÁá€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µ¥½¸µÍ¥é”ˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý%½¹M¥é•õÁá€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµ½™™Í•Ðˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý=™™Í•ÑõÁá€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µ½™™Í•Ðˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý=™™Í•ÑõÁá€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµäˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½ÝY•ÉÑ¥…±A½Í¥Ñ¥½¹ô•€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µäˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½ÝY•ÉÑ¥…±A½Í¥Ñ¥½¹ô•€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½ÀµÉ…‘¥ÕÌˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½ÝI…‘¥ÕÍô•€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µÉ…‘¥ÕÌˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½ÝI…‘¥ÕÍô•€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµ‰œˆèÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý	…­É½Õ¹°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µ‰œˆèÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý	…­É½Õ¹°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµ½±½ÈˆèÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý½±½È°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µ½±½ÈˆèÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý½±½È°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµ½Á…¥ÑäˆèÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý=Á…¥Ñä€¼€ÄÀÀ°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µ½Á…¥ÑäˆèÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý=Á…¥Ñä€¼€ÄÀÀ°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½Àµ‰½É‘•Èˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý	½É‘•É]¥‘Ñ¡õÁàÍ½±¥€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý	½É‘•É½±½Éõ€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µ‰½É‘•Èˆè€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý	½É‘•É]¥‘Ñ¡õÁàÍ½±¥€‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý	½É‘•É½±½Éõ€°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµ‘•Í­Ñ½ÀµÍ¡…‘½ÜˆèÍ¡…‘½ÝY…±Õ•mÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½ÝM¡…‘½Ýt°4(€€€€€€€€ˆ´µ‘´µ…ÉÉ½Üµµ½‰¥±”µÍ¡…‘½ÜˆèÍ¡…‘½ÝY…±Õ•mÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½ÝM¡…‘½Ýt°4(€€€€€ô…ÌMMAÉ½Á•ÉÑ¥•Íô4(€€€€ø4(€€€€€ì…•µ‰•‘‘•€˜˜€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹ÁÉ•Ù¥•Ý	…Éôø4(€€€€€€€€ñÍÁ…¸øñ¤€¼ø9519$ð½ÍÁ…¸ø4(€€€€€€€€ñÀù	ÔÍ…å™…‘„•Ë•¬ƒÙ‘•µ”…³Å¹µ…è¸ð½Àø4(€€€€€€€€ñ1¥¹¬¡É•˜ôˆ¼ˆùM¥Ñ•å”“Ù¸ƒŠHð½1¥¹¬ø4(€€€€€€ð½‘¥Øùô4(4(€€€€€€ñÍ•Ñ¥½¸±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‘Õ±•M¡•±±ôø4(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹…Ñ•½ÉåMÉ½±±•Éôø4(€€€€€€€€€€ñ‘¥Ø4(€€€€€€€€€€€±…ÍÍ9…µ”õíÍÑå±•Ì¹…Ñ•½ÉåI…¥±ô4(€€€€€€€€€€€…É¥„µ±…‰•°ô‰	‡Ç|­…Ñ•½É¥±•É¤ˆ4(€€€€€€€€€€€É•˜õí…Ñ•½É¥•ÍI•™ô4(€€€€€€€€€€€½¹MÉ½±°õíÕÁ‘…Ñ•…Ñ•½ÉåAÉ½É•ÍÍô4(€€€€€€€€€€€½¹A½¥¹Ñ•É½Ý¸õì¡•Ù•¹Ð¤€ôøì(€€€€€€€€€€€€€ÍÑ…ÉÑ…Ñ•½Éå%¹Ñ•É…Ñ¥½¸ ¤ì(€€€€€€€€€€€€€•Ù•¹Ð¹ÕÉÉ•¹ÑQ…É•Ð¹Í•ÑA½¥¹Ñ•É…ÁÑÕÉ”ü¸¡•Ù•¹Ð¹Á½¥¹Ñ•É%¤ì(€€€€€€€€€€€õô(€€€€€€€€€€€½¹A½¥¹Ñ•ÉUÀõì¡•Ù•¹Ð¤€ôøì(€€€€€€€€€€€€€™¥¹¥Í¡…Ñ•½Éå%¹Ñ•É…Ñ¥½¸ ¤ì(€€€€€€€€€€€€€¥˜€¡•Ù•¹Ð¹ÕÉÉ•¹ÑQ…É•Ð¹¡…ÍA½¥¹Ñ•É…ÁÑÕÉ”ü¸¡•Ù•¹Ð¹Á½¥¹Ñ•É%¤¤•Ù•¹Ð¹ÕÉÉ•¹ÑQ…É•Ð¹É•±•…Í•A½¥¹Ñ•É…ÁÑÕÉ”¡•Ù•¹Ð¹Á½¥¹Ñ•É%¤ì(€€€€€€€€€€€õô(€€€€€€€€€€€½¹A½¥¹Ñ•É…¹•°õí™¥¹¥Í¡…Ñ•½Éå%¹Ñ•É…Ñ¥½¹ô(€€€€€€€€€€€½¹]¡••°õíÁ…ÕÍ•…Ñ•½Éå½É]¡••±ô(€€€€€€€€€€ø(€€€€€€€€€€€íÙ¥Í¥‰±•…Ñ•½É¥•Ì¹µ…À ¡¥Ñ•´¤€ôø€ (€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸(€€€€€€€€€€€€€€€±…ÍÍ9…µ”õí•™™•Ñ¥Ù•…Ñ•½Éä€ôôô¥Ñ•´¹¥€üÍÑå±•Ì¹…Ñ¥Ù•…Ñ•½Éä€è€ˆ‰ô(€€€€€€€€€€€€€€€­•äõí¥Ñ•´¹¥‘ô4(€€€€€€€€€€€€€€€½¹±¥¬õì ¤€ôøÍ•Ñ…Ñ•½Éä¡¥Ñ•´¹¥¥ô4(€€€€€€€€€€€€€€€…É¥„µ±…‰•°õí¥Ñ•´¹±…‰•±ô4(€€€€€€€€€€€€€€€Ñ¥Ñ±”õí¥Ñ•´¹±…‰•±ô4(€€€€€€€€€€€€€€ø4(€€€€€€€€€€€€€€€€ñ%µ…”±…ÍÍ9…µ”õíÍÑå±•Ì¹‘•Í­Ñ½Á…Ñ•½Éå%µ…•ôÍÉŒõíÍ•ÑÑ¥¹Ì¹…Ñ•½Éå%µ…•Ím¥Ñ•´¹¥‘tü¹‘•Í­Ñ½Àñð‘•™…Õ±Ñ5½‘Õ±•M•ÑÑ¥¹Ì¹‘½¹…Ñ¥½¸¹…Ñ•½Éå%µ…•Ím¥Ñ•´¹¥‘t¹‘•Í­Ñ½Áô…±Ðõí€‘í¥Ñ•´¹±…‰•±ô‰‡Ç|­…Ñ•½É¥Í¥ô™¥±°Í¥é•Ìôˆ¡µ…àµÝ¥‘Ñ è€ØÐÁÁà¤€ÅÁà°€ÄäÁÁàˆ€¼ø4(€€€€€€€€€€€€€€€€ñ%µ…”±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‰¥±•…Ñ•½Éå%µ…•ôÍÉŒõíÍ•ÑÑ¥¹Ì¹…Ñ•½Éå%µ…•Ím¥Ñ•´¹¥‘tü¹µ½‰¥±”ñðÍ•ÑÑ¥¹Ì¹…Ñ•½Éå%µ…•Ím¥Ñ•´¹¥‘tü¹‘•Í­Ñ½Àñð‘•™…Õ±Ñ5½‘Õ±•M•ÑÑ¥¹Ì¹‘½¹…Ñ¥½¸¹…Ñ•½Éå%µ…•Ím¥Ñ•´¹¥‘t¹µ½‰¥±•ô…±Ðôˆˆ™¥±°Í¥é•Ìôˆ¡µ…àµÝ¥‘Ñ è€ØÐÁÁà¤€ÄÄáÁà°€ÅÁàˆ€¼ø4(€€€€€€€€€€€€€€ð½‰ÕÑÑ½¸ø4(€€€€€€€€€€€€¤¥ô4(€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€€íÍ•ÑÑ¥¹Ì¹Í¡½ÝAÉ½É•ÍÌ€ü€ðø4(€€€€€€€€€€€€ñÍÁ…¸±…ÍÍ9…µ”õí€‘íÍÑå±•Ì¹…Ñ•½ÉåAÉ½É•ÍÍô€‘íÍÑå±•Ì¹…Ñ•½ÉåAÉ½É•ÍÍQ½Áô‘íÍ•ÑÑ¥¹Ì¹‘•Í­Ñ½ÁAÉ½É•ÍÍA½Í¥Ñ¥½¸€ôôô€‰‰½ÑÑ½´ˆ€ü€€‘íÍÑå±•Ì¹‘•Í­Ñ½ÁAÉ½É•ÍÍ=™™õ€€è€ˆ‰ô‘íÍ•ÑÑ¥¹Ì¹µ½‰¥±•AÉ½É•ÍÍA½Í¥Ñ¥½¸€ôôô€‰‰½ÑÑ½´ˆ€ü€€‘íÍÑå±•Ì¹µ½‰¥±•AÉ½É•ÍÍ=™™õ€€è€ˆ‰õô…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøñ¤ÍÑå±”õíìÝ¥‘Ñ è€‘í…Ñ•½ÉåAÉ½É•ÍÍô•€õô€¼øð½ÍÁ…¸ø4(€€€€€€€€€€€€ñÍÁ…¸±…ÍÍ9…µ”õí€‘íÍÑå±•Ì¹…Ñ•½ÉåAÉ½É•ÍÍô€‘íÍÑå±•Ì¹…Ñ•½ÉåAÉ½É•ÍÍ	½ÑÑ½µô‘íÍ•ÑÑ¥¹Ì¹‘•Í­Ñ½ÁAÉ½É•ÍÍA½Í¥Ñ¥½¸€ôôô€‰Ñ½Àˆ€ü€€‘íÍÑå±•Ì¹‘•Í­Ñ½ÁAÉ½É•ÍÍ=™™õ€€è€ˆ‰ô‘íÍ•ÑÑ¥¹Ì¹µ½‰¥±•AÉ½É•ÍÍA½Í¥Ñ¥½¸€ôôô€‰Ñ½Àˆ€ü€€‘íÍÑå±•Ì¹µ½‰¥±•AÉ½É•ÍÍ=™™õ€€è€ˆ‰õô…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøñ¤ÍÑå±”õíìÝ¥‘Ñ è€‘í…Ñ•½ÉåAÉ½É•ÍÍô•€õô€¼øð½ÍÁ…¸ø4(€€€€€€€€€€ð¼ø€è¹Õ±±ô4(€€€€€€€€ð½‘¥Øø4(4(€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õí€‘íÍÑå±•Ì¹½¹Ñ•¹ÑÉ¥‘ô‘íÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹±…å½ÕÐ€ôôô€‰É¥ˆ€ü€€‘íÍÑå±•Ì¹‘•Í­Ñ½ÁÉ¥‘õ€€è€ˆ‰ô‘íÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹±…å½ÕÐ€ôôô€‰É¥ˆ€ü€€‘íÍÑå±•Ì¹µ½‰¥±•É¥‘õ€€è€ˆ‰õôø4(€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹Í•Ñ¥½¹!•…‘¥¹ôø4(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹‘•Í­Ñ½Á1½Ý•É!•…‘¥¹ôÍÑå±”õíì‘¥ÍÁ±…äèÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹Í¡½Ý!•…‘¥¹œ€üÕ¹‘•™¥¹•€è€‰¹½¹”ˆõôøñÍÁ…¸ùíÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹¡•…‘¥¹å•‰É½Ýôð½ÍÁ…¸øñ ÈùíÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹¡•…‘¥¹Q¥Ñ±•ôð½ Èøð½‘¥Øø4(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‰¥±•1½Ý•É!•…‘¥¹ôÍÑå±”õíì‘¥ÍÁ±…äèÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹Í¡½Ý!•…‘¥¹œ€üÕ¹‘•™¥¹•€è€‰¹½¹”ˆõôøñÍÁ…¸ùíÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹¡•…‘¥¹å•‰É½Ýôð½ÍÁ…¸øñ ÈùíÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹¡•…‘¥¹Q¥Ñ±•ôð½ Èøð½‘¥Øø4(€€€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹…É‘ÍY¥•ÝÁ½ÉÑôø4(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õí€‘íÍÑå±•Ì¹Í¥‘•ÉÉ½Ýô€‘íÍÑå±•Ì¹Í¥‘•ÉÉ½Ý1•™Ñô‘ì…Í•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½ÝÍY¥Í¥‰±”ñð€…Í•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹±•™ÑÉÉ½ÝY¥Í¥‰±”€ü€€‘íÍÑå±•Ì¹‘•Í­Ñ½ÁÉÉ½Ý=™™õ€€è€ˆ‰ô‘ì…Í•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½ÝÍY¥Í¥‰±”ñð€…Í•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹±•™ÑÉÉ½ÝY¥Í¥‰±”€ü€€‘íÍÑå±•Ì¹µ½‰¥±•ÉÉ½Ý=™™õ€€è€ˆ‰õôÑåÁ”ô‰‰ÕÑÑ½¸ˆ…É¥„µ±…‰•°ô‹Y¹•­¤‰‡Ç|ÁÉ½©•±•É¤ˆ½¹±¥¬õì ¤€ôøµ½Ù•…É‘Ì ´Ä¥ôøñÍÁ…¸±…ÍÍ9…µ”õíÍÑå±•Ì¹‘•Í­Ñ½ÁÉÉ½ÝMåµ‰½±ôùí…ÉÉ½ÝMåµ‰½±ÍmÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý%½¹ulÁuôð½ÍÁ…¸øñÍÁ…¸±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‰¥±•ÉÉ½ÝMåµ‰½±ôùí…ÉÉ½ÝMåµ‰½±ÍmÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý%½¹ulÁuôð½ÍÁ…¸øð½‰ÕÑÑ½¸ø4(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹…É‘ÍôÉ•˜õí…É‘ÍI•™ôø4(€€€€€€€€€€€€€í™¥±Ñ•É•¹µ…À ¡ÁÉ½©•Ð¤€ôøì4(€€€€€€€€€€€€€€€½¹ÍÐÁ¥­•€ôÍ•±•Ñ•‘mÁÉ½©•Ð¹¥‘t€üüÁÉ½©•Ð¹ÍÕ•ÍÑ•‘lÁtì4(€€€€€€€€€€€€€€€½¹ÍÐÍ¡…É•‘•Í¥¸€ô€¡ÁÉ½©•Ñ•Í¥¸èÑåÁ•½˜ÁÉ½©•Ð¹‘•Í­Ñ½À°½µµ½¸èÑåÁ•½˜Í•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¤€ôøÁÉ½©•Ñ•Í¥¸¹ÕÍ•M¡…É•‘•Í¥¸€üì4(€€€€€€€€€€€€€€€€€€¸¸¹ÁÉ½©•Ñ•Í¥¸°4(€€€€€€€€€€€€€€€€€…É‘]¥‘Ñ è½µµ½¸¹…É‘]¥‘Ñ °4(€€€€€€€€€€€€€€€€€…É‘A…‘‘¥¹œè½µµ½¸¹…É‘A…‘‘¥¹œ°4(€€€€€€€€€€€€€€€€€…É‘	…­É½Õ¹è½µµ½¸¹…É‘	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€…É‘I…‘¥ÕÌè½µµ½¸¹…É‘I…‘¥ÕÌ°4(€€€€€€€€€€€€€€€€€…É‘	½É‘•É½±½Èè½µµ½¸¹…É‘	½É‘•É½±½È°4(€€€€€€€€€€€€€€€€€…É‘	½É‘•É]¥‘Ñ è½µµ½¸¹…É‘	½É‘•É]¥‘Ñ °4(€€€€€€€€€€€€€€€€€¥µ…•!•¥¡Ðè½µµ½¸¹¥µ…•!•¥¡Ð°4(€€€€€€€€€€€€€€€€€¥µ…•I…‘¥ÕÌè½µµ½¸¹¥µ…•I…‘¥ÕÌ°4(€€€€€€€€€€€€€€€€€Ñ¥Ñ±•½±½Èè½µµ½¸¹Ñ¥Ñ±•½±½È°4(€€€€€€€€€€€€€€€€€Ñ¥Ñ±•M¥é”è½µµ½¸¹Ñ¥Ñ±•M¥é”°4(€€€€€€€€€€€€€€€€€Ñ¥Ñ±•]•¥¡Ðè½µµ½¸¹Ñ¥Ñ±•]•¥¡Ð°4(€€€€€€€€€€€€€€€€€‘•ÍÉ¥ÁÑ¥½¹½±½Èè½µµ½¸¹‘•ÍÉ¥ÁÑ¥½¹½±½È°4(€€€€€€€€€€€€€€€€€‘•ÍÉ¥ÁÑ¥½¹M¥é”è½µµ½¸¹‘•ÍÉ¥ÁÑ¥½¹M¥é”°4(€€€€€€€€€€€€€€€ô€èÁÉ½©•Ñ•Í¥¸ì4(€€€€€€€€€€€€€€€½¹ÍÐ‘•Í­Ñ½Á•Í¥¸€ôÍ¡…É•‘•Í¥¸¡ÁÉ½©•Ð¹‘•Í­Ñ½À°Í•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¤ì4(€€€€€€€€€€€€€€€½¹ÍÐµ½‰¥±••Í¥¸€ôÍ¡…É•‘•Í¥¸¡ÁÉ½©•Ð¹µ½‰¥±”°Í•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¤ì4(€€€€€€€€€€€€€€€É•ÑÕÉ¸€ 4(€€€€€€€€€€€€€€€€€€ñ…ÉÑ¥±”±…ÍÍ9…µ”õí€‘íÍÑå±•Ì¹…É‘ô‘í•™™•Ñ¥Ù•…Ñ•½Éä€ôôô€‰…±°ˆ€˜˜ÁÉ½©•Ð¹Í¡½Ý%¹±±•Í­Ñ½À€ôôô™…±Í”€ü€€‘íÍÑå±•Ì¹…±±•Í­Ñ½Á!¥‘‘•¹õ€€è€ˆ‰ô‘í•™™•Ñ¥Ù•…Ñ•½Éä€ôôô€‰…±°ˆ€˜˜ÁÉ½©•Ð¹Í¡½Ý%¹±±5½‰¥±”€ôôô™…±Í”€ü€€‘íÍÑå±•Ì¹…±±5½‰¥±•!¥‘‘•¹õ€€è€ˆ‰õô­•äõíÁÉ½©•Ð¹¥‘ôÍÑå±”õíì4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ…±°µ‘•Í­Ñ½Àµ½É‘•ÈˆèÁÉ½©•Ð¹…±±=É‘•É•Í­Ñ½À€üü€À°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ…±°µµ½‰¥±”µ½É‘•ÈˆèÁÉ½©•Ð¹…±±=É‘•É5½‰¥±”€üü€À°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…ÉµÝ¥‘Ñ ˆè€‘í‘•Í­Ñ½Á•Í¥¸¹…É‘]¥‘Ñ¡õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…ÉµÝ¥‘Ñ ˆè€‘íµ½‰¥±••Í¥¸¹…É‘]¥‘Ñ¡õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…ÉµÁ…‘‘¥¹œˆè€‘í‘•Í­Ñ½Á•Í¥¸¹…É‘A…‘‘¥¹õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…ÉµÁ…‘‘¥¹œˆè€‘íµ½‰¥±••Í¥¸¹…É‘A…‘‘¥¹õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…Éµ‰œˆè‘•Í­Ñ½Á•Í¥¸¹…É‘	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…Éµ‰œˆèµ½‰¥±••Í¥¸¹…É‘	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…ÉµÉ…‘¥ÕÌˆè€‘í‘•Í­Ñ½Á•Í¥¸¹…É‘I…‘¥ÕÍõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…ÉµÉ…‘¥ÕÌˆè€‘íµ½‰¥±••Í¥¸¹…É‘I…‘¥ÕÍõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ‰½É‘•Èˆè€‘í‘•Í­Ñ½Á•Í¥¸¹…É‘	½É‘•É]¥‘Ñ¡õÁàÍ½±¥€‘í‘•Í­Ñ½Á•Í¥¸¹…É‘	½É‘•É½±½Éõ€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ‰½É‘•Èˆè€‘íµ½‰¥±••Í¥¸¹…É‘	½É‘•É]¥‘Ñ¡õÁàÍ½±¥€‘íµ½‰¥±••Í¥¸¹…É‘	½É‘•É½±½Éõ€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¥µ…”µ¡•¥¡Ðˆè€‘í‘•Í­Ñ½Á•Í¥¸¹ÕÍ•M¡…É•‘%µ…••Í¥¸€„ôô™…±Í”€üÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹¥µ…•!•¥¡Ð€è‘•Í­Ñ½Á•Í¥¸¹¥µ…•!•¥¡ÑõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¥µ…”µ¡•¥¡Ðˆè€‘íµ½‰¥±••Í¥¸¹ÕÍ•M¡…É•‘%µ…••Í¥¸€„ôô™…±Í”€üÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹¥µ…•!•¥¡Ð€èµ½‰¥±••Í¥¸¹¥µ…•!•¥¡ÑõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¥µ…”µ‘¥ÍÁ±…äˆè‘•Í­Ñ½Á•Í¥¸¹¥µ…•Y¥Í¥‰±”€ôôô™…±Í”€ü€‰¹½¹”ˆ€è€‰‰±½¬ˆ°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¥µ…”µ‘¥ÍÁ±…äˆèµ½‰¥±••Í¥¸¹¥µ…•Y¥Í¥‰±”€ôôô™…±Í”€ü€‰¹½¹”ˆ€è€‰‰±½¬ˆ°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¥µ…”µ™¥Ðˆè‘•Í­Ñ½Á•Í¥¸¹ÕÍ•M¡…É•‘%µ…••Í¥¸€„ôô™…±Í”€üÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹¥µ…•¥Ð€è‘•Í­Ñ½Á•Í¥¸¹¥µ…•¥Ðñð€‰½Ù•Èˆ°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¥µ…”µ™¥Ðˆèµ½‰¥±••Í¥¸¹ÕÍ•M¡…É•‘%µ…••Í¥¸€„ôô™…±Í”€üÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹¥µ…•¥Ð€èµ½‰¥±••Í¥¸¹¥µ…•¥Ðñð€‰½Ù•Èˆ°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½ÀµÑ¥Ñ±”µ½±½Èˆè‘•Í­Ñ½Á•Í¥¸¹Ñ¥Ñ±•½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µÑ¥Ñ±”µ½±½Èˆèµ½‰¥±••Í¥¸¹Ñ¥Ñ±•½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½ÀµÑ¥Ñ±”µÍ¥é”ˆè€‘í‘•Í­Ñ½Á•Í¥¸¹Ñ¥Ñ±•M¥é•õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µÑ¥Ñ±”µÍ¥é”ˆè€‘íµ½‰¥±••Í¥¸¹Ñ¥Ñ±•M¥é•õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½ÀµÑ¥Ñ±”µÝ•¥¡Ðˆè‘•Í­Ñ½Á•Í¥¸¹Ñ¥Ñ±•]•¥¡Ð°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µÑ¥Ñ±”µÝ•¥¡Ðˆèµ½‰¥±••Í¥¸¹Ñ¥Ñ±•]•¥¡Ð°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ‘•ÍÉ¥ÁÑ¥½¸µ½±½Èˆè‘•Í­Ñ½Á•Í¥¸¹‘•ÍÉ¥ÁÑ¥½¹½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ‘•ÍÉ¥ÁÑ¥½¸µ½±½Èˆèµ½‰¥±••Í¥¸¹‘•ÍÉ¥ÁÑ¥½¹½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ‘•ÍÉ¥ÁÑ¥½¸µÍ¥é”ˆè€‘í‘•Í­Ñ½Á•Í¥¸¹‘•ÍÉ¥ÁÑ¥½¹M¥é•õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ‘•ÍÉ¥ÁÑ¥½¸µÍ¥é”ˆè€‘íµ½‰¥±••Í¥¸¹‘•ÍÉ¥ÁÑ¥½¹M¥é•õÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¡½¥”µ¡•¥¡Ðˆè€‘í‘•Í­Ñ½Á•Í¥¸¹ÁÉ¥•	ÕÑÑ½¹!•¥¡ÑõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¡½¥”µ¡•¥¡Ðˆè€‘íµ½‰¥±••Í¥¸¹ÁÉ¥•	ÕÑÑ½¹!•¥¡ÑõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¡½¥”µÉ…‘¥ÕÌˆè€‘í‘•Í­Ñ½Á•Í¥¸¹ÁÉ¥•	ÕÑÑ½¹I…‘¥ÕÍõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¡½¥”µÉ…‘¥ÕÌˆè€‘íµ½‰¥±••Í¥¸¹ÁÉ¥•	ÕÑÑ½¹I…‘¥ÕÍõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¡½¥”µ‰œˆè‘•Í­Ñ½Á•Í¥¸¹ÁÉ¥•	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¡½¥”µ‰œˆèµ½‰¥±••Í¥¸¹ÁÉ¥•	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ¡½¥”µ½±½Èˆè‘•Í­Ñ½Á•Í¥¸¹ÁÉ¥•Q•áÑ½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ¡½¥”µ½±½Èˆèµ½‰¥±••Í¥¸¹ÁÉ¥•Q•áÑ½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½ÀµÍ•±•Ñ•µ‰œˆè‘•Í­Ñ½Á•Í¥¸¹Í•±•Ñ•‘AÉ¥•	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µÍ•±•Ñ•µ‰œˆèµ½‰¥±••Í¥¸¹Í•±•Ñ•‘AÉ¥•	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½ÀµÍ•±•Ñ•µ½±½Èˆè‘•Í­Ñ½Á•Í¥¸¹Í•±•Ñ•‘AÉ¥•Q•áÑ½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µÍ•±•Ñ•µ½±½Èˆèµ½‰¥±••Í¥¸¹Í•±•Ñ•‘AÉ¥•Q•áÑ½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…Ñ¥½¸µ‰œˆè‘•Í­Ñ½Á•Í¥¸¹…Ñ¥½¹	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…Ñ¥½¸µ‰œˆèµ½‰¥±••Í¥¸¹…Ñ¥½¹	…­É½Õ¹°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…Ñ¥½¸µ½±½Èˆè‘•Í­Ñ½Á•Í¥¸¹…Ñ¥½¹Q•áÑ½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…Ñ¥½¸µ½±½Èˆèµ½‰¥±••Í¥¸¹…Ñ¥½¹Q•áÑ½±½È°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…Ñ¥½¸µ¡•¥¡Ðˆè€‘í‘•Í­Ñ½Á•Í¥¸¹…Ñ¥½¹!•¥¡ÑõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…Ñ¥½¸µ¡•¥¡Ðˆè€‘íµ½‰¥±••Í¥¸¹…Ñ¥½¹!•¥¡ÑõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµ‘•Í­Ñ½Àµ…Ñ¥½¸µÉ…‘¥ÕÌˆè€‘í‘•Í­Ñ½Á•Í¥¸¹…Ñ¥½¹I…‘¥ÕÍõÁá€°4(€€€€€€€€€€€€€€€€€€€€ˆ´µ‘´µ±½Ý•Èµµ½‰¥±”µ…Ñ¥½¸µÉ…‘¥ÕÌˆè€‘íµ½‰¥±••Í¥¸¹…Ñ¥½¹I…‘¥ÕÍõÁá€°4(€€€€€€€€€€€€€€€€€ô…ÌMMAÉ½Á•ÉÑ¥•Íôø4(€€€€€€€€€€€€€€€€€€€€ñ…É‘5•‘¥„µ•‘¥„õíÁÉ½©•Ð¹‘•Í­Ñ½Á5•‘¥„ñðmuô™…±±‰…¬õíÁÉ½©•Ð¹¥µ…•ô±…ÍÍ9…µ”õíÍÑå±•Ì¹‘•Í­Ñ½Á…É‘5•‘¥…ô€¼ø4(€€€€€€€€€€€€€€€€€€€€ñ…É‘5•‘¥„µ•‘¥„õíÁÉ½©•Ð¹µ½‰¥±•5•‘¥„ñðmuô™…±±‰…¬õíÁÉ½©•Ð¹¥µ…•ô±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‰¥±•…É‘5•‘¥…ô€¼ø4(€€€€€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹…É‘	½‘åôø4(€€€€€€€€€€€€€€€€€€€€€€ñ ÌùíÁÉ½©•Ð¹Ñ¥Ñ±•ôð½ Ìø4(€€€€€€€€€€€€€€€€€€€€€€ñÀùíÁÉ½©•Ð¹‘•ÍÉ¥ÁÑ¥½¹ôð½Àø4(€€€€€€€€€€€€€€€€€€€€€€ñÍµ…±°ùíÁÉ½©•Ð¹ÁÉ¥¥¹5½‘”€ôôô€‰ÅÕ…¹Ñ¥Ñäˆ€ü€‰!¥ÍÍ”…‘•‘¤ˆ€è€‰	‡Ç|ÑÕÑ…ËÄ‰ôð½Íµ…±°ø4(€€€€€€€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹¡½¥•Íôø4(€€€€€€€€€€€€€€€€€€€€€€€íÁÉ½©•Ð¹ÍÕ•ÍÑ•¹µ…À ¡…µ½Õ¹Ð¤€ôø€ 4(€€€€€€€€€€€€€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õíÁ¥­•€ôôô…µ½Õ¹Ð€üÍÑå±•Ì¹Í•±•Ñ•‘¡½¥”€è€ˆ‰ô­•äõí…µ½Õ¹Ñô½¹±¥¬õì ¤€ôøÍ•ÑM•±•Ñ• ¡ÍÑ…Ñ”¤€ôø€¡ì€¸¸¹ÍÑ…Ñ”°mÁÉ½©•Ð¹¥‘tè…µ½Õ¹Ðô¤¥ôø4(€€€€€€€€€€€€€€€€€€€€€€€€€€€íÁÉ½©•Ð¹ÁÉ¥¥¹5½‘”€ôôô€‰ÅÕ…¹Ñ¥Ñäˆ€ü…µ½Õ¹Ð€èµ½¹•ä¹™½Éµ…Ð¡…µ½Õ¹Ð¥ô4(€€€€€€€€€€€€€€€€€€€€€€€€€€ð½‰ÕÑÑ½¸ø4(€€€€€€€€€€€€€€€€€€€€€€€€¤¥ô4(€€€€€€€€€€€€€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹…É‘Ñ¥½¹ôø4(€€€€€€€€€€€€€€€€€€€€€€€€ñ±…‰•°ø4(€€€€€€€€€€€€€€€€€€€€€€€€€€ñÍÁ…¸ùíÁÉ½©•Ð¹ÁÉ¥¥¹5½‘”€ôôô€‰ÅÕ…¹Ñ¥Ñäˆ€üµ½¹•ä¹™½Éµ…Ð¡ÁÉ½©•Ð¹™¥á•‘AÉ¥”€¨Á¥­•¤€è€‹Š
-è‰ôð½ÍÁ…¸ø4(€€€€€€€€€€€€€€€€€€€€€€€€€íÁÉ½©•Ð¹ÁÉ¥¥¹5½‘”€ôôô€‰…µ½Õ¹Ðˆ€˜˜ÁÉ½©•Ð¹ÕÍÑ½µµ½Õ¹Ñ¹…‰±•€˜˜€ñ¥¹ÁÕÐ¥¹ÁÕÑ5½‘”ô‰¹Õµ•É¥ŒˆÙ…±Õ”õíÕÍÑ½µmÁÉ½©•Ð¹¥‘tñð€ˆ‰ô½¹¡…¹”õì¡•Ù•¹Ð¤€ôøÍ•ÑÕÍÑ½´ ¡ÍÑ…Ñ”¤€ôø€¡ì€¸¸¹ÍÑ…Ñ”°mÁÉ½©•Ð¹¥‘tè•Ù•¹Ð¹Ñ…É•Ð¹Ù…±Õ”¹É•Á±…” ½myq±t½œ°€ˆˆ¤ô¤¥ôÁ±…•¡½±‘•Èô‰	‡}­„ÑÕÑ…Èˆ€¼ùô4(€€€€€€€€€€€€€€€€€€€€€€€€ð½±…‰•°ø4(€€€€€€€€€€€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸½¹±¥¬õì ¤€ôø…‘‘Q½…ÉÐ¡ÁÉ½©•Ð¥ôøñÍÁ…¸±…ÍÍ9…µ”õíÍÑå±•Ì¹‘•Í­Ñ½ÁÑ¥½¹Q•áÑôùí‘•Í­Ñ½Á•Í¥¸¹…Ñ¥½¹Q•áÑôð½ÍÁ…¸øñÍÁ…¸±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‰¥±•Ñ¥½¹Q•áÑôùíµ½‰¥±••Í¥¸¹…Ñ¥½¹Q•áÑôð½ÍÁ…¸ø€ñˆø¬ð½ˆøð½‰ÕÑÑ½¸ø4(€€€€€€€€€€€€€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€€€€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€€€€€€€€€€€ð½…ÉÑ¥±”ø4(€€€€€€€€€€€€€€€€¤ì4(€€€€€€€€€€€€€ô¥ô4(€€€€€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÍ9…µ”õí€‘íÍÑå±•Ì¹Í¥‘•ÉÉ½Ýô€‘íÍÑå±•Ì¹Í¥‘•ÉÉ½ÝI¥¡Ñô‘ì…Í•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½ÝÍY¥Í¥‰±”ñð€…Í•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹É¥¡ÑÉÉ½ÝY¥Í¥‰±”€ü€€‘íÍÑå±•Ì¹‘•Í­Ñ½ÁÉÉ½Ý=™™õ€€è€ˆ‰ô‘ì…Í•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½ÝÍY¥Í¥‰±”ñð€…Í•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹É¥¡ÑÉÉ½ÝY¥Í¥‰±”€ü€€‘íÍÑå±•Ì¹µ½‰¥±•ÉÉ½Ý=™™õ€€è€ˆ‰õôÑåÁ”ô‰‰ÕÑÑ½¸ˆ…É¥„µ±…‰•°ô‰M½¹É…­¤‰‡Ç|ÁÉ½©•±•É¤ˆ½¹±¥¬õì ¤€ôøµ½Ù•…É‘Ì Ä¥ôøñÍÁ…¸±…ÍÍ9…µ”õíÍÑå±•Ì¹‘•Í­Ñ½ÁÉÉ½ÝMåµ‰½±ôùí…ÉÉ½ÝMåµ‰½±ÍmÍ•ÑÑ¥¹Ì¹±½Ý•É•Í­Ñ½À¹…ÉÉ½Ý%½¹ulÅuôð½ÍÁ…¸øñÍÁ…¸±…ÍÍ9…µ”õíÍÑå±•Ì¹µ½‰¥±•ÉÉ½ÝMåµ‰½±ôùí…ÉÉ½ÝMåµ‰½±ÍmÍ•ÑÑ¥¹Ì¹±½Ý•É5½‰¥±”¹…ÉÉ½Ý%½¹ulÅuôð½ÍÁ…¸øð½‰ÕÑÑ½¸ø4(€€€€€€€€€€€€ð½‘¥Øø4(€€€€€€€€ð½‘¥Øø4(€€€€€€ð½Í•Ñ¥½¸ø4(€€€€€í¹½Ñ¥”€˜˜€ñ‘¥Ø±…ÍÍ9…µ”õíÍÑå±•Ì¹Ñ½…ÍÑôùí¹½Ñ¥•ôð½‘¥Øùô4(€€€€ð½Í•Ñ¥½¸ø4(€€¤ì4)ô4
+        "--dm-desktop-shadow": shadowValue[settings.desktopShadow],
+        "--dm-mobile-shadow": shadowValue[settings.mobileShadow],
+        "--dm-desktop-image-bg": settings.desktopImageBackgroundColor,
+        "--dm-mobile-image-bg": settings.mobileImageBackgroundColor,
+        "--dm-lower-desktop-display": "block",
+        "--dm-lower-mobile-display": "block",
+        "--dm-lower-desktop-max": `${settings.lowerDesktop.sectionMaxWidth}px`,
+        "--dm-lower-mobile-max": `${settings.lowerMobile.sectionMaxWidth}px`,
+        "--dm-lower-desktop-padding": `${settings.lowerDesktop.sectionPadding}px`,
+        "--dm-lower-mobile-padding": `${settings.lowerMobile.sectionPadding}px`,
+        "--dm-lower-desktop-gap": `${settings.lowerDesktop.sectionGap}px`,
+        "--dm-lower-mobile-gap": `${settings.lowerMobile.sectionGap}px`,
+        "--dm-lower-desktop-heading-gap": `${settings.lowerDesktop.headingGap}px`,
+        "--dm-lower-mobile-heading-gap": `${settings.lowerMobile.headingGap}px`,
+        "--dm-lower-desktop-heading-display": settings.lowerDesktop.showHeading ? "flex" : "none",
+        "--dm-lower-mobile-heading-display": settings.lowerMobile.showHeading ? "flex" : "none",
+        "--dm-lower-desktop-bottom-gap": `${settings.lowerDesktop.sectionBottomGap}px`,
+        "--dm-lower-mobile-bottom-gap": `${settings.lowerMobile.sectionBottomGap}px`,
+        "--dm-lower-desktop-card-width": `${settings.lowerDesktop.cardWidth}px`,
+        "--dm-lower-mobile-card-width": `${settings.lowerMobile.cardWidth}px`,
+        "--dm-lower-desktop-card-gap": `${settings.lowerDesktop.cardGap}px`,
+        "--dm-lower-mobile-card-gap": `${settings.lowerMobile.cardGap}px`,
+        "--dm-lower-desktop-card-radius": `${settings.lowerDesktop.cardRadius}px`,
+        "--dm-lower-mobile-card-radius": `${settings.lowerMobile.cardRadius}px`,
+        "--dm-lower-desktop-card-padding": `${settings.lowerDesktop.cardPadding}px`,
+        "--dm-lower-mobile-card-padding": `${settings.lowerMobile.cardPadding}px`,
+        "--dm-lower-desktop-card-bg": settings.lowerDesktop.cardBackground,
+        "--dm-lower-mobile-card-bg": settings.lowerMobile.cardBackground,
+        "--dm-lower-desktop-border": `${settings.lowerDesktop.cardBorderWidth}px solid ${settings.lowerDesktop.cardBorderColor}`,
+        "--dm-lower-mobile-border": `${settings.lowerMobile.cardBorderWidth}px solid ${settings.lowerMobile.cardBorderColor}`,
+        "--dm-lower-desktop-shadow": shadowValue[settings.lowerDesktop.cardShadow],
+        "--dm-lower-mobile-shadow": shadowValue[settings.lowerMobile.cardShadow],
+        "--dm-lower-desktop-image-display": settings.lowerDesktop.imageVisible ? "block" : "none",
+        "--dm-lower-mobile-image-display": settings.lowerMobile.imageVisible ? "block" : "none",
+        "--dm-lower-desktop-image-height": `${settings.lowerDesktop.imageHeight}px`,
+        "--dm-lower-mobile-image-height": `${settings.lowerMobile.imageHeight}px`,
+        "--dm-lower-desktop-image-radius": `${settings.lowerDesktop.imageRadius}px`,
+        "--dm-lower-mobile-image-radius": `${settings.lowerMobile.imageRadius}px`,
+        "--dm-lower-desktop-image-fit": settings.lowerDesktop.imageFit,
+        "--dm-lower-mobile-image-fit": settings.lowerMobile.imageFit,
+        "--dm-lower-desktop-title-size": `${settings.lowerDesktop.titleSize}px`,
+        "--dm-lower-mobile-title-size": `${settings.lowerMobile.titleSize}px`,
+        "--dm-lower-desktop-title-color": settings.lowerDesktop.titleColor,
+        "--dm-lower-mobile-title-color": settings.lowerMobile.titleColor,
+        "--dm-lower-desktop-title-weight": settings.lowerDesktop.titleWeight,
+        "--dm-lower-mobile-title-weight": settings.lowerMobile.titleWeight,
+        "--dm-lower-desktop-title-display": settings.lowerDesktop.titleVisible ? "block" : "none",
+        "--dm-lower-mobile-title-display": settings.lowerMobile.titleVisible ? "block" : "none",
+        "--dm-lower-desktop-description-display": settings.lowerDesktop.descriptionVisible ? "block" : "none",
+        "--dm-lower-mobile-description-display": settings.lowerMobile.descriptionVisible ? "block" : "none",
+        "--dm-lower-desktop-description-size": `${settings.lowerDesktop.descriptionSize}px`,
+        "--dm-lower-mobile-description-size": `${settings.lowerMobile.descriptionSize}px`,
+        "--dm-lower-desktop-description-color": settings.lowerDesktop.descriptionColor,
+        "--dm-lower-mobile-description-color": settings.lowerMobile.descriptionColor,
+        "--dm-lower-desktop-choice-height": `${settings.lowerDesktop.priceButtonHeight}px`,
+        "--dm-lower-mobile-choice-height": `${settings.lowerMobile.priceButtonHeight}px`,
+        "--dm-lower-desktop-choice-radius": `${settings.lowerDesktop.priceButtonRadius}px`,
+        "--dm-lower-mobile-choice-radius": `${settings.lowerMobile.priceButtonRadius}px`,
+        "--dm-lower-desktop-choice-bg": settings.lowerDesktop.priceBackground,
+        "--dm-lower-mobile-choice-bg": settings.lowerMobile.priceBackground,
+        "--dm-lower-desktop-choice-color": settings.lowerDesktop.priceTextColor,
+        "--dm-lower-mobile-choice-color": settings.lowerMobile.priceTextColor,
+        "--dm-lower-desktop-selected-bg": settings.lowerDesktop.selectedPriceBackground,
+        "--dm-lower-mobile-selected-bg": settings.lowerMobile.selectedPriceBackground,
+        "--dm-lower-desktop-selected-color": settings.lowerDesktop.selectedPriceTextColor,
+        "--dm-lower-mobile-selected-color": settings.lowerMobile.selectedPriceTextColor,
+        "--dm-lower-desktop-action-height": `${settings.lowerDesktop.actionButtonHeight}px`,
+        "--dm-lower-mobile-action-height": `${settings.lowerMobile.actionButtonHeight}px`,
+        "--dm-lower-desktop-action-radius": `${settings.lowerDesktop.actionButtonRadius}px`,
+        "--dm-lower-mobile-action-radius": `${settings.lowerMobile.actionButtonRadius}px`,
+        "--dm-lower-desktop-action-bg": settings.lowerDesktop.actionButtonBackground,
+        "--dm-lower-mobile-action-bg": settings.lowerMobile.actionButtonBackground,
+        "--dm-lower-desktop-action-color": settings.lowerDesktop.actionButtonTextColor,
+        "--dm-lower-mobile-action-color": settings.lowerMobile.actionButtonTextColor,
+        "--dm-arrow-desktop-size": `${settings.lowerDesktop.arrowSize}px`,
+        "--dm-arrow-mobile-size": `${settings.lowerMobile.arrowSize}px`,
+        "--dm-arrow-desktop-icon-size": `${settings.lowerDesktop.arrowIconSize}px`,
+        "--dm-arrow-mobile-icon-size": `${settings.lowerMobile.arrowIconSize}px`,
+        "--dm-arrow-desktop-offset": `${settings.lowerDesktop.arrowOffset}px`,
+        "--dm-arrow-mobile-offset": `${settings.lowerMobile.arrowOffset}px`,
+        "--dm-arrow-desktop-y": `${settings.lowerDesktop.arrowVerticalPosition}%`,
+        "--dm-arrow-mobile-y": `${settings.lowerMobile.arrowVerticalPosition}%`,
+        "--dm-arrow-desktop-radius": `${settings.lowerDesktop.arrowRadius}%`,
+        "--dm-arrow-mobile-radius": `${settings.lowerMobile.arrowRadius}%`,
+        "--dm-arrow-desktop-bg": settings.lowerDesktop.arrowBackground,
+        "--dm-arrow-mobile-bg": settings.lowerMobile.arrowBackground,
+        "--dm-arrow-desktop-color": settings.lowerDesktop.arrowColor,
+        "--dm-arrow-mobile-color": settings.lowerMobile.arrowColor,
+        "--dm-arrow-desktop-opacity": settings.lowerDesktop.arrowOpacity / 100,
+        "--dm-arrow-mobile-opacity": settings.lowerMobile.arrowOpacity / 100,
+        "--dm-arrow-desktop-border": `${settings.lowerDesktop.arrowBorderWidth}px solid ${settings.lowerDesktop.arrowBorderColor}`,
+        "--dm-arrow-mobile-border": `${settings.lowerMobile.arrowBorderWidth}px solid ${settings.lowerMobile.arrowBorderColor}`,
+        "--dm-arrow-desktop-shadow": shadowValue[settings.lowerDesktop.arrowShadow],
+        "--dm-arrow-mobile-shadow": shadowValue[settings.lowerMobile.arrowShadow],
+      } as CSSProperties}
+    >
+      {!embedded && <div className={styles.previewBar}>
+        <span><i /> DENEME ALANI</span>
+        <p>Bu sayfada gerÃ§ek Ã¶deme alÄ±nmaz.</p>
+        <Link href="/">Siteye dÃ¶n â†’</Link>
+      </div>}
+
+      <section className={styles.moduleShell}>
+        <div className={styles.categoryScroller}>
+          <div
+            className={styles.categoryRail}
+            aria-label="BaÄŸÄ±ÅŸ kategorileri"
+            ref={categoriesRef}
+            onScroll={updateCategoryProgress}
+            onPointerDown={(event) => {
+              startCategoryInteraction();
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+            }}
+            onPointerUp={(event) => {
+              finishCategoryInteraction();
+              if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+            onPointerCancel={finishCategoryInteraction}
+            onWheel={pauseCategoryForWheel}
+          >
+            {visibleCategories.map((item) => (
+              <button
+                className={effectiveCategory === item.id ? styles.activeCategory : ""}
+                key={item.id}
+                onClick={() => setCategory(item.id)}
+                aria-label={item.label}
+                title={item.label}
+              >
+                <Image className={styles.desktopCategoryImage} src={settings.categoryImages[item.id]?.desktop || defaultModuleSettings.donation.categoryImages[item.id].desktop} alt={`${item.label} baÄŸÄ±ÅŸ kategorisi`} fill sizes="(max-width: 640px) 1px, 190px" />
+                <Image className={styles.mobileCategoryImage} src={settings.categoryImages[item.id]?.mobile || settings.categoryImages[item.id]?.desktop || defaultModuleSettings.donation.categoryImages[item.id].mobile} alt="" fill sizes="(max-width: 640px) 118px, 1px" />
+              </button>
+            ))}
+          </div>
+          {settings.showProgress ? <>
+            <span className={`${styles.categoryProgress} ${styles.categoryProgressTop}${settings.desktopProgressPosition === "bottom" ? ` ${styles.desktopProgressOff}` : ""}${settings.mobileProgressPosition === "bottom" ? ` ${styles.mobileProgressOff}` : ""}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
+            <span className={`${styles.categoryProgress} ${styles.categoryProgressBottom}${settings.desktopProgressPosition === "top" ? ` ${styles.desktopProgressOff}` : ""}${settings.mobileProgressPosition === "top" ? ` ${styles.mobileProgressOff}` : ""}`} aria-hidden="true"><i style={{ width: `${categoryProgress}%` }} /></span>
+          </> : null}
+        </div>
+
+        <div className={`${styles.contentGrid}${settings.lowerDesktop.layout === "grid" ? ` ${styles.desktopGrid}` : ""}${settings.lowerMobile.layout === "grid" ? ` ${styles.mobileGrid}` : ""}`}>
+            <div className={styles.sectionHeading}>
+              <div className={styles.desktopLowerHeading} style={{ display: settings.lowerDesktop.showHeading ? undefined : "none" }}><span>{settings.lowerDesktop.headingEyebrow}</span><h2>{settings.lowerDesktop.headingTitle}</h2></div>
+              <div className={styles.mobileLowerHeading} style={{ display: settings.lowerMobile.showHeading ? undefined : "none" }}><span>{settings.lowerMobile.headingEyebrow}</span><h2>{settings.lowerMobile.headingTitle}</h2></div>
+            </div>
+            <div className={styles.cardsViewport}>
+              <button className={`${styles.sideArrow} ${styles.sideArrowLeft}${!settings.lowerDesktop.arrowsVisible || !settings.lowerDesktop.leftArrowVisible ? ` ${styles.desktopArrowOff}` : ""}${!settings.lowerMobile.arrowsVisible || !settings.lowerMobile.leftArrowVisible ? ` ${styles.mobileArrowOff}` : ""}`} type="button" aria-label="Ã–nceki baÄŸÄ±ÅŸ projeleri" onClick={() => moveCards(-1)}><span className={styles.desktopArrowSymbol}>{arrowSymbols[settings.lowerDesktop.arrowIcon][0]}</span><span className={styles.mobileArrowSymbol}>{arrowSymbols[settings.lowerMobile.arrowIcon][0]}</span></button>
+              <div className={styles.cards} ref={cardsRef}>
+              {filtered.map((project) => {
+                const picked = selected[project.id] ?? project.suggested[0];
+                const sharedDesign = (projectDesign: typeof project.desktop, common: typeof settings.lowerDesktop) => projectDesign.useSharedDesign ? {
+                  ...projectDesign,
+                  cardWidth: common.cardWidth,
+                  cardPadding: common.cardPadding,
+                  cardBackground: common.cardBackground,
+                  cardRadius: common.cardRadius,
+                  cardBorderColor: common.cardBorderColor,
+                  cardBorderWidth: common.cardBorderWidth,
+                  imageHeight: common.imageHeight,
+                  imageRadius: common.imageRadius,
+                  titleColor: common.titleColor,
+                  titleSize: common.titleSize,
+                  titleWeight: common.titleWeight,
+                  descriptionColor: common.descriptionColor,
+                  descriptionSize: common.descriptionSize,
+                } : projectDesign;
+                const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
+                const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
+                return (
+                  <article className={`${styles.card}${effectiveCategory === "all" && project.showInAllDesktop === false ? ` ${styles.allDesktopHidden}` : ""}${effectiveCategory === "all" && project.showInAllMobile === false ? ` ${styles.allMobileHidden}` : ""}`} key={project.id} style={{
+                    "--dm-all-desktop-order": project.allOrderDesktop ?? 0,
+                    "--dm-all-mobile-order": project.allOrderMobile ?? 0,
+                    "--dm-lower-desktop-card-width": `${desktopDesign.cardWidth}px`,
+                    "--dm-lower-mobile-card-width": `${mobileDesign.cardWidth}px`,
+                    "--dm-lower-desktop-card-padding": `${desktopDesign.cardPadding}px`,
+                    "--dm-lower-mobile-card-padding": `${mobileDesign.cardPadding}px`,
+                    "--dm-lower-desktop-card-bg": desktopDesign.cardBackground,
+                    "--dm-lower-mobile-card-bg": mobileDesign.cardBackground,
+                    "--dm-lower-desktop-card-radius": `${desktopDesign.cardRadius}px`,
+                    "--dm-lower-mobile-card-radius": `${mobileDesign.cardRadius}px`,
+                    "--dm-lower-desktop-border": `${desktopDesign.cardBorderWidth}px solid ${desktopDesign.cardBorderColor}`,
+                    "--dm-lower-mobile-border": `${mobileDesign.cardBorderWidth}px solid ${mobileDesign.cardBorderColor}`,
+                    "--dm-lower-desktop-image-height": `${desktopDesign.useSharedImageDesign !== false ? settings.lowerDesktop.imageHeight : desktopDesign.imageHeight}px`,
+                    "--dm-lower-mobile-image-height": `${mobileDesign.useSharedImageDesign !== false ? settings.lowerMobile.imageHeight : mobileDesign.imageHeight}px`,
+                    "--dm-lower-desktop-image-display": desktopDesign.imageVisible === false ? "none" : "block",
+                    "--dm-lower-mobile-image-display": mobileDesign.imageVisible === false ? "none" : "block",
+                    "--dm-lower-desktop-image-fit": desktopDesign.useSharedImageDesign !== false ? settings.lowerDesktop.imageFit : desktopDesign.imageFit || "cover",
+                    "--dm-lower-mobile-image-fit": mobileDesign.useSharedImageDesign !== false ? settings.lowerMobile.imageFit : mobileDesign.imageFit || "cover",
+                    "--dm-lower-desktop-title-color": desktopDesign.titleColor,
+                    "--dm-lower-mobile-title-color": mobileDesign.titleColor,
+                    "--dm-lower-desktop-title-size": `${desktopDesign.titleSize}px`,
+                    "--dm-lower-mobile-title-size": `${mobileDesign.titleSize}px`,
+                    "--dm-lower-desktop-title-weight": desktopDesign.titleWeight,
+                    "--dm-lower-mobile-title-weight": mobileDesign.titleWeight,
+                    "--dm-lower-desktop-description-color": desktopDesign.descriptionColor,
+                    "--dm-lower-mobile-description-color": mobileDesign.descriptionColor,
+                    "--dm-lower-desktop-description-size": `${desktopDesign.descriptionSize}px`,
+                    "--dm-lower-mobile-description-size": `${mobileDesign.descriptionSize}px`,
+                    "--dm-lower-desktop-choice-height": `${desktopDesign.priceButtonHeight}px`,
+                    "--dm-lower-mobile-choice-height": `${mobileDesign.priceButtonHeight}px`,
+                    "--dm-lower-desktop-choice-radius": `${desktopDesign.priceButtonRadius}px`,
+                    "--dm-lower-mobile-choice-radius": `${mobileDesign.priceButtonRadius}px`,
+                    "--dm-lower-desktop-choice-bg": desktopDesign.priceBackground,
+                    "--dm-lower-mobile-choice-bg": mobileDesign.priceBackground,
+                    "--dm-lower-desktop-choice-color": desktopDesign.priceTextColor,
+                    "--dm-lower-mobile-choice-color": mobileDesign.priceTextColor,
+                    "--dm-lower-desktop-selected-bg": desktopDesign.selectedPriceBackground,
+                    "--dm-lower-mobile-selected-bg": mobileDesign.selectedPriceBackground,
+                    "--dm-lower-desktop-selected-color": desktopDesign.selectedPriceTextColor,
+                    "--dm-lower-mobile-selected-color": mobileDesign.selectedPriceTextColor,
+                    "--dm-lower-desktop-action-bg": desktopDesign.actionBackground,
+                    "--dm-lower-mobile-action-bg": mobileDesign.actionBackground,
+                    "--dm-lower-desktop-action-color": desktopDesign.actionTextColor,
+                    "--dm-lower-mobile-action-color": mobileDesign.actionTextColor,
+                    "--dm-lower-desktop-action-height": `${desktopDesign.actionHeight}px`,
+                    "--dm-lower-mobile-action-height": `${mobileDesign.actionHeight}px`,
+                    "--dm-lower-desktop-action-radius": `${desktopDesign.actionRadius}px`,
+                    "--dm-lower-mobile-action-radius": `${mobileDesign.actionRadius}px`,
+                  } as CSSProperties}>
+                    <CardMedia media={project.desktopMedia || []} fallback={project.image} className={styles.desktopCardMedia} />
+                    <CardMedia media={project.mobileMedia || []} fallback={project.image} className={styles.mobileCardMedia} />
+                    <div className={styles.cardBody}>
+                      <h3>{project.title}</h3>
+                      <p>{project.description}</p>
+                      <small>{project.pricingMode === "quantity" ? "Hisse adedi" : "BaÄŸÄ±ÅŸ tutarÄ±"}</small>
+                      <div className={styles.choices}>
+                        {project.suggested.map((amount) => (
+                          <button className={picked === amount ? styles.selectedChoice : ""} key={amount} onClick={() => setSelected((state) => ({ ...state, [project.id]: amount }))}>
+                            {project.pricingMode === "quantity" ? amount : money.format(amount)}
+                          </button>
+                        ))}
+                      </div>
+                      <div className={styles.cardAction}>
+                        <label>
+                          <span>{project.pricingMode === "quantity" ? money.format(project.fixedPrice * picked) : "â‚º"}</span>
+                          {project.pricingMode === "amount" && project.customAmountEnabled && <input inputMode="numeric" value={custom[project.id] || ""} onChange={(event) => setCustom((state) => ({ ...state, [project.id]: event.target.value.replace(/[^\d,]/g, "") }))} placeholder="BaÅŸka tutar" />}
+                        </label>
+                        <button onClick={() => addToCart(project)}><span className={styles.desktopActionText}>{desktopDesign.actionText}</span><span className={styles.mobileActionText}>{mobileDesign.actionText}</span> <b>+</b></button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+              </div>
+              <button className={`${styles.sideArrow} ${styles.sideArrowRight}${!settings.lowerDesktop.arrowsVisible || !settings.lowerDesktop.rightArrowVisible ? ` ${styles.desktopArrowOff}` : ""}${!settings.lowerMobile.arrowsVisible || !settings.lowerMobile.rightArrowVisible ? ` ${styles.mobileArrowOff}` : ""}`} type="button" aria-label="Sonraki baÄŸÄ±ÅŸ projeleri" onClick={() => moveCards(1)}><span className={styles.desktopArrowSymbol}>{arrowSymbols[settings.lowerDesktop.arrowIcon][1]}</span><span className={styles.mobileArrowSymbol}>{arrowSymbols[settings.lowerMobile.arrowIcon][1]}</span></button>
+            </div>
+        </div>
+      </section>
+      {notice && <div className={styles.toast}>{notice}</div>}
+    </section>
+  );
+}
