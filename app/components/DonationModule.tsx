@@ -3,11 +3,60 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
 import { defaultModuleSettings, type DonationCategory, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Device = "desktop" | "mobile";
+type CardMediaPreferences = {
+  mediaThumbnailsVisible?: boolean;
+  mediaThumbnailSize?: number;
+  mediaThumbnailGap?: number;
+  mediaThumbnailRadius?: number;
+  mediaThumbnailBottom?: number;
+  videoModalWidth?: number;
+  videoModalRadius?: number;
+  videoModalBackdropOpacity?: number;
+};
+type ResolvedCardMediaPreferences = {
+  thumbnailsVisible: boolean;
+  thumbnailSize: number;
+  thumbnailGap: number;
+  thumbnailRadius: number;
+  thumbnailBottom: number;
+  modalWidth: number;
+  modalRadius: number;
+  modalBackdropOpacity: number;
+};
+type VideoModalState = {
+  src: string;
+  poster?: string;
+  title: string;
+  preferences: ResolvedCardMediaPreferences;
+};
+
+const numberSetting = (value: unknown, fallback: number, min: number, max: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+};
+
+function resolveCardMediaPreferences(
+  projectDesign: CardMediaPreferences & { useSharedImageDesign?: boolean },
+  sharedDesign: CardMediaPreferences,
+): ResolvedCardMediaPreferences {
+  const source = projectDesign.useSharedImageDesign !== false ? sharedDesign : projectDesign;
+  return {
+    thumbnailsVisible: source.mediaThumbnailsVisible !== false,
+    thumbnailSize: numberSetting(source.mediaThumbnailSize, 54, 24, 160),
+    thumbnailGap: numberSetting(source.mediaThumbnailGap, 8, 0, 40),
+    thumbnailRadius: numberSetting(source.mediaThumbnailRadius, 8, 0, 40),
+    thumbnailBottom: numberSetting(source.mediaThumbnailBottom, 10, 0, 80),
+    modalWidth: numberSetting(source.videoModalWidth, 960, 280, 1800),
+    modalRadius: numberSetting(source.videoModalRadius, 18, 0, 60),
+    modalBackdropOpacity: numberSetting(source.videoModalBackdropOpacity, 84, 0, 100),
+  };
+}
 
 function CategoryImage({ category, src, className, sizes }: { category: DonationCategory; src: string; className: string; sizes: string }) {
   const alt = category.imageAlt;
@@ -28,25 +77,134 @@ function CategoryImage({ category, src, className, sizes }: { category: Donation
   return <Image className={className} src={src} alt={alt} title={title} fill sizes={sizes} />;
 }
 
-function CardMedia({ media, fallback, className }: { media: DonationProjectMedia[]; fallback: string; className: string }) {
-  const items = media.length ? media : [{ id: "fallback", type: "image" as const, url: fallback }];
+function BrokenMediaMarker({ className = "" }: { className?: string }) {
+  return (
+    // A native image intentionally preserves the browser's broken-image marker.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className={`${styles.cardMediaBroken}${className ? ` ${className}` : ""}`} src="/__missing-donation-project-media__.png" alt="" aria-hidden="true" />
+  );
+}
+
+function CardMedia({
+  media,
+  title,
+  preferences,
+  imageHeight,
+  imageRadius,
+  imageFit,
+  visible,
+  onOpenVideo,
+}: {
+  media: DonationProjectMedia[];
+  title: string;
+  preferences: ResolvedCardMediaPreferences;
+  imageHeight: number;
+  imageRadius: number;
+  imageFit: "cover" | "contain";
+  visible: boolean;
+  onOpenVideo: (media: DonationProjectMedia, trigger: HTMLButtonElement) => void;
+}) {
   const [active, setActive] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const startX = useRef(0);
-  const current = items[Math.min(active, items.length - 1)];
-  const select = (index: number) => { setActive(index); setPlaying(false); };
-  return <div className={`${styles.cardMedia} ${className}`} onPointerDown={(event) => { startX.current = event.clientX; }} onPointerUp={(event) => {
-    const distance = event.clientX - startX.current;
-    if (Math.abs(distance) < 35) return;
-    select(Math.max(0, Math.min(items.length - 1, active + (distance < 0 ? 1 : -1))));
-  }}>
-    <div className={styles.cardMediaMain}>
-      {current.type === "video" && playing
-        ? <video src={current.url} poster={current.poster} controls autoPlay playsInline preload="none" />
-        : <div className={styles.cardMediaCover} role={current.type === "video" ? "button" : undefined} tabIndex={current.type === "video" ? 0 : undefined} style={{ backgroundImage: `url("${current.type === "video" ? current.poster || fallback : current.url}")` }} onClick={() => current.type === "video" && setPlaying(true)} onKeyDown={(event) => { if (current.type === "video" && (event.key === "Enter" || event.key === " ")) setPlaying(true); }}>{current.type === "video" ? <i>▶</i> : null}</div>}
+  const pointerStart = useRef<{ x: number; y: number; id: number; captured: boolean } | null>(null);
+  const swiped = useRef(false);
+  const currentIndex = media.length ? Math.min(active, media.length - 1) : 0;
+  const current = media[currentIndex];
+  const select = (index: number) => setActive(Math.max(0, Math.min(media.length - 1, index)));
+  const thumbnailSize = Math.min(preferences.thumbnailSize, Math.max(32, imageHeight - 30));
+  const thumbnailHeight = Math.min(Math.max(24, Math.round(thumbnailSize * .72)), Math.max(24, imageHeight - 20));
+
+  if (!visible) return null;
+
+  return (
+    <div
+      className={styles.cardMedia}
+      style={{
+        "--dm-card-media-display": "block",
+        "--dm-card-media-height": `${imageHeight}px`,
+        "--dm-card-media-radius": `${imageRadius}px`,
+        "--dm-card-media-fit": imageFit,
+        "--dm-media-thumb-size": `${thumbnailSize}px`,
+        "--dm-media-thumb-height": `${thumbnailHeight}px`,
+        "--dm-media-thumb-gap": `${preferences.thumbnailGap}px`,
+        "--dm-media-thumb-radius": `${preferences.thumbnailRadius}px`,
+        "--dm-media-thumb-bottom": `${preferences.thumbnailBottom}px`,
+      } as CSSProperties}
+    >
+      <div
+        className={styles.cardMediaMain}
+        onPointerDown={(event) => {
+          if (!event.isPrimary) return;
+          if ((event.target as HTMLElement).closest("[data-media-thumbnails='true']")) return;
+          pointerStart.current = { x: event.clientX, y: event.clientY, id: event.pointerId, captured: false };
+          swiped.current = false;
+        }}
+        onPointerMove={(event) => {
+          const start = pointerStart.current;
+          if (!start || start.id !== event.pointerId || start.captured) return;
+          const distanceX = event.clientX - start.x;
+          const distanceY = event.clientY - start.y;
+          if (Math.abs(distanceX) < 8 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+          start.captured = true;
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+        }}
+        onPointerUp={(event) => {
+          const start = pointerStart.current;
+          pointerStart.current = null;
+          if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          if (!start || start.id !== event.pointerId || media.length < 2) return;
+          const distanceX = event.clientX - start.x;
+          const distanceY = event.clientY - start.y;
+          if (Math.abs(distanceX) < 35 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+          swiped.current = true;
+          select(currentIndex + (distanceX < 0 ? 1 : -1));
+          window.requestAnimationFrame(() => { swiped.current = false; });
+        }}
+        onPointerCancel={() => {
+          pointerStart.current = null;
+          swiped.current = false;
+        }}
+      >
+        {!current || !current.url ? <BrokenMediaMarker /> : current.type === "image" ? (
+          <Image className={styles.cardMediaImage} src={current.url} alt={current.alt || title} fill sizes="(max-width: 640px) 92vw, (max-width: 1200px) 50vw, 700px" draggable={false} />
+        ) : (
+          <>
+            {current.poster ? <Image className={styles.cardMediaImage} src={current.poster} alt="" fill sizes="(max-width: 640px) 92vw, (max-width: 1200px) 50vw, 700px" draggable={false} /> : <BrokenMediaMarker />}
+            <button
+              className={styles.cardMediaPlay}
+              type="button"
+              aria-label={`${title} videosunu oynat`}
+              onClick={(event) => {
+                if (swiped.current) return;
+                onOpenVideo(current, event.currentTarget);
+              }}
+            >
+              <span aria-hidden="true">▶</span>
+            </button>
+          </>
+        )}
+        {preferences.thumbnailsVisible && media.length > 1 ? (
+          <div className={styles.cardMediaThumbs} role="group" data-media-thumbnails="true" aria-label={`${title} medya galerisi`}>
+            {media.map((item, index) => {
+              const thumbnail = item.type === "video" ? item.poster : item.url;
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={index === currentIndex ? styles.activeMediaThumb : ""}
+                  onClick={() => select(index)}
+                  aria-label={`${index + 1}. medyayı göster${item.type === "video" ? " (video)" : ""}`}
+                  aria-current={index === currentIndex ? "true" : undefined}
+                >
+                  {thumbnail ? <Image src={thumbnail} alt="" fill sizes={`${preferences.thumbnailSize}px`} draggable={false} /> : <BrokenMediaMarker />}
+                  {item.type === "video" ? <i aria-hidden="true">▶</i> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
     </div>
-    {items.length > 1 ? <div className={styles.cardMediaThumbs}>{items.map((item, index) => <button type="button" key={item.id} className={index === active ? styles.activeMediaThumb : ""} onClick={() => select(index)} aria-label={`${index + 1}. medyayı göster`} style={{ backgroundImage: `url("${item.type === "video" ? item.poster || fallback : item.url}")` }}>{item.type === "video" ? <i>▶</i> : null}</button>)}</div> : null}
-  </div>;
+  );
 }
 
 const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
@@ -89,6 +247,10 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [videoModal, setVideoModal] = useState<VideoModalState | null>(null);
+  const videoModalPanelRef = useRef<HTMLDivElement>(null);
+  const videoModalCloseRef = useRef<HTMLButtonElement>(null);
+  const videoModalTriggerRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useSyncExternalStore(
     subscribeToMobileViewport,
     getMobileViewportSnapshot,
@@ -99,6 +261,59 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     const frame = window.requestAnimationFrame(() => setCategory(previewCategory));
     return () => window.cancelAnimationFrame(frame);
   }, [previewCategory]);
+  useEffect(() => {
+    if (!videoModal) return;
+
+    const body = document.body;
+    const root = document.documentElement;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const originalBody = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+      paddingRight: body.style.paddingRight,
+    };
+    const originalRootOverflow = root.style.overflow;
+    const scrollbarWidth = Math.max(0, window.innerWidth - root.clientWidth);
+    const bodyPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setVideoModal(null);
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = `-${scrollX}px`;
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    if (scrollbarWidth) body.style.paddingRight = `${bodyPaddingRight + scrollbarWidth}px`;
+    root.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    window.requestAnimationFrame(() => videoModalCloseRef.current?.focus({ preventScroll: true }));
+
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      body.style.position = originalBody.position;
+      body.style.top = originalBody.top;
+      body.style.left = originalBody.left;
+      body.style.right = originalBody.right;
+      body.style.width = originalBody.width;
+      body.style.overflow = originalBody.overflow;
+      body.style.paddingRight = originalBody.paddingRight;
+      root.style.overflow = originalRootOverflow;
+      const originalScrollBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      window.scrollTo(scrollX, scrollY);
+      root.style.scrollBehavior = originalScrollBehavior;
+      window.requestAnimationFrame(() => {
+        if (videoModalTriggerRef.current?.isConnected) videoModalTriggerRef.current.focus({ preventScroll: true });
+      });
+    };
+  }, [videoModal]);
   const activeDevice: Device = previewDevice || (isMobileViewport ? "mobile" : "desktop");
   const categories = settings.categories;
   const legacyVisibleCategories = settings.visibleCategories || categories.map((item) => item.id);
@@ -237,6 +452,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const mobileBottomSpace = settings.mobileProgressPosition === "top" ? 0 : settings.mobileProgressGap + settings.mobileProgressThickness + mobileExtraSide;
 
   return (
+    <>
     <section
       className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}${previewDevice === "mobile" ? ` ${styles.forceMobile}` : ""}`}
       style={{
@@ -483,6 +699,14 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                 } : projectDesign;
                 const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
                 const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
+                const activeProjectDesign = activeDevice === "mobile" ? project.mobile : project.desktop;
+                const activeSharedDesign = activeDevice === "mobile" ? settings.lowerMobile : settings.lowerDesktop;
+                const activeImageDesign = activeProjectDesign.useSharedImageDesign !== false ? activeSharedDesign : activeProjectDesign;
+                const activeMedia = activeDevice === "mobile" ? project.mobileMedia || [] : project.desktopMedia || [];
+                const mediaPreferences = resolveCardMediaPreferences(
+                  activeProjectDesign as CardMediaPreferences & { useSharedImageDesign?: boolean },
+                  activeSharedDesign as CardMediaPreferences,
+                );
                 return (
                   <article className={`${styles.card}${isAllCategory && project.showInAllDesktop === false ? ` ${styles.allDesktopHidden}` : ""}${isAllCategory && project.showInAllMobile === false ? ` ${styles.allMobileHidden}` : ""}`} key={project.id} style={{
                     "--dm-all-desktop-order": project.allOrderDesktop ?? 0,
@@ -534,8 +758,25 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     "--dm-lower-desktop-action-radius": `${desktopDesign.actionRadius}px`,
                     "--dm-lower-mobile-action-radius": `${mobileDesign.actionRadius}px`,
                   } as CSSProperties}>
-                    <CardMedia media={project.desktopMedia || []} fallback={project.image} className={styles.desktopCardMedia} />
-                    <CardMedia media={project.mobileMedia || []} fallback={project.image} className={styles.mobileCardMedia} />
+                    <CardMedia
+                      key={`${project.id}:${activeDevice}`}
+                      media={activeMedia}
+                      title={project.title}
+                      preferences={mediaPreferences}
+                      imageHeight={numberSetting(activeImageDesign.imageHeight, activeDevice === "mobile" ? 205 : 218, 80, 800)}
+                      imageRadius={numberSetting(activeImageDesign.imageRadius, 0, 0, 100)}
+                      imageFit={activeImageDesign.imageFit === "contain" ? "contain" : "cover"}
+                      visible={activeProjectDesign.imageVisible !== false}
+                      onOpenVideo={(media, trigger) => {
+                        videoModalTriggerRef.current = trigger;
+                        setVideoModal({
+                          src: media.url,
+                          poster: media.poster,
+                          title: media.alt || `${project.title} videosu`,
+                          preferences: mediaPreferences,
+                        });
+                      }}
+                    />
                     <div className={styles.cardBody}>
                       <h3>{project.title}</h3>
                       <p>{project.description}</p>
@@ -565,5 +806,47 @@ export default function DonationModule({ embedded = false, settings = defaultMod
       </section>
       {notice && <div className={styles.toast}>{notice}</div>}
     </section>
+    {videoModal && typeof document !== "undefined" ? createPortal(
+      <div
+        className={styles.videoModalBackdrop}
+        style={{
+          "--dm-video-modal-width": `${videoModal.preferences.modalWidth}px`,
+          "--dm-video-modal-radius": `${videoModal.preferences.modalRadius}px`,
+          "--dm-video-modal-backdrop": `rgba(4, 18, 15, ${videoModal.preferences.modalBackdropOpacity / 100})`,
+        } as CSSProperties}
+        onPointerDown={(event) => {
+          if (event.target === event.currentTarget) setVideoModal(null);
+        }}
+      >
+        <div
+          className={styles.videoModal}
+          ref={videoModalPanelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="donation-video-modal-title"
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") return;
+            const focusable = [...(videoModalPanelRef.current?.querySelectorAll<HTMLElement>("button, video[controls], [href], [tabindex]:not([tabindex='-1'])") || [])]
+              .filter((element) => !element.hasAttribute("disabled"));
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }}
+        >
+          <h2 id="donation-video-modal-title" className={styles.videoModalTitle}>{videoModal.title}</h2>
+          <button ref={videoModalCloseRef} className={styles.videoModalClose} type="button" aria-label="Videoyu kapat" onClick={() => setVideoModal(null)}>×</button>
+          <video key={videoModal.src} src={videoModal.src} poster={videoModal.poster} controls autoPlay playsInline preload="none" />
+        </div>
+      </div>,
+      document.body,
+    ) : null}
+    </>
   );
 }
