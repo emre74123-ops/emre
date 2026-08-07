@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
-import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type ModuleSettings } from "../../../../lib/module-settings";
+import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type DonationProjectDesign, type ModuleSettings } from "../../../../lib/module-settings";
 import { readModuleSettings, writeModuleSettings } from "../../../../lib/module-storage";
 
 async function isAdmin() {
@@ -21,6 +21,14 @@ const choice = <T extends string>(value: unknown, allowed: readonly T[], fallbac
 const text = (value: unknown, fallback: string, max = 80) => {
   const result = String(value ?? "").trim().slice(0, max);
   return result || fallback;
+};
+const optionalPositiveInteger = (value: unknown, max: number) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? Math.min(max, number) : undefined;
+};
+const optionalFileName = (value: unknown) => {
+  const result = String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 180);
+  return result || undefined;
 };
 
 function cleanLower(source: Record<string, unknown> | undefined, defaults: typeof defaultModuleSettings.donation.lowerDesktop) {
@@ -49,6 +57,19 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
     imageHeight: clamp(input.imageHeight, 80, 500, defaults.imageHeight),
     imageRadius: clamp(input.imageRadius, 0, 60, defaults.imageRadius),
     imageFit: choice(input.imageFit, ["cover", "contain"], defaults.imageFit),
+    mediaThumbnailsVisible: input.mediaThumbnailsVisible !== false,
+    mediaThumbnailSize: clamp(input.mediaThumbnailSize, 24, 160, defaults.mediaThumbnailSize),
+    mediaThumbnailGap: clamp(input.mediaThumbnailGap, 0, 40, defaults.mediaThumbnailGap),
+    mediaThumbnailRadius: clamp(input.mediaThumbnailRadius, 0, 40, defaults.mediaThumbnailRadius),
+    mediaThumbnailBottom: clamp(input.mediaThumbnailBottom, 0, 80, defaults.mediaThumbnailBottom),
+    videoModalWidth: clamp(input.videoModalWidth, 280, 1800, defaults.videoModalWidth),
+    videoModalRadius: clamp(input.videoModalRadius, 0, 60, defaults.videoModalRadius),
+    videoModalBackdropOpacity: clamp(
+      input.videoModalBackdropOpacity,
+      0,
+      100,
+      defaults.videoModalBackdropOpacity,
+    ),
     titleSize: clamp(input.titleSize, 12, 48, defaults.titleSize),
     titleColor: color(input.titleColor, defaults.titleColor),
     titleWeight: clamp(input.titleWeight, 300, 900, defaults.titleWeight),
@@ -83,6 +104,28 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
     arrowBorderWidth: clamp(input.arrowBorderWidth, 0, 6, defaults.arrowBorderWidth),
     arrowBorderColor: color(input.arrowBorderColor, defaults.arrowBorderColor),
     arrowShadow: choice(input.arrowShadow, ["none", "soft", "medium", "strong"], defaults.arrowShadow),
+  };
+}
+
+function cleanProjectDesign(source: DonationProjectDesign, defaults: DonationProjectDesign): DonationProjectDesign {
+  return {
+    ...source,
+    useSharedImageDesign: source.useSharedImageDesign !== false,
+    imageVisible: source.imageVisible !== false,
+    imageFit: choice(source.imageFit, ["cover", "contain"] as const, "cover"),
+    mediaThumbnailsVisible: source.mediaThumbnailsVisible !== false,
+    mediaThumbnailSize: clamp(source.mediaThumbnailSize, 24, 160, defaults.mediaThumbnailSize),
+    mediaThumbnailGap: clamp(source.mediaThumbnailGap, 0, 40, defaults.mediaThumbnailGap),
+    mediaThumbnailRadius: clamp(source.mediaThumbnailRadius, 0, 40, defaults.mediaThumbnailRadius),
+    mediaThumbnailBottom: clamp(source.mediaThumbnailBottom, 0, 80, defaults.mediaThumbnailBottom),
+    videoModalWidth: clamp(source.videoModalWidth, 280, 1800, defaults.videoModalWidth),
+    videoModalRadius: clamp(source.videoModalRadius, 0, 60, defaults.videoModalRadius),
+    videoModalBackdropOpacity: clamp(
+      source.videoModalBackdropOpacity,
+      0,
+      100,
+      defaults.videoModalBackdropOpacity,
+    ),
   };
 }
 
@@ -227,8 +270,16 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
           type: choice(media.type, ["image", "video"], "image"),
           url: String(media.url || "").slice(0, 1000),
           path: String(media.path || "").slice(0, 500),
+          width: optionalPositiveInteger(media.width, 8192),
+          height: optionalPositiveInteger(media.height, 8192),
+          size: optionalPositiveInteger(media.size, 150 * 1024 * 1024),
+          originalName: optionalFileName(media.originalName),
           poster: String(media.poster || "").slice(0, 1000),
           posterPath: String(media.posterPath || "").slice(0, 500),
+          posterWidth: optionalPositiveInteger(media.posterWidth, 8192),
+          posterHeight: optionalPositiveInteger(media.posterHeight, 8192),
+          posterSize: optionalPositiveInteger(media.posterSize, 5 * 1024 * 1024),
+          posterOriginalName: optionalFileName(media.posterOriginalName),
           alt: String(media.alt || "").slice(0, 160),
         })).filter((media) => media.url),
         mobileMedia: (project.mobileMedia || []).slice(0, 20).map((media) => ({
@@ -236,22 +287,20 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
           type: choice(media.type, ["image", "video"], "image"),
           url: String(media.url || "").slice(0, 1000),
           path: String(media.path || "").slice(0, 500),
+          width: optionalPositiveInteger(media.width, 8192),
+          height: optionalPositiveInteger(media.height, 8192),
+          size: optionalPositiveInteger(media.size, 150 * 1024 * 1024),
+          originalName: optionalFileName(media.originalName),
           poster: String(media.poster || "").slice(0, 1000),
           posterPath: String(media.posterPath || "").slice(0, 500),
+          posterWidth: optionalPositiveInteger(media.posterWidth, 8192),
+          posterHeight: optionalPositiveInteger(media.posterHeight, 8192),
+          posterSize: optionalPositiveInteger(media.posterSize, 5 * 1024 * 1024),
+          posterOriginalName: optionalFileName(media.posterOriginalName),
           alt: String(media.alt || "").slice(0, 160),
         })).filter((media) => media.url),
-        desktop: {
-          ...project.desktop,
-          useSharedImageDesign: project.desktop.useSharedImageDesign !== false,
-          imageVisible: project.desktop.imageVisible !== false,
-          imageFit: choice(project.desktop.imageFit, ["cover", "contain"] as const, "cover"),
-        },
-        mobile: {
-          ...project.mobile,
-          useSharedImageDesign: project.mobile.useSharedImageDesign !== false,
-          imageVisible: project.mobile.imageVisible !== false,
-          imageFit: choice(project.mobile.imageFit, ["cover", "contain"] as const, "cover"),
-        },
+        desktop: cleanProjectDesign(project.desktop, defaultModuleSettings.donation.projects[0].desktop),
+        mobile: cleanProjectDesign(project.mobile, defaultModuleSettings.donation.projects[0].mobile),
       })),
       lowerDesktop: cleanLower(source.lowerDesktop as unknown as Record<string, unknown>, defaultModuleSettings.donation.lowerDesktop),
       lowerMobile: cleanLower(source.lowerMobile as unknown as Record<string, unknown>, defaultModuleSettings.donation.lowerMobile),
