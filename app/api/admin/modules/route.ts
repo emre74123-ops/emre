@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
-import { defaultDonationCategoryImages, defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type ModuleSettings } from "../../../../lib/module-settings";
+import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type ModuleSettings } from "../../../../lib/module-settings";
 import { readModuleSettings, writeModuleSettings } from "../../../../lib/module-storage";
 
 async function isAdmin() {
@@ -88,12 +88,32 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
 
 function clean(input: Partial<ModuleSettings>): ModuleSettings {
   const source = normalizeModuleSettings(input).donation;
-  const categoryIds = donationCategoryOptions.map(([id]) => id);
-  type CategoryId = (typeof categoryIds)[number];
+  const usedCategoryIds = new Set<string>();
+  const categories = source.categories.slice(0, 100).map((category, index): DonationCategory => {
+    const baseId = normalizeDonationCategoryId(category.id, `kategori-${index + 1}`);
+    let id = baseId;
+    let suffix = 2;
+    while (usedCategoryIds.has(id)) {
+      id = `${baseId.slice(0, Math.max(1, 63 - String(suffix).length))}-${suffix}`;
+      suffix += 1;
+    }
+    usedCategoryIds.add(id);
+    const label = text(category.label, "Yeni kategori", 100);
+    return {
+      id,
+      label,
+      description: String(category.description || "").trim().slice(0, 300),
+      imageTitle: String(category.imageTitle || "").trim().slice(0, 140),
+      imageAlt: String(category.imageAlt || "").trim().slice(0, 180),
+    };
+  });
+  const categoryIds = categories.map((category) => category.id);
   const validIds = new Set<string>(categoryIds);
-  const cleanCategorySubset = (value: unknown, fallback: readonly CategoryId[]) => {
+  const cleanCategorySubset = (value: unknown, fallback: readonly string[]) => {
     if (!Array.isArray(value)) return [...fallback];
-    return [...new Set(value.filter((id): id is CategoryId => typeof id === "string" && validIds.has(id)))];
+    return [...new Set(value
+      .map((id) => normalizeDonationCategoryId(id))
+      .filter((id) => id && validIds.has(id)))];
   };
   const cleanCategoryOrder = (value: unknown) => {
     const selected = cleanCategorySubset(value, []);
@@ -116,16 +136,19 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
   const visibleCategories = categoryIds.filter(
     (id) => desktopVisibleCategories.includes(id) || mobileVisibleCategories.includes(id),
   );
-  const categoryImages = Object.fromEntries(donationCategoryOptions.map(([id]) => {
+  const allCategoryId = source.allCategoryId && validIds.has(source.allCategoryId)
+    ? source.allCategoryId
+    : "";
+  const safeUrl = (value: unknown) => {
+    const url = String(value ?? "").trim();
+    if (!url) return "";
+    return (url.startsWith("/") && !url.startsWith("//")) || /^https:\/\/[a-z0-9.-]+(?:[/:?#].*)?$/i.test(url) ? url.slice(0, 1500) : "";
+  };
+  const categoryImages = Object.fromEntries(categories.map(({ id }) => {
     const candidate = source.categoryImages?.[id];
-    const fallback = defaultDonationCategoryImages[id];
-    const safeUrl = (value: unknown, defaultValue: string) => {
-      const url = String(value || "");
-      return url.startsWith("/") || /^https:\/\/[a-z0-9.-]+\/.+/i.test(url) ? url : defaultValue;
-    };
     return [id, {
-      desktop: safeUrl(candidate?.desktop, fallback.desktop),
-      mobile: safeUrl(candidate?.mobile, fallback.mobile),
+      desktop: safeUrl(candidate?.desktop),
+      mobile: safeUrl(candidate?.mobile),
     }];
   }));
   return {
@@ -177,6 +200,8 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       mobileShadow: choice(source.mobileShadow, ["none", "soft", "medium", "strong"], "soft"),
       desktopImageBackgroundColor: color(source.desktopImageBackgroundColor, "#edf6f2"),
       mobileImageBackgroundColor: color(source.mobileImageBackgroundColor, "#edf6f2"),
+      categories,
+      allCategoryId,
       visibleCategories,
       desktopVisibleCategories,
       mobileVisibleCategories,
@@ -187,6 +212,7 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       projects: source.projects.slice(0, 100).map((project) => ({
         ...project,
         id: text(project.id, `project-${Date.now()}`, 80).replace(/[^a-z0-9-]/gi, "-").toLowerCase(),
+        category: normalizeDonationCategoryId(project.category),
         title: text(project.title, "Yeni bağış", 100),
         description: String(project.description || "").slice(0, 500),
         badge: String(project.badge || "").slice(0, 60),

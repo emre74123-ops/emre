@@ -1,4 +1,12 @@
-export type DonationCategoryId = "all" | "general" | "qurban" | "water" | "zakat" | "orphan";
+export type DonationCategoryId = string;
+
+export type DonationCategory = {
+  id: DonationCategoryId;
+  label: string;
+  description: string;
+  imageTitle: string;
+  imageAlt: string;
+};
 
 export type DonationModuleSettings = {
   enabled: boolean;
@@ -48,6 +56,8 @@ export type DonationModuleSettings = {
   mobileShadow: "none" | "soft" | "medium" | "strong";
   desktopImageBackgroundColor: string;
   mobileImageBackgroundColor: string;
+  categories: DonationCategory[];
+  allCategoryId: DonationCategoryId;
   visibleCategories: DonationCategoryId[];
   desktopVisibleCategories: DonationCategoryId[];
   mobileVisibleCategories: DonationCategoryId[];
@@ -62,7 +72,7 @@ export type DonationModuleSettings = {
 
 export type DonationProject = {
   id: string;
-  category: "general" | "qurban" | "water" | "zakat" | "orphan";
+  category: DonationCategoryId;
   enabled: boolean;
   showInAllDesktop?: boolean;
   showInAllMobile?: boolean;
@@ -196,17 +206,59 @@ export const donationCategoryOptions = [
   ["orphan", "Yetim Desteği"],
 ] as const;
 
-const donationCategoryIds = donationCategoryOptions.map(([id]) => id);
+export const defaultDonationCategories: DonationCategory[] = donationCategoryOptions.map(([id, label]) => ({
+  id,
+  label,
+  description: "",
+  imageTitle: label,
+  imageAlt: `${label} bağış kategorisi`,
+}));
 
-function normalizeVisibleCategories(value: unknown, fallback: readonly DonationCategoryId[]) {
-  if (!Array.isArray(value)) return [...fallback];
-  const validIds = new Set<string>(donationCategoryIds);
-  return [...new Set(value.filter((id): id is DonationCategoryId => typeof id === "string" && validIds.has(id)))];
+export function normalizeDonationCategoryId(value: unknown, fallback = "") {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+  return normalized || fallback;
 }
 
-function normalizeCategoryOrder(value: unknown) {
-  const selected = normalizeVisibleCategories(value, []);
-  return [...selected, ...donationCategoryIds.filter((id) => !selected.includes(id))];
+function categoryLabelFromId(id: string) {
+  return id
+    .split("-")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toLocaleUpperCase("tr-TR")}${part.slice(1)}`)
+    .join(" ") || "Yeni kategori";
+}
+
+function normalizeCategorySubset(
+  value: unknown,
+  fallback: readonly DonationCategoryId[],
+  validIds: ReadonlySet<string>,
+  remapId: (value: unknown) => string,
+) {
+  if (!Array.isArray(value)) return [...fallback];
+  const normalized = value.map(remapId).filter((id) => id && validIds.has(id));
+  return [...new Set(normalized)];
+}
+
+function normalizeCategoryOrder(
+  value: unknown,
+  categoryIds: readonly DonationCategoryId[],
+  validIds: ReadonlySet<string>,
+  remapId: (value: unknown) => string,
+) {
+  const selected = normalizeCategorySubset(value, [], validIds, remapId);
+  return [...selected, ...categoryIds.filter((id) => !selected.includes(id))];
 }
 
 export const defaultDonationCategoryImages = {
@@ -303,6 +355,8 @@ export const defaultModuleSettings: ModuleSettings = {
     mobileShadow: "soft",
     desktopImageBackgroundColor: "#edf6f2",
     mobileImageBackgroundColor: "#edf6f2",
+    categories: defaultDonationCategories,
+    allCategoryId: "all",
     visibleCategories: donationCategoryOptions.map(([id]) => id),
     desktopVisibleCategories: donationCategoryOptions.map(([id]) => id),
     mobileVisibleCategories: donationCategoryOptions.map(([id]) => id),
@@ -348,32 +402,121 @@ export const defaultModuleSettings: ModuleSettings = {
 
 export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null): ModuleSettings {
   const donation = input?.donation;
-  const legacyVisibleCategories = normalizeVisibleCategories(
+  const hasDynamicCategories = Array.isArray(donation?.categories);
+  const legacyIds = [
+    ...donationCategoryOptions.map(([id]) => id),
+    ...Object.keys(donation?.categoryImages || {}),
+    ...(Array.isArray(donation?.visibleCategories) ? donation.visibleCategories : []),
+    ...(Array.isArray(donation?.desktopVisibleCategories) ? donation.desktopVisibleCategories : []),
+    ...(Array.isArray(donation?.mobileVisibleCategories) ? donation.mobileVisibleCategories : []),
+    ...(Array.isArray(donation?.desktopCategoryOrder) ? donation.desktopCategoryOrder : []),
+    ...(Array.isArray(donation?.mobileCategoryOrder) ? donation.mobileCategoryOrder : []),
+    ...(Array.isArray(donation?.projects) ? donation.projects.map((project) => project.category) : []),
+  ];
+  const legacyCategoryIds = [...new Set(legacyIds.map((id) => normalizeDonationCategoryId(id)).filter(Boolean))];
+  const legacyCategories = legacyCategoryIds.map((id) => {
+    const known = defaultDonationCategories.find((category) => category.id === id);
+    const label = known?.label || categoryLabelFromId(id);
+    return known || { id, label, description: "", imageTitle: label, imageAlt: `${label} bağış kategorisi` };
+  });
+  const rawCategories: unknown[] = hasDynamicCategories ? donation?.categories || [] : legacyCategories;
+  const usedIds = new Set<string>();
+  const idAliases = new Map<string, string>();
+  const categories = rawCategories.slice(0, 100).map((value, index): DonationCategory => {
+    const candidate: { id?: unknown; label?: unknown; description?: unknown; imageTitle?: unknown; imageAlt?: unknown } =
+      value && typeof value === "object" ? value : { id: value };
+    const originalId = String(candidate.id ?? "");
+    const baseId = normalizeDonationCategoryId(originalId, `kategori-${index + 1}`);
+    let id = baseId;
+    let suffix = 2;
+    while (usedIds.has(id)) {
+      id = `${baseId.slice(0, Math.max(1, 63 - String(suffix).length))}-${suffix}`;
+      suffix += 1;
+    }
+    usedIds.add(id);
+    if (originalId && !idAliases.has(originalId)) idAliases.set(originalId, id);
+    if (!idAliases.has(baseId)) idAliases.set(baseId, id);
+    const known = defaultDonationCategories.find((category) => category.id === baseId);
+    const label = String(candidate.label ?? known?.label ?? categoryLabelFromId(id)).trim().slice(0, 100) || categoryLabelFromId(id);
+    return {
+      id,
+      label,
+      description: String(candidate.description ?? known?.description ?? "").trim().slice(0, 300),
+      imageTitle: String(candidate.imageTitle ?? known?.imageTitle ?? label).trim().slice(0, 140),
+      imageAlt: String(candidate.imageAlt ?? known?.imageAlt ?? `${label} bağış kategorisi`).trim().slice(0, 180),
+    };
+  });
+  const categoryIds = categories.map((category) => category.id);
+  const validIds = new Set<string>(categoryIds);
+  const remapId = (value: unknown) => {
+    const original = String(value ?? "");
+    const safeId = normalizeDonationCategoryId(original);
+    return idAliases.get(original) || idAliases.get(safeId) || safeId;
+  };
+  const defaultVisibleCategories = hasDynamicCategories
+    ? categoryIds
+    : normalizeCategorySubset(
+      donation?.visibleCategories,
+      categoryIds,
+      validIds,
+      remapId,
+    );
+  const legacyVisibleCategories = normalizeCategorySubset(
     donation?.visibleCategories,
-    defaultModuleSettings.donation.visibleCategories,
+    defaultVisibleCategories,
+    validIds,
+    remapId,
   );
-  const desktopVisibleCategories = normalizeVisibleCategories(
+  const desktopVisibleCategories = normalizeCategorySubset(
     donation?.desktopVisibleCategories,
     legacyVisibleCategories,
+    validIds,
+    remapId,
   );
-  const mobileVisibleCategories = normalizeVisibleCategories(
+  const mobileVisibleCategories = normalizeCategorySubset(
     donation?.mobileVisibleCategories,
     legacyVisibleCategories,
+    validIds,
+    remapId,
   );
-  const desktopCategoryOrder = normalizeCategoryOrder(donation?.desktopCategoryOrder);
-  const mobileCategoryOrder = normalizeCategoryOrder(donation?.mobileCategoryOrder);
-  const visibleCategories = donationCategoryIds.filter(
+  const desktopCategoryOrder = normalizeCategoryOrder(
+    donation?.desktopCategoryOrder,
+    categoryIds,
+    validIds,
+    remapId,
+  );
+  const mobileCategoryOrder = normalizeCategoryOrder(
+    donation?.mobileCategoryOrder,
+    categoryIds,
+    validIds,
+    remapId,
+  );
+  const visibleCategories = categoryIds.filter(
     (id) => desktopVisibleCategories.includes(id) || mobileVisibleCategories.includes(id),
   );
-  const categoryImages = Object.fromEntries(
-    donationCategoryOptions.map(([id]) => [
-      id,
-      {
-        ...defaultDonationCategoryImages[id],
-        ...(donation?.categoryImages?.[id] || {}),
-      },
-    ]),
-  ) as DonationModuleSettings["categoryImages"];
+  const requestedAllCategoryId = donation && Object.prototype.hasOwnProperty.call(donation, "allCategoryId")
+    ? String(donation.allCategoryId ?? "")
+    : categoryIds.includes("all") ? "all" : "";
+  const remappedAllCategoryId = requestedAllCategoryId ? remapId(requestedAllCategoryId) : "";
+  const allCategoryId = validIds.has(remappedAllCategoryId) ? remappedAllCategoryId : "";
+  const categoryImages: DonationModuleSettings["categoryImages"] = Object.fromEntries(
+    categories.map(({ id }) => {
+      const fallback = defaultDonationCategoryImages[id as keyof typeof defaultDonationCategoryImages];
+      return [id, {
+        desktop: fallback?.desktop || "",
+        mobile: fallback?.mobile || "",
+      }];
+    }),
+  );
+  for (const [originalId, candidate] of Object.entries(donation?.categoryImages || {})) {
+    const id = remapId(originalId);
+    if (!id) continue;
+    const current = categoryImages[id] || { desktop: "", mobile: "" };
+    categoryImages[id] = {
+      desktop: typeof candidate?.desktop === "string" ? candidate.desktop : current.desktop,
+      mobile: typeof candidate?.mobile === "string" ? candidate.mobile : current.mobile,
+    };
+  }
 
   return {
     ...defaultModuleSettings,
@@ -381,6 +524,8 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
     donation: {
       ...defaultModuleSettings.donation,
       ...donation,
+      categories,
+      allCategoryId,
       visibleCategories,
       desktopVisibleCategories,
       mobileVisibleCategories,
@@ -402,6 +547,7 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
         return {
           ...fallback,
           ...project,
+          category: remapId(project.category || fallback.category),
           showInAllDesktop: project.showInAllDesktop !== false,
           showInAllMobile: project.showInAllMobile !== false,
           allOrderDesktop: Number.isFinite(project.allOrderDesktop) ? project.allOrderDesktop : index,

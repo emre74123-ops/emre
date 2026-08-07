@@ -4,19 +4,29 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
+import { defaultModuleSettings, type DonationCategory, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
-type Category = "all" | "general" | "qurban" | "water" | "zakat" | "orphan";
 type Device = "desktop" | "mobile";
-const categories: { id: Category; label: string }[] = [
-  { id: "all", label: "Tüm Bağışlar" },
-  { id: "general", label: "Genel Bağış" },
-  { id: "qurban", label: "Kurban" },
-  { id: "water", label: "Su Kuyusu" },
-  { id: "zakat", label: "Zekât ve Fitre" },
-  { id: "orphan", label: "Yetim Desteği" },
-];
+
+function CategoryImage({ category, src, className, sizes }: { category: DonationCategory; src: string; className: string; sizes: string }) {
+  const alt = category.imageAlt;
+  const title = category.imageTitle || category.label;
+  if (!src) {
+    return (
+      // A native image intentionally preserves the browser's broken-image marker for an empty category image.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        className={className}
+        src="/__missing-donation-category-image__.png"
+        alt=""
+        aria-hidden="true"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      />
+    );
+  }
+  return <Image className={className} src={src} alt={alt} title={title} fill sizes={sizes} />;
+}
 
 function CardMedia({ media, fallback, className }: { media: DonationProjectMedia[]; fallback: string; className: string }) {
   const items = media.length ? media : [{ id: "fallback", type: "image" as const, url: fallback }];
@@ -63,7 +73,7 @@ function subscribeToMobileViewport(callback: () => void) {
 const getMobileViewportSnapshot = () => window.matchMedia("(max-width: 640px)").matches;
 const getDesktopServerSnapshot = () => false;
 
-export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice, previewCategory }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile"; previewCategory?: Category }) {
+export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice, previewCategory }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile"; previewCategory?: string }) {
   const cardsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const categoryDirectionRef = useRef<1 | -1>(1);
@@ -73,7 +83,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const categoryPointerActiveRef = useRef(false);
   const categoryResumeAtRef = useRef(0);
   const [categoryProgress, setCategoryProgress] = useState(0);
-  const [category, setCategory] = useState<Category>(previewCategory || "all");
+  const [category, setCategory] = useState(previewCategory || settings.allCategoryId || settings.categories[0]?.id || "");
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
@@ -88,6 +98,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     return () => window.cancelAnimationFrame(frame);
   }, [previewCategory]);
   const activeDevice: Device = previewDevice || (isMobileViewport ? "mobile" : "desktop");
+  const categories = settings.categories;
   const legacyVisibleCategories = settings.visibleCategories || categories.map((item) => item.id);
   const deviceVisibleCategories = activeDevice === "mobile"
     ? settings.mobileVisibleCategories || legacyVisibleCategories
@@ -106,11 +117,12 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     .filter((item): item is (typeof categories)[number] => Boolean(item));
   const effectiveCategory = visibleIds.has(category)
     ? category
-    : visibleCategories.find((item) => item.id === "all")?.id || visibleCategories[0]?.id || "all";
+    : visibleCategories.find((item) => item.id === settings.allCategoryId)?.id || visibleCategories[0]?.id || "";
+  const isAllCategory = Boolean(settings.allCategoryId) && effectiveCategory === settings.allCategoryId;
   const categoryListKey = `${activeDevice}:${visibleCategories.map((item) => item.id).join(",")}`;
   const filtered = settings.projects
-    .filter((project) => project.enabled && (effectiveCategory === "all" || project.category === effectiveCategory))
-    .sort((a, b) => effectiveCategory === "all"
+    .filter((project) => project.enabled && (isAllCategory || project.category === effectiveCategory))
+    .sort((a, b) => isAllCategory
       ? (activeDevice === "mobile" ? (a.allOrderMobile ?? 0) - (b.allOrderMobile ?? 0) : (a.allOrderDesktop ?? 0) - (b.allOrderDesktop ?? 0))
       : 0);
 
@@ -389,8 +401,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                 aria-label={item.label}
                 title={item.label}
               >
-                <Image className={styles.desktopCategoryImage} src={settings.categoryImages[item.id]?.desktop || defaultModuleSettings.donation.categoryImages[item.id].desktop} alt={`${item.label} bağış kategorisi`} fill sizes="(max-width: 640px) 1px, 190px" />
-                <Image className={styles.mobileCategoryImage} src={settings.categoryImages[item.id]?.mobile || settings.categoryImages[item.id]?.desktop || defaultModuleSettings.donation.categoryImages[item.id].mobile} alt="" fill sizes="(max-width: 640px) 118px, 1px" />
+                <CategoryImage category={item} className={styles.desktopCategoryImage} src={settings.categoryImages[item.id]?.desktop ?? ""} sizes="(max-width: 640px) 1px, 190px" />
+                <CategoryImage category={item} className={styles.mobileCategoryImage} src={settings.categoryImages[item.id]?.mobile ?? ""} sizes="(max-width: 640px) 118px, 1px" />
               </button>
             ))}
           </div>
@@ -429,7 +441,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                 const desktopDesign = sharedDesign(project.desktop, settings.lowerDesktop);
                 const mobileDesign = sharedDesign(project.mobile, settings.lowerMobile);
                 return (
-                  <article className={`${styles.card}${effectiveCategory === "all" && project.showInAllDesktop === false ? ` ${styles.allDesktopHidden}` : ""}${effectiveCategory === "all" && project.showInAllMobile === false ? ` ${styles.allMobileHidden}` : ""}`} key={project.id} style={{
+                  <article className={`${styles.card}${isAllCategory && project.showInAllDesktop === false ? ` ${styles.allDesktopHidden}` : ""}${isAllCategory && project.showInAllMobile === false ? ` ${styles.allMobileHidden}` : ""}`} key={project.id} style={{
                     "--dm-all-desktop-order": project.allOrderDesktop ?? 0,
                     "--dm-all-mobile-order": project.allOrderMobile ?? 0,
                     "--dm-lower-desktop-card-width": `${desktopDesign.cardWidth}px`,

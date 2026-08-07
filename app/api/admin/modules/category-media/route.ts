@@ -20,8 +20,13 @@ const cacheControl = "public, max-age=31536000, immutable";
 const maxOptimizedSize = 2 * 1024 * 1024;
 const maxOriginalSize = 50 * 1024 * 1024;
 const maxDimension = 4096;
-const categoryKeyPattern =
-  /^modules\/donation\/categories\/(desktop|mobile)\/[a-z0-9][a-z0-9._-]*\.webp$/i;
+const categoryIdPattern = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const fileNamePattern = /^[a-z0-9][a-z0-9._-]*\.webp$/i;
+
+type ParsedCategoryKey = {
+  device: Device;
+  categoryId: string | null;
+};
 
 async function isAdmin() {
   const supabase = await createClient();
@@ -41,6 +46,37 @@ function isDevice(value: unknown): value is Device {
 
 function prefixFor(device: Device) {
   return `modules/donation/categories/${device}/`;
+}
+
+function isCategoryId(value: unknown): value is string {
+  return typeof value === "string" && categoryIdPattern.test(value);
+}
+
+function categoryPrefixFor(device: Device, categoryId: string) {
+  return `${prefixFor(device)}${categoryId}/`;
+}
+
+function parseCategoryKey(key: string): ParsedCategoryKey | null {
+  const parts = key.split("/");
+  if (
+    parts[0] !== "modules"
+    || parts[1] !== "donation"
+    || parts[2] !== "categories"
+    || !isDevice(parts[3])
+  ) {
+    return null;
+  }
+  if (parts.length === 5 && fileNamePattern.test(parts[4])) {
+    return { device: parts[3], categoryId: null };
+  }
+  if (
+    parts.length === 6
+    && isCategoryId(parts[4])
+    && fileNamePattern.test(parts[5])
+  ) {
+    return { device: parts[3], categoryId: parts[4] };
+  }
+  return null;
 }
 
 function positiveInteger(value: unknown) {
@@ -77,14 +113,19 @@ function normalizeCategoryKey(value: unknown) {
 }
 
 async function describeObject(summary: R2ObjectSummary, device: Device) {
+  const parsedKey = parseCategoryKey(summary.key);
   try {
     const details = await headR2Object(summary.key);
     const metadata = details.metadata;
+    const categoryId = parsedKey?.categoryId
+      ?? (isCategoryId(metadata.categoryid) ? metadata.categoryid : null);
     return {
       key: summary.key,
       path: `r2:${summary.key}`,
       url: r2PublicUrl(summary.key),
       device,
+      categoryId,
+      legacy: parsedKey?.categoryId === null,
       size: details.size || summary.size,
       createdAt: (details.lastModified || summary.lastModified)?.toISOString() || null,
       contentType: details.contentType || null,
@@ -99,6 +140,8 @@ async function describeObject(summary: R2ObjectSummary, device: Device) {
       path: `r2:${summary.key}`,
       url: r2PublicUrl(summary.key),
       device,
+      categoryId: parsedKey?.categoryId ?? null,
+      legacy: parsedKey?.categoryId === null,
       size: summary.size,
       createdAt: summary.lastModified?.toISOString() || null,
       contentType: null,
@@ -112,7 +155,7 @@ async function describeObject(summary: R2ObjectSummary, device: Device) {
 
 async function listDeviceImages(device: Device) {
   const objects = (await listR2Objects(prefixFor(device)))
-    .filter((object) => categoryKeyPattern.test(object.key));
+    .filter((object) => parseCategoryKey(object.key)?.device === device);
   const images = [];
   for (let index = 0; index < objects.length; index += 20) {
     images.push(...await Promise.all(
@@ -127,9 +170,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
   }
 
-  const requestedDevice = new URL(request.url).searchParams.get("device") || "all";
+  const searchParams = new URL(request.url).searchParams;
+  const requestedDevice = searchParams.get("device") || "all";
+  const requestedCategoryId = searchParams.get("categoryId");
   if (requestedDevice !== "all" && !isDevice(requestedDevice)) {
     return NextResponse.json({ error: "Geçersiz cihaz seçimi." }, { status: 400 });
+  }
+  if (requestedCategoryId !== null && !isCategoryId(requestedCategoryId)) {
+    return NextResponse.json({ error: "Geçersiz kategori seçimi." }, { status: 400 });
   }
 
   try {
@@ -142,6 +190,7 @@ export async function GET(request: Request) {
     })));
     const images = groups
       .flatMap((group) => group.images)
+      .filter((image) => requestedCategoryId === null || image.categoryId === requestedCategoryId)
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 
     return NextResponse.json(
@@ -162,6 +211,7 @@ export async function POST(request: Request) {
 
   let body: {
     device?: unknown;
+    categoryId?: unknown;
     contentType?: unknown;
     size?: unknown;
     width?: unknown;
@@ -177,6 +227,9 @@ export async function POST(request: Request) {
 
   if (!isDevice(body.device)) {
     return NextResponse.json({ error: "Web veya mobil görünüm seçilmelidir." }, { status: 400 });
+  }
+  if (!isCategoryId(body.categoryId)) {
+    return NextResponse.json({ error: "Geçerli bir kategori seçilmelidir." }, { status: 400 });
   }
   if (String(body.contentType || "").toLowerCase() !== contentType) {
     return NextResponse.json({
@@ -209,9 +262,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Geçerli bir dosya adı gereklidir." }, { status: 400 });
   }
 
-  const key = `${prefixFor(body.device)}${crypto.randomUUID()}.webp`;
+  const key = `${categoryPrefixFor(body.device, body.categoryId)}${crypto.randomUUID()}.webp`;
   const metadata = {
     device: body.device,
+    categoryid: body.categoryId,
     width: String(width),
     height: String(height),
     originalsize: String(originalSize),
@@ -233,6 +287,7 @@ export async function POST(request: Request) {
       path: `r2:${key}`,
       url: r2PublicUrl(key),
       device: body.device,
+      categoryId: body.categoryId,
       contentType,
       requiredHeaders: {
         "Content-Type": contentType,
@@ -256,6 +311,10 @@ export async function DELETE(request: Request) {
     keys?: unknown[];
     path?: unknown;
     key?: unknown;
+    action?: unknown;
+    deleteCategory?: unknown;
+    device?: unknown;
+    categoryId?: unknown;
   };
   try {
     body = await request.json();
@@ -263,6 +322,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Geçersiz silme bilgisi." }, { status: 400 });
   }
 
+  const searchParams = new URL(request.url).searchParams;
   const values = [
     ...(Array.isArray(body.paths) ? body.paths : []),
     ...(Array.isArray(body.keys) ? body.keys : []),
@@ -270,14 +330,63 @@ export async function DELETE(request: Request) {
     body.key,
   ].filter((value) => value !== undefined && value !== null && value !== "");
   const keys = [...new Set(values.map(normalizeCategoryKey))];
+  const requestedDevice = body.device ?? searchParams.get("device");
+  const requestedCategoryId = body.categoryId ?? searchParams.get("categoryId");
+  const categoryCleanupRequested =
+    body.action === "deleteCategory"
+    || searchParams.get("action") === "deleteCategory"
+    || body.deleteCategory === true
+    || (keys.length === 0 && requestedCategoryId !== null && requestedCategoryId !== undefined);
 
-  if (!keys.length || keys.some((key) => !categoryKeyPattern.test(key))) {
+  if (categoryCleanupRequested) {
+    if (keys.length) {
+      return NextResponse.json({
+        error: "Tekil görsel silme ile kategori temizliği aynı istekte yapılamaz.",
+      }, { status: 400 });
+    }
+    if (!isDevice(requestedDevice) || !isCategoryId(requestedCategoryId)) {
+      return NextResponse.json({
+        error: "Kategori temizliği için geçerli cihaz ve kategori gereklidir.",
+      }, { status: 400 });
+    }
+    try {
+      const prefix = categoryPrefixFor(requestedDevice, requestedCategoryId);
+      const categoryObjects = (await listR2Objects(prefix)).filter((object) => {
+        const parsed = parseCategoryKey(object.key);
+        return parsed?.device === requestedDevice && parsed.categoryId === requestedCategoryId;
+      });
+      const categoryKeys = categoryObjects.map((object) => object.key);
+      await deleteR2Keys(categoryKeys);
+      return NextResponse.json({
+        success: true,
+        action: "deleteCategory",
+        device: requestedDevice,
+        categoryId: requestedCategoryId,
+        deleted: categoryKeys.length,
+        keys: categoryKeys,
+      });
+    } catch (error) {
+      return NextResponse.json({
+        error: error instanceof Error ? error.message : "Kategori galerisi temizlenemedi.",
+      }, { status: 500 });
+    }
+  }
+
+  const parsedKeys = keys.map((key) => ({ key, parsed: parseCategoryKey(key) }));
+  if (!keys.length || parsedKeys.some((item) => !item.parsed)) {
     return NextResponse.json({ error: "Geçersiz kategori görseli yolu." }, { status: 400 });
   }
 
   try {
     await deleteR2Keys(keys);
-    return NextResponse.json({ success: true, deleted: keys.length, keys });
+    return NextResponse.json({
+      success: true,
+      action: "deleteImages",
+      deleted: keys.length,
+      legacyDeleted: parsedKeys.filter((item) => item.parsed?.categoryId === null).length,
+      scopedDeleted: parsedKeys.filter((item) => item.parsed?.categoryId !== null).length,
+      keys,
+    });
   } catch (error) {
     return NextResponse.json({
       error: error instanceof Error ? error.message : "Kategori görseli silinemedi.",

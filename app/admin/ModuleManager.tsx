@@ -1,17 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultModuleSettings, donationCategoryOptions, normalizeModuleSettings, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
 type ModuleTab = "desktop" | "mobile";
 type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
-type ProjectCategory = DonationProject["category"] | "all";
-type DonationCategoryId = typeof donationCategoryOptions[number][0];
+type ProjectCategory = DonationProject["category"];
+type DonationCategoryId = string;
 type GalleryImage = {
   path: string;
   url: string;
@@ -23,12 +23,16 @@ type GalleryImage = {
   originalName?: string;
   createdAt?: string;
   format?: string;
+  categoryId?: string | null;
+  legacy?: boolean;
 };
 type UpperSettingsGroupRenderer = (id: string, title: string, content: ReactNode) => ReactNode;
 
 export default function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
   const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
   const [saving, setSaving] = useState(false);
+  const [settingsReady, setSettingsReady] = useState(false);
+  const [settingsLoadError, setSettingsLoadError] = useState("");
   const [expanded, setExpanded] = useState(true);
   const [section, setSection] = useState<ModuleSection>("upper");
   const [lowerDevice, setLowerDevice] = useState<Device>("desktop");
@@ -44,34 +48,74 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [imageMeta, setImageMeta] = useState<Record<string, { width: number; height: number }>>({});
   const [selectedUpperCategory, setSelectedUpperCategory] = useState<Record<Device, DonationCategoryId>>({ desktop: "all", mobile: "all" });
   const [draggedUpperCategory, setDraggedUpperCategory] = useState("");
-  const [galleryQuery, setGalleryQuery] = useState("");
-  const [gallerySort, setGallerySort] = useState<"newest" | "oldest" | "smallest" | "largest">("newest");
+  const [pendingCategoryDeletes, setPendingCategoryDeletes] = useState<string[]>([]);
+  const [pendingLegacyCategoryImages, setPendingLegacyCategoryImages] = useState<Record<string, GalleryImage[]>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadingPosterId, setUploadingPosterId] = useState("");
+  const categoryStripRefs = useRef<Record<Device, HTMLDivElement | null>>({ desktop: null, mobile: null });
+  const persistedCategoryIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/admin/modules", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/admin/modules/category-media", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/admin/modules/images", { cache: "no-store" }).then((response) => response.json()),
-    ]).then(([settingsResult, categoryMediaResult, legacyImageResult]) => {
-      if (settingsResult.settings) {
-        setSettings(normalizeModuleSettings(settingsResult.settings));
+    let active = true;
+    async function load() {
+      try {
+        const response = await fetch("/api/admin/modules", { cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok || !result.settings) throw new Error("Modül ayarları yüklenemedi.");
+        if (!active) return;
+        const normalized = normalizeModuleSettings(result.settings);
+        setSettings(normalized);
+        persistedCategoryIdsRef.current = new Set(normalized.donation.categories.map((category) => category.id));
+        const firstDesktop = normalized.donation.desktopCategoryOrder[0] || normalized.donation.categories[0]?.id || "";
+        const firstMobile = normalized.donation.mobileCategoryOrder[0] || normalized.donation.categories[0]?.id || "";
+        setSelectedUpperCategory({ desktop: firstDesktop, mobile: firstMobile });
+        const firstProjectCategory = normalized.donation.allCategoryId || firstDesktop;
+        setProjectCategory(firstProjectCategory);
+        const firstProjects = firstProjectCategory === normalized.donation.allCategoryId
+          ? normalized.donation.projects
+          : normalized.donation.projects.filter((project) => project.category === firstProjectCategory);
+        setSelectedProjectId(firstProjects[0]?.id || "");
+        setSettingsLoadError("");
+        setSettingsReady(true);
+      } catch {
+        if (!active) return;
+        setSettingsLoadError("Modül ayarları yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
+        setSettingsReady(false);
+        return;
       }
-      setImages([...(categoryMediaResult.images || []), ...(legacyImageResult.images || [])]);
-    }).catch(() => undefined);
+
+      const mediaResults = await Promise.allSettled([
+        fetch("/api/admin/modules/category-media", { cache: "no-store" }).then(async (response) => {
+          const result = await response.json();
+          if (!response.ok) throw new Error("Kategori galerisi yüklenemedi.");
+          return result.images || [];
+        }),
+        fetch("/api/admin/modules/images", { cache: "no-store" }).then(async (response) => {
+          const result = await response.json();
+          if (!response.ok) throw new Error("Eski galeri yüklenemedi.");
+          return result.images || [];
+        }),
+      ]);
+      if (!active) return;
+      setImages(mediaResults.flatMap((result) => result.status === "fulfilled" ? result.value : []));
+    }
+    void load();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const donation = settings.donation;
   const allOrderKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
-  const categoryProjects = (projectCategory === "all"
+  const aggregateCategorySelected = Boolean(donation.allCategoryId) && projectCategory === donation.allCategoryId;
+  const categoryProjects = (aggregateCategorySelected
     ? donation.projects
     : donation.projects.filter((project) => project.category === projectCategory))
     .slice()
-    .sort((a, b) => projectCategory === "all"
+    .sort((a, b) => aggregateCategorySelected
       ? (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b))
       : donation.projects.indexOf(a) - donation.projects.indexOf(b));
-  const selectedProject = donation.projects.find((project) => project.id === selectedProjectId) || categoryProjects[0];
+  const selectedProject = categoryProjects.find((project) => project.id === selectedProjectId) || categoryProjects[0];
   const update = (changes: Partial<typeof donation>) => setSettings((current) => ({
     ...current,
     donation: { ...current.donation, ...changes },
@@ -96,7 +140,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     updateProject({ [device]: { ...selectedProject[device], ...changes } });
   };
   const addProject = () => {
-    if (projectCategory === "all") {
+    if (aggregateCategorySelected) {
       showToast("Yeni kart eklemek için önce gerçek bir bağış kategorisi seçin.");
       return;
     }
@@ -124,7 +168,19 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const duplicateProject = () => {
     if (!selectedProject) return;
     const id = `${selectedProject.id}-kopya-${crypto.randomUUID()}`;
-    updateProjects([...donation.projects, { ...selectedProject, id, title: `${selectedProject.title} Kopyası`, desktopMedia: [], mobileMedia: [], desktop: { ...selectedProject.desktop }, mobile: { ...selectedProject.mobile } }]);
+    const nextDesktopOrder = Math.max(-1, ...donation.projects.map((project) => project.allOrderDesktop ?? -1)) + 1;
+    const nextMobileOrder = Math.max(-1, ...donation.projects.map((project) => project.allOrderMobile ?? -1)) + 1;
+    updateProjects([...donation.projects, {
+      ...selectedProject,
+      id,
+      title: `${selectedProject.title} Kopyası`,
+      allOrderDesktop: nextDesktopOrder,
+      allOrderMobile: nextMobileOrder,
+      desktopMedia: [],
+      mobileMedia: [],
+      desktop: { ...selectedProject.desktop },
+      mobile: { ...selectedProject.mobile },
+    }]);
     setSelectedProjectId(id);
   };
   const deleteProject = () => {
@@ -138,13 +194,13 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       if (!response.ok) return showToast((await response.json()).error || "Kart galerisi silinemedi.");
       const next = donation.projects.filter((project) => project.id !== removedId);
       updateProjects(next);
-      setSelectedProjectId(projectCategory === "all" ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
+      setSelectedProjectId(aggregateCategorySelected ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
       showToast("Kart ve karta ait medya galerisi silindi.");
     });
   };
   const moveProject = (direction: -1 | 1) => {
     if (!selectedProject) return;
-    if (projectCategory === "all") {
+    if (aggregateCategorySelected) {
       const currentIndex = categoryProjects.findIndex((project) => project.id === selectedProject.id);
       const target = categoryProjects[currentIndex + direction];
       if (!target) return;
@@ -256,7 +312,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const source = donation.projects.find((project) => project.id === draggedProjectId);
     const target = donation.projects.find((project) => project.id === targetId);
     if (!source || !target) return setDraggedProjectId("");
-    if (projectCategory === "all") {
+    if (aggregateCategorySelected) {
       const sourceOrder = source[allOrderKey] ?? categoryProjects.findIndex((project) => project.id === source.id);
       const targetOrder = target[allOrderKey] ?? categoryProjects.findIndex((project) => project.id === target.id);
       updateProjects(donation.projects.map((project) => project.id === source.id ? { ...project, [allOrderKey]: targetOrder } : project.id === target.id ? { ...project, [allOrderKey]: sourceOrder } : project));
@@ -271,17 +327,57 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   };
 
   async function save() {
+    if (!settingsReady) return showToast("Gerçek modül ayarları yüklenmeden kayıt yapılamaz. Sayfayı yenileyin.");
     setSaving(true);
-    const response = await fetch("/api/admin/modules", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings),
-    });
-    const result = await response.json();
-    setSaving(false);
-    if (!response.ok) return showToast(result.error || "Modül ayarları kaydedilemedi.");
-    setSettings(normalizeModuleSettings(result.settings));
-    showToast("Modül ayarları canlı siteye kaydedildi.");
+    try {
+      const response = await fetch("/api/admin/modules", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      const result = await response.json();
+      if (!response.ok) return showToast(result.error || "Modül ayarları kaydedilemedi.");
+      const normalized = normalizeModuleSettings(result.settings);
+      setSettings(normalized);
+      persistedCategoryIdsRef.current = new Set(normalized.donation.categories.map((category) => category.id));
+
+      if (pendingCategoryDeletes.length) {
+        const cleanupResults = await Promise.all(pendingCategoryDeletes.map(async (categoryId) => {
+          const requests = (["desktop", "mobile"] as const).map((device) => fetch("/api/admin/modules/category-media", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "deleteCategory", device, categoryId }),
+          }));
+          for (const image of pendingLegacyCategoryImages[categoryId] || []) {
+            requests.push(fetch(image.path.startsWith("r2:") ? "/api/admin/modules/category-media" : "/api/admin/modules/images", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path: image.path }),
+            }));
+          }
+          const results = await Promise.allSettled(requests);
+          return {
+            categoryId,
+            success: results.every((item) => item.status === "fulfilled" && item.value.ok),
+          };
+        }));
+        const deletedIds = cleanupResults.filter((item) => item.success).map((item) => item.categoryId);
+        const failedIds = cleanupResults.filter((item) => !item.success).map((item) => item.categoryId);
+        const deletedLegacyPaths = new Set(deletedIds.flatMap((categoryId) => (pendingLegacyCategoryImages[categoryId] || []).map((image) => image.path)));
+        setPendingCategoryDeletes(failedIds);
+        setPendingLegacyCategoryImages((current) => Object.fromEntries(failedIds.map((categoryId) => [categoryId, current[categoryId] || []])));
+        setImages((current) => current.filter((image) => !deletedIds.includes(image.categoryId || "") && !deletedLegacyPaths.has(image.path)));
+        if (failedIds.length) {
+          showToast(`Ayarlar kaydedildi; ${failedIds.length} kategori galerisi temizlenemedi ve sonraki kayıtta yeniden denenecek.`);
+          return;
+        }
+      }
+      showToast("Modül ayarları canlı siteye kaydedildi.");
+    } catch {
+      showToast("Modül ayarları kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const categoryVisibility = (device: Device) => device === "desktop"
@@ -317,6 +413,97 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const target = order[index + direction];
     if (index < 0 || !target) return;
     reorderCategory(device, id, target);
+  }
+
+  function chooseUpperCategory(device: Device, id: string) {
+    setSelectedUpperCategory((current) => ({ ...current, [device]: id }));
+    requestAnimationFrame(() => {
+      const rail = categoryStripRefs.current[device];
+      const card = rail?.querySelector<HTMLElement>(`[data-category-id="${CSS.escape(id)}"]`);
+      if (!rail || !card) return;
+      const target = card.offsetLeft - Math.max(0, (rail.clientWidth - card.offsetWidth) / 2);
+      rail.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+    });
+  }
+
+  function updateCategoryDefinition(id: string, changes: Partial<DonationCategory>) {
+    update({ categories: donation.categories.map((category) => category.id === id ? { ...category, ...changes, id } : category) });
+  }
+
+  function addCategory(device: Device) {
+    const id = normalizeDonationCategoryId(`kategori-${crypto.randomUUID().slice(0, 8)}`, "kategori");
+    const category: DonationCategory = {
+      id,
+      label: "Yeni kategori",
+      description: "",
+      imageTitle: "Yeni kategori",
+      imageAlt: "Yeni bağış kategorisi",
+    };
+    update({
+      categories: [...donation.categories, category],
+      categoryImages: { ...donation.categoryImages, [id]: { desktop: "", mobile: "" } },
+      visibleCategories: [...new Set([...donation.visibleCategories, id])],
+      desktopVisibleCategories: [...donation.desktopVisibleCategories, id],
+      mobileVisibleCategories: [...donation.mobileVisibleCategories, id],
+      desktopCategoryOrder: [...donation.desktopCategoryOrder, id],
+      mobileCategoryOrder: [...donation.mobileCategoryOrder, id],
+    });
+    chooseUpperCategory(device, id);
+  }
+
+  function removeCategory(id: string, device: Device) {
+    const category = donation.categories.find((item) => item.id === id);
+    if (!category) return;
+    const linkedProjects = donation.projects.filter((project) => project.category === id);
+    if (linkedProjects.length) {
+      showToast(`Bu kategoriye bağlı ${linkedProjects.length} bağış kartı var. Önce kartları başka kategoriye taşıyın veya silin.`);
+      return;
+    }
+    if (donation.categories.length <= 1) {
+      showToast("En az bir bağış kategorisi kalmalıdır.");
+      return;
+    }
+    if (!window.confirm(`“${category.label}” kategorisi ve web/mobil görsel galerileri kalıcı olarak silinsin mi?`)) return;
+    const nextCategories = donation.categories.filter((item) => item.id !== id);
+    const categoryUrls = new Set(Object.values(donation.categoryImages[id] || {}).filter(Boolean));
+    const legacyImages = images.filter((image) => {
+      if (image.categoryId || !categoryUrls.has(image.url)) return false;
+      return !nextCategories.some((item) => {
+        const itemImages = donation.categoryImages[item.id];
+        return itemImages?.desktop === image.url || itemImages?.mobile === image.url;
+      });
+    });
+    const nextImages = { ...donation.categoryImages };
+    delete nextImages[id];
+    update({
+      categories: nextCategories,
+      allCategoryId: donation.allCategoryId === id ? "" : donation.allCategoryId,
+      categoryImages: nextImages,
+      visibleCategories: donation.visibleCategories.filter((item) => item !== id),
+      desktopVisibleCategories: donation.desktopVisibleCategories.filter((item) => item !== id),
+      mobileVisibleCategories: donation.mobileVisibleCategories.filter((item) => item !== id),
+      desktopCategoryOrder: donation.desktopCategoryOrder.filter((item) => item !== id),
+      mobileCategoryOrder: donation.mobileCategoryOrder.filter((item) => item !== id),
+    });
+    setPendingCategoryDeletes((current) => [...new Set([...current, id])]);
+    setPendingLegacyCategoryImages((current) => ({ ...current, [id]: legacyImages }));
+    const fallback = (device === "desktop" ? donation.desktopCategoryOrder : donation.mobileCategoryOrder).find((item) => item !== id) || nextCategories[0]?.id || "";
+    chooseUpperCategory(device, fallback);
+    if (projectCategory === id) {
+      setProjectCategory(fallback);
+      setSelectedProjectId(donation.projects.find((project) => project.category === fallback)?.id || "");
+    }
+    showToast("Kategori kaldırıldı. Kaydet ve Yayınla ile galeri de kalıcı olarak silinecek.");
+  }
+
+  function toggleAllCategory(id: string) {
+    const nextAllCategoryId = donation.allCategoryId === id ? "" : id;
+    update({ allCategoryId: nextAllCategoryId });
+    setProjectCategory(id);
+    const nextProjects = nextAllCategoryId
+      ? donation.projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
+      : donation.projects.filter((project) => project.category === id);
+    setSelectedProjectId(nextProjects[0]?.id || "");
   }
 
   async function optimizeCategoryImage(file: File, device: Device) {
@@ -365,7 +552,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     };
   }
 
-  async function uploadImage(file: File, device: Device) {
+  async function uploadImage(file: File, device: Device, categoryId = selectedUpperCategory[device]) {
+    if (!categoryId) return showToast("Önce bir kategori seçin.");
+    if (!persistedCategoryIdsRef.current.has(categoryId)) return showToast("Yeni kategoriye görsel yüklemeden önce Kaydet ve Yayınla düğmesine basın.");
     setUploading(true);
     try {
       const optimized = await optimizeCategoryImage(file, device);
@@ -374,6 +563,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           device,
+          categoryId,
           contentType: optimized.file.type,
           size: optimized.file.size,
           width: optimized.width,
@@ -401,9 +591,11 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         originalName: optimized.originalName,
         createdAt: new Date().toISOString(),
         format: "webp",
+        categoryId,
+        legacy: false,
       };
       setImages((current) => [image, ...current]);
-      selectCategoryImage(selectedUpperCategory[device], device, image.url);
+      selectCategoryImage(categoryId, device, image.url);
       showToast(`${formatSize(optimized.originalSize)} görsel ${formatSize(optimized.file.size)} WebP olarak optimize edildi.`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Görsel yüklenemedi.");
@@ -413,16 +605,18 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }
 
   async function deleteImage(image: GalleryImage) {
-    const usages = donationCategoryOptions.filter(([id]) => donation.categoryImages[id][image.device] === image.url);
-    const usageText = usages.length ? ` Bu görsel ${usages.map(([, label]) => label).join(", ")} kategorilerinde kullanılıyor; bu kategoriler varsayılan görsele dönecek.` : "";
+    const usages = donation.categories.flatMap((category) => {
+      const devices = (["desktop", "mobile"] as const).filter((device) => donation.categoryImages[category.id]?.[device] === image.url);
+      return devices.length ? [{ category, devices }] : [];
+    });
+    const usageText = usages.length ? ` Bu görsel ${usages.map(({ category }) => category.label).join(", ")} kategorilerinde kullanılıyor; görsel alanı boşaltılacak.` : "";
     if (!window.confirm(`Bu görsel kalıcı olarak silinsin mi?${usageText}`)) return;
     if (usages.length) {
       const categoryImages = { ...donation.categoryImages };
-      for (const [id] of usages) {
-        categoryImages[id] = {
-          ...categoryImages[id],
-          [image.device]: defaultModuleSettings.donation.categoryImages[id][image.device],
-        };
+      for (const { category, devices } of usages) {
+        const next = { ...categoryImages[category.id] };
+        for (const device of devices) next[device] = "";
+        categoryImages[category.id] = next;
       }
       const nextSettings = { ...settings, donation: { ...donation, categoryImages } };
       const settingsResponse = await fetch("/api/admin/modules", {
@@ -442,24 +636,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     if (!response.ok) return showToast(result.error || "Görsel silinemedi.");
     setImages((current) => current.filter((item) => item.path !== image.path));
     showToast("Görsel silindi.");
-  }
-
-  async function deleteUnusedImages(device: Device) {
-    const unused = images.filter((image) => image.device === device
-      && !donationCategoryOptions.some(([id]) => donation.categoryImages[id][device] === image.url));
-    if (!unused.length) return showToast("Bu galeride kullanılmayan görsel yok.");
-    if (!window.confirm(`${unused.length} kullanılmayan görsel kalıcı olarak silinsin mi?`)) return;
-    const deleted: string[] = [];
-    for (const image of unused) {
-      const response = await fetch(image.path.startsWith("r2:") ? "/api/admin/modules/category-media" : "/api/admin/modules/images", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: image.path }),
-      });
-      if (response.ok) deleted.push(image.path);
-    }
-    setImages((current) => current.filter((image) => !deleted.includes(image.path)));
-    showToast(`${deleted.length} kullanılmayan görsel silindi.`);
   }
 
   function selectCategoryImage(id: string, device: Device, url: string) {
@@ -502,7 +678,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       : { mobileCardWidth: width, mobileCardHeight: Math.min(400, Math.max(50, height)) });
   }
 
-  const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  const formatSize = (bytes: number) => bytes <= 0 ? "0 KB" : bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   const imageRatio = (width: number, height: number) => {
     const divisor = (a: number, b: number): number => b ? divisor(b, a % b) : a;
     const common = divisor(width, height);
@@ -522,8 +698,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   );
 
   const projectControls = (device: Device) => {
-    if (!selectedProject) return <div className={styles.emptyModuleGallery}>Bu kategoride henüz bağış kartı yok. “Yeni Kart” düğmesiyle ilk kartı oluşturun.</div>;
-    const design = selectedProject[device];
+    const design = (selectedProject || defaultModuleSettings.donation.projects[0])[device];
     const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
     const updateSharedImage = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
     const designRange = (label: string, key: keyof DonationProjectDesign, min: number, max: number, suffix = "px") => (
@@ -537,19 +712,19 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
         {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
           <div className={styles.miniCategoryPreview}>
-            {donationCategoryOptions.map(([id, label]) => {
-              const projects = id === "all" ? donation.projects : donation.projects.filter((project) => project.category === id);
+            {donation.categories.map(({ id, label, imageAlt }) => {
+              const projects = id === donation.allCategoryId ? donation.projects : donation.projects.filter((project) => project.category === id);
               const cover = donation.categoryImages[id]?.[lowerDevice] || donation.categoryImages[id]?.desktop;
               const active = projectCategory === id;
               return <button type="button" key={id} className={active ? styles.activeMiniCategory : ""} onClick={() => {
                 const nextCategory = id as ProjectCategory;
                 setProjectCategory(nextCategory);
-                const ordered = id === "all"
+                const ordered = id === donation.allCategoryId
                   ? projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
                   : projects;
                 setSelectedProjectId(ordered[0]?.id || "");
               }}>
-                <span>{cover ? <Image src={cover} alt="" fill sizes="72px" /> : <b>{label.slice(0, 1)}</b>}</span>
+                <span>{cover ? <Image src={cover} alt={imageAlt} fill sizes="72px" /> : <Image src="/__missing-category-image.webp" alt="" fill sizes="72px" unoptimized />}</span>
                 <strong>{label}</strong>
                 <small>{projects.length} kart</small>
               </button>;
@@ -558,38 +733,39 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <div className={styles.miniProjectPreview}>
             {categoryProjects.length ? categoryProjects.map((project, index) => <button type="button" draggable key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onDragStart={() => setDraggedProjectId(project.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropProject(project.id)} onDragEnd={() => setDraggedProjectId("")} onClick={() => setSelectedProjectId(project.id)}>
               <strong>{index + 1}. Kart</strong>
-              <small>{donationCategoryOptions.find(([id]) => id === project.category)?.[1]}{!project.enabled ? " · Kapalı" : projectCategory === "all" && !(lowerDevice === "desktop" ? project.showInAllDesktop !== false : project.showInAllMobile !== false) ? " · Gizli" : ""}</small>
+              <small>{donation.categories.find((category) => category.id === project.category)?.label}{!project.enabled ? " · Kapalı" : aggregateCategorySelected && !(lowerDevice === "desktop" ? project.showInAllDesktop !== false : project.showInAllMobile !== false) ? " · Gizli" : ""}</small>
             </button>) : <small>Bu kategoride henüz bağış kartı yok.</small>}
           </div>
           <label>Kategori<select value={projectCategory} onChange={(event) => {
             const nextCategory = event.target.value as ProjectCategory;
             setProjectCategory(nextCategory);
-            const projects = nextCategory === "all"
+            const projects = nextCategory === donation.allCategoryId
               ? donation.projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
               : donation.projects.filter((project) => project.category === nextCategory);
             setSelectedProjectId(projects[0]?.id || "");
-          }}>{donationCategoryOptions.map(([id, label]) => <option value={id} key={id}>{label} · {id === "all" ? donation.projects.length : donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
+          }}>{donation.categories.map(({ id, label }) => <option value={id} key={id}>{label} · {id === donation.allCategoryId ? donation.projects.length : donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
           <label>Bağış kartı<select value={selectedProject?.id || ""} onChange={(event) => setSelectedProjectId(event.target.value)}>
             {categoryProjects.length ? categoryProjects.map((project, index) => <option value={project.id} key={project.id}>{index + 1}. {project.title}{project.enabled ? "" : " (Kapalı)"}</option>) : <option value="">Bu kategoride kart yok</option>}
           </select></label>
           <div className={styles.projectQuickActions}>
-            <button type="button" title={projectCategory === "all" ? "Yeni kart için gerçek kategori seçin" : "Yeni kart"} aria-label="Yeni kart" disabled={projectCategory === "all"} onClick={addProject}>＋</button>
+            <button type="button" title={aggregateCategorySelected ? "Yeni kart için gerçek kategori seçin" : "Yeni kart"} aria-label="Yeni kart" disabled={aggregateCategorySelected} onClick={addProject}>＋</button>
             <button type="button" title="Kartı çoğalt" aria-label="Kartı çoğalt" disabled={!selectedProject} onClick={duplicateProject}>⧉</button>
             <button type="button" title="Sola taşı" aria-label="Sola taşı" disabled={!selectedProject} onClick={() => moveProject(-1)}>←</button>
             <button type="button" title="Sağa taşı" aria-label="Sağa taşı" disabled={!selectedProject} onClick={() => moveProject(1)}>→</button>
             <button type="button" title="Kartı sil" aria-label="Kartı sil" disabled={!selectedProject} onClick={deleteProject}>×</button>
           </div>
           <small>{categoryProjects.length} kart · Seçilen kartın ayarları aşağıdaki bölümlerde düzenlenir.</small>
-          <nav className={styles.projectSettingsTabs} aria-label="Seçili kart ayarları">
+          {selectedProject ? <nav className={styles.projectSettingsTabs} aria-label="Seçili kart ayarları">
             {[
               ["project-measurements", "Kart ayarları"],
               ["project-design", "Görsel ayarları"],
               ["project-content", "Yazı ayarları"],
               ["project-payment", "Fiyat ve düğme"],
             ].map(([id, label]) => <button type="button" key={id} className={lowerGroup === id ? styles.activeProjectSettingsTab : ""} onClick={() => setLowerGroup(id)}>{label}</button>)}
-          </nav>
+          </nav> : null}
         </div> : null}
       </section>
+      {selectedProject ? <>
       <section style={{ order: 2 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarları</span><b>{lowerGroup === "project-measurements" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
@@ -597,7 +773,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.titleVisible} onChange={(event) => updateSharedImage({ titleVisible: event.target.checked })} /> Kart başlığını göster</label>
           <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> Açıklamayı göster</label>
           <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartı göster</label>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={device === "desktop" ? selectedProject.showInAllDesktop !== false : selectedProject.showInAllMobile !== false} onChange={(event) => updateProject(device === "desktop" ? { showInAllDesktop: event.target.checked } : { showInAllMobile: event.target.checked })} /> Tüm Bağışlar’da {device === "desktop" ? "webde" : "mobilde"} göster</label>
+          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={device === "desktop" ? selectedProject.showInAllDesktop !== false : selectedProject.showInAllMobile !== false} onChange={(event) => updateProject(device === "desktop" ? { showInAllDesktop: event.target.checked } : { showInAllMobile: event.target.checked })} /> {donation.categories.find((category) => category.id === donation.allCategoryId)?.label || "Tüm bağışlar"} kategorisinde {device === "desktop" ? "webde" : "mobilde"} göster</label>
           <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart tasarımını kullan</label>
           {design.useSharedDesign ? <>
             {sharedRange("Kart genişliği", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
@@ -690,6 +866,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <label>Düğme yazı rengi<input type="color" value={design.actionTextColor} onChange={(event) => updateProjectDesign(device, { actionTextColor: event.target.value })} /></label>
         </div> : null}
       </section>
+      </> : <div className={styles.emptyModuleGallery}>Bu kategoride henüz bağış kartı yok. Yukarıdaki “＋” düğmesiyle ilk kartı oluşturun.</div>}
     </div>;
   };
 
@@ -756,50 +933,55 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const shadow = device === "desktop" ? donation.desktopShadow : donation.mobileShadow;
     const backgroundColor = device === "desktop" ? donation.desktopImageBackgroundColor : donation.mobileImageBackgroundColor;
     const visibleCategories = categoryVisibility(device);
-    const allCategoryIds = donationCategoryOptions.map(([id]) => id);
+    const allCategoryIds = donation.categories.map((category) => category.id);
     const orderedIds = [...categoryOrder(device), ...allCategoryIds].filter((id, index, list) => list.indexOf(id) === index);
     const orderedCategories = orderedIds
-      .map((id) => donationCategoryOptions.find(([optionId]) => optionId === id))
-      .filter((option): option is typeof donationCategoryOptions[number] => Boolean(option));
-    const selectedId = orderedCategories.some(([id]) => id === selectedUpperCategory[device])
+      .map((id) => donation.categories.find((category) => category.id === id))
+      .filter((category): category is DonationCategory => Boolean(category));
+    const selectedId = orderedCategories.some((category) => category.id === selectedUpperCategory[device])
       ? selectedUpperCategory[device]
-      : orderedCategories[0]?.[0] || "all";
-    const selectedLabel = donationCategoryOptions.find(([id]) => id === selectedId)?.[1] || "Kategori";
-    const selectedUrl = donation.categoryImages[selectedId][device];
-    const query = galleryQuery.trim().toLocaleLowerCase("tr-TR");
-    const filteredImages = deviceImages
-      .filter((image) => !query || `${image.originalName || ""} ${image.path}`.toLocaleLowerCase("tr-TR").includes(query))
-      .sort((left, right) => {
-        if (gallerySort === "smallest") return left.size - right.size;
-        if (gallerySort === "largest") return right.size - left.size;
-        const leftDate = new Date(left.createdAt || 0).getTime();
-        const rightDate = new Date(right.createdAt || 0).getTime();
-        return gallerySort === "oldest" ? leftDate - rightDate : rightDate - leftDate;
-      });
-    const totalSize = deviceImages.reduce((sum, image) => sum + image.size, 0);
+      : orderedCategories[0]?.id || "";
+    const selectedCategory = donation.categories.find((category) => category.id === selectedId);
+    const selectedUrl = donation.categoryImages[selectedId]?.[device] || "";
+    const scopedImages = deviceImages
+      .filter((image) => image.categoryId === selectedId || (!image.categoryId && image.url === selectedUrl))
+      .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime());
+    const currentImageIsListed = scopedImages.some((image) => image.url === selectedUrl);
+    const categoryAssets: GalleryImage[] = selectedUrl && !currentImageIsListed
+      ? [{
+          path: `current:${device}:${selectedId}`,
+          url: selectedUrl,
+          size: 0,
+          device,
+          categoryId: selectedId,
+          originalName: "Mevcut kategori görseli",
+          format: selectedUrl.split(".").at(-1) || "görsel",
+        }, ...scopedImages]
+      : scopedImages;
+    const totalSize = scopedImages.reduce((sum, image) => sum + image.size, 0);
 
     return group("category-visual-center", "Kategori ve Görsel Merkezi", <div className={styles.categoryVisualCenter}>
-      <header className={styles.categoryCenterHeader}>
-        <div>
-          <span>{deviceLabel.toLocaleUpperCase("tr-TR")} KÜTÜPHANESİ</span>
-          <h3>Kategorileri tek merkezden yönetin</h3>
-          <p>Sıralama, görünürlük, tasarım ve görseller yalnızca {deviceName} görünümünü etkiler.</p>
-        </div>
-        <div className={styles.categoryCenterStats}>
-          <span><b>{visibleCategories.length}</b> görünür</span>
-          <span><b>{deviceImages.length}</b> görsel</span>
-          <span><b>{formatSize(totalSize)}</b> toplam</span>
-        </div>
-      </header>
-
-      <div className={styles.categoryManagerStrip}>
-        {orderedCategories.map(([id, label], index) => {
+      <div className={styles.categoryManagerStrip} ref={(element) => { categoryStripRefs.current[device] = element; }}>
+        {orderedCategories.map((category, index) => {
+          const { id, label, imageAlt } = category;
           const active = selectedId === id;
           const visible = visibleCategories.includes(id);
+          const imageUrl = donation.categoryImages[id]?.[device] || "";
           return <article
             className={active ? styles.categoryManagerCardActive : styles.categoryManagerCard}
+            data-category-id={id}
             draggable
             key={id}
+            role="button"
+            tabIndex={0}
+            onClick={() => chooseUpperCategory(device, id)}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                chooseUpperCategory(device, id);
+              }
+            }}
             onDragStart={() => setDraggedUpperCategory(id)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={() => {
@@ -808,35 +990,114 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             }}
             onDragEnd={() => setDraggedUpperCategory("")}
           >
-            <button className={styles.categoryManagerBody} type="button" onClick={() => setSelectedUpperCategory((current) => ({ ...current, [device]: id }))}>
-              <span className={styles.categoryManagerThumb}><Image src={donation.categoryImages[id][device]} alt="" fill sizes="72px" /></span>
+            <button
+              className={styles.categoryAllToggle}
+              data-active={donation.allCategoryId === id}
+              aria-pressed={donation.allCategoryId === id}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                toggleAllCategory(id);
+              }}
+              title="Bu kategoriyi tüm bağış kartlarını gösteren kategori yap"
+            >{donation.allCategoryId === id ? <b>✓</b> : null} Tümü</button>
+            <div className={styles.categoryCardMain}>
+              <span className={styles.categoryManagerThumb}>
+                {imageUrl
+                  ? <Image src={imageUrl} alt={imageAlt} fill sizes="72px" />
+                  : <Image src="/__missing-category-image.webp" alt="" fill sizes="42px" unoptimized />}
+              </span>
               <span><strong>{label}</strong><small>{visible ? "Sitede görünüyor" : "Gizli"}</small></span>
-            </button>
-            <div className={styles.categoryManagerActions}>
+            </div>
+            <div className={styles.categoryManagerActions} onClick={(event) => event.stopPropagation()}>
               <label className={styles.categoryVisibilityToggle} title={`${label} kategorisini ${deviceName} görünümünde göster`}>
                 <input type="checkbox" checked={visible} onChange={() => toggleCategory(id, device)} />
                 <span>{visible ? "Açık" : "Kapalı"}</span>
               </label>
               <span className={styles.categoryOrderControls}>
+                <label className={styles.categoryAddButton} title={`${label} için görsel yükle`}>
+                  ↑
+                  <input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={uploading} onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void uploadImage(file, device, id);
+                    event.target.value = "";
+                  }} />
+                </label>
                 <button type="button" title="Sola taşı" disabled={index === 0} onClick={() => moveCategory(device, id, -1)}>←</button>
                 <button type="button" title="Sağa taşı" disabled={index === orderedCategories.length - 1} onClick={() => moveCategory(device, id, 1)}>→</button>
               </span>
             </div>
           </article>;
         })}
+        <button className={styles.categoryAddButton} type="button" onClick={() => addCategory(device)}>＋ Yeni kategori</button>
       </div>
 
-      <div className={styles.categoryWorkbench}>
-        <div className={styles.categoryCurrentPreview}>
-          <Image src={selectedUrl} alt={`${selectedLabel} ${deviceName} görseli`} fill sizes="220px" />
+      <div className={styles.categoryCompactGallery}>
+        <div className={styles.categoryCompactToolbar}>
+          <div>
+            <strong>{selectedCategory?.label || "Kategori"} · {deviceLabel} galerisi</strong>
+            <small>{categoryAssets.length} görsel · {totalSize ? formatSize(totalSize) : selectedUrl ? "mevcut dosya" : "0 KB"} · Yüklenen dosyalar otomatik WebP olur</small>
+          </div>
+          <nav>
+            {selectedUrl ? <button className={styles.categoryDeleteButton} type="button" onClick={() => selectCategoryImage(selectedId, device, "")}>Görseli kaldır</button> : null}
+            <label className={styles.categoryAddButton}>
+              {uploading ? "Hazırlanıyor…" : "＋ Görsel yükle"}
+              <input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={uploading || !selectedId} onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadImage(file, device, selectedId);
+                event.target.value = "";
+              }} />
+            </label>
+          </nav>
         </div>
-        <div className={styles.categoryCurrentInfo}>
-          <span>SEÇİLİ KATEGORİ</span>
-          <h3>{selectedLabel}</h3>
-          <p>Galeriden bir görsel seçin veya büyük PNG/JPG dosyanızı yükleyin. Sistem onu otomatik olarak WebP’ye dönüştürür.</p>
-          <button type="button" onClick={() => selectCategoryImage(selectedId, device, defaultModuleSettings.donation.categoryImages[selectedId][device])}>Varsayılan görsele dön</button>
-        </div>
+        {categoryAssets.length ? <div className={styles.categoryAssetStrip}>
+        {categoryAssets.map((image) => {
+          const meta = image.width && image.height ? { width: image.width, height: image.height } : imageMeta[image.url];
+          const isSelected = selectedUrl === image.url;
+          const savedPercent = image.originalSize && image.originalSize > image.size
+            ? Math.round((1 - image.size / image.originalSize) * 100)
+            : 0;
+          return <article
+            className={styles.categoryAssetCard}
+            data-selected={isSelected}
+            aria-pressed={isSelected}
+            role="button"
+            tabIndex={0}
+            key={image.path}
+            onClick={() => selectCategoryImage(selectedId, device, image.url)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") selectCategoryImage(selectedId, device, image.url);
+            }}
+          >
+            <span><Image src={image.url} alt={selectedCategory?.imageAlt || `${deviceLabel} kategori görseli`} fill sizes="110px" onLoad={(event) => {
+              const element = event.currentTarget;
+              setImageMeta((current) => current[image.url] ? current : { ...current, [image.url]: { width: element.naturalWidth, height: element.naturalHeight } });
+            }} /></span>
+            <strong>{image.originalName || image.path.split("/").at(-1) || "Kategori görseli"}</strong>
+            <small>{meta ? `${meta.width}×${meta.height} · ${imageRatio(meta.width, meta.height)}` : image.path.startsWith("current:") ? "Mevcut görsel" : formatSize(image.size)}</small>
+            {savedPercent ? <small>%{savedPercent} küçüldü</small> : null}
+            <button type="button" title="Görseli sil" onClick={(event) => {
+              event.stopPropagation();
+              if (image.path.startsWith("current:")) selectCategoryImage(selectedId, device, "");
+              else void deleteImage(image);
+            }}>×</button>
+          </article>;
+        })}
+        </div> : <div className={styles.categoryEmpty}><strong>Bu kategori galerisi boş</strong></div>}
       </div>
+
+      {selectedCategory ? <div className={styles.categoryCrudPanel}>
+        <header>
+          <div><strong>{selectedCategory.label}</strong><small>Kategori metinleri ve SEO bilgileri</small></div>
+          <button className={styles.categoryDeleteButton} type="button" onClick={() => removeCategory(selectedId, device)}>Kategoriyi sil</button>
+        </header>
+        <div className={styles.categoryInlineFields}>
+          <label>Kategori adı<input value={selectedCategory.label} maxLength={80} onChange={(event) => updateCategoryDefinition(selectedId, { label: event.target.value })} /></label>
+          <label>Kısa açıklama<input value={selectedCategory.description} maxLength={180} onChange={(event) => updateCategoryDefinition(selectedId, { description: event.target.value })} /></label>
+          <label>Görsel başlığı<input value={selectedCategory.imageTitle} maxLength={100} onChange={(event) => updateCategoryDefinition(selectedId, { imageTitle: event.target.value })} /></label>
+          <label>Görsel alt metni (SEO)<input value={selectedCategory.imageAlt} maxLength={160} onChange={(event) => updateCategoryDefinition(selectedId, { imageAlt: event.target.value })} /></label>
+        </div>
+      </div> : null}
 
       <div className={styles.categoryDesignGrid}>
         <section>
@@ -862,68 +1123,6 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <label>Gölge<select value={shadow} onChange={(event) => update(device === "desktop" ? { desktopShadow: event.target.value as typeof donation.desktopShadow } : { mobileShadow: event.target.value as typeof donation.mobileShadow })}><option value="none">Kapalı</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">Güçlü</option></select></label>
         </section>
       </div>
-
-      <div className={styles.categoryGalleryToolbar}>
-        <div>
-          <span>{deviceLabel.toLocaleUpperCase("tr-TR")} GÖRSEL GALERİSİ</span>
-          <strong>Optimize edilmiş medya</strong>
-          <small>PNG, JPG, WebP veya AVIF · En fazla 12 MB</small>
-        </div>
-        <input type="search" value={galleryQuery} placeholder="Görsel ara…" onChange={(event) => setGalleryQuery(event.target.value)} />
-        <select value={gallerySort} onChange={(event) => setGallerySort(event.target.value as typeof gallerySort)}>
-          <option value="newest">En yeni</option>
-          <option value="oldest">En eski</option>
-          <option value="smallest">En küçük dosya</option>
-          <option value="largest">En büyük dosya</option>
-        </select>
-        <button type="button" onClick={() => void deleteUnusedImages(device)}>Kullanılmayanları sil</button>
-        <label className={styles.primaryButton}>
-          {uploading ? "WebP hazırlanıyor…" : "+ Görsel Yükle"}
-          <input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={uploading} onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void uploadImage(file, device);
-            event.target.value = "";
-          }} />
-        </label>
-      </div>
-
-      {filteredImages.length ? <div className={styles.categoryGalleryGrid}>
-        {filteredImages.map((image) => {
-          const meta = image.width && image.height ? { width: image.width, height: image.height } : imageMeta[image.url];
-          const usages = donationCategoryOptions.filter(([id]) => donation.categoryImages[id][device] === image.url);
-          const isSelected = selectedUrl === image.url;
-          const savedPercent = image.originalSize && image.originalSize > image.size
-            ? Math.round((1 - image.size / image.originalSize) * 100)
-            : 0;
-          return <article className={isSelected ? styles.categoryGalleryCardSelected : styles.categoryGalleryCard} key={image.path}>
-            <button type="button" onClick={() => selectCategoryImage(selectedId, device, image.url)}>
-              <span>
-                <Image src={image.url} alt={`${deviceLabel} galeri görseli`} fill sizes="180px" onLoad={(event) => {
-                  const element = event.currentTarget;
-                  setImageMeta((current) => current[image.url] ? current : { ...current, [image.url]: { width: element.naturalWidth, height: element.naturalHeight } });
-                }} />
-              </span>
-              <strong>{image.originalName || image.path.split("/").at(-1) || "Kategori görseli"}</strong>
-              <small>{meta ? `${meta.width}×${meta.height} · ${imageRatio(meta.width, meta.height)} · ` : ""}{(image.format || image.path.split(".").at(-1) || "görsel").toUpperCase()}</small>
-            </button>
-            <div className={styles.categoryOptimization}>
-              {image.originalSize && image.originalSize > image.size
-                ? <span>{formatSize(image.originalSize)} → <b>{formatSize(image.size)}</b>{savedPercent ? ` · %${savedPercent} küçük` : ""}</span>
-                : <span>{formatSize(image.size)}</span>}
-              {usages.length
-                ? <span className={styles.categoryUsageBadge}>{usages.map(([, label]) => label).join(", ")}</span>
-                : <span>Kullanılmıyor</span>}
-            </div>
-            <div className={styles.categoryManagerActions}>
-              <button type="button" onClick={() => selectCategoryImage(selectedId, device, image.url)}>{isSelected ? "Seçili" : `${selectedLabel} için kullan`}</button>
-              <button type="button" onClick={() => void deleteImage(image)}>Sil</button>
-            </div>
-          </article>;
-        })}
-      </div> : <div className={styles.categoryEmpty}>
-        <strong>{query ? "Aramanızla eşleşen görsel yok" : `${deviceLabel} galerisi henüz boş`}</strong>
-        <p>{query ? "Arama kelimesini değiştirin." : "İlk görselinizi yüklediğinizde otomatik olarak WebP’ye dönüştürülüp burada görünecek."}</p>
-      </div>}
     </div>);
   };
 
@@ -978,10 +1177,10 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     <>
       <div className={styles.pageHeading}>
         <div><p>Site bileşenleri</p><h1>Modüller</h1><span>Bugünkü ve gelecekte eklenecek site modüllerini tek merkezden yönet.</span></div>
-        <button className={styles.primaryButton} type="button" disabled={saving} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+        <button className={styles.primaryButton} type="button" disabled={saving || !settingsReady} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
       </div>
 
-      <div className={styles.demoBanner}><span>◦</span><p><strong>Modül merkezi hazır.</strong>Her modül kendi kartında açılır; gelecekte ekleyeceğimiz modüller burada sıralanır.</p></div>
+      <div className={styles.demoBanner}><span>◦</span><p><strong>{settingsLoadError ? "Ayarlar yüklenemedi." : "Modül merkezi hazır."}</strong>{settingsLoadError || "Her modül kendi kartında açılır; gelecekte ekleyeceğimiz modüller burada sıralanır."}</p></div>
 
       <section className={styles.moduleManagerCard}>
         <button className={styles.moduleManagerHeader} type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
