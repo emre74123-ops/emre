@@ -2,6 +2,8 @@ export type DonationModuleSettings = {
   enabled: boolean;
   autoScroll: boolean;
   autoScrollSpeed: number;
+  desktopEdgeScrollPadding: number;
+  mobileEdgeScrollPadding: number;
   showProgress: boolean;
   desktopOverlap: number;
   mobileOverlap: number;
@@ -238,6 +240,8 @@ export const defaultModuleSettings: ModuleSettings = {
     enabled: true,
     autoScroll: true,
     autoScrollSpeed: 1,
+    desktopEdgeScrollPadding: 32,
+    mobileEdgeScrollPadding: 20,
     showProgress: true,
     desktopOverlap: 28,
     mobileOverlap: 10,

@@ -109,6 +109,8 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       enabled: source.enabled !== false,
       autoScroll: source.autoScroll !== false,
       autoScrollSpeed: clamp(source.autoScrollSpeed, .25, 4, 1),
+      desktopEdgeScrollPadding: clamp(source.desktopEdgeScrollPadding, 0, 160, 32),
+      mobileEdgeScrollPadding: clamp(source.mobileEdgeScrollPadding, 0, 100, 20),
       showProgress: source.showProgress !== false,
       desktopOverlap: clamp(source.desktopOverlap, 0, 100, 28),
       mobileOverlap: clamp(source.mobileOverlap, 0, 60, 10),

@@ -13,7 +13,7 @@
 .categoryRail button{min-height:150px}
 .embedded .moduleShell{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .embedded .moduleShell{margin-bottom:0}.embedded .cards{padding-bottom:4px}
-.categoryRail{justify-content:var(--dm-desktop-category-alignment,flex-start);padding:var(--dm-desktop-progress-top-space,0) 0 var(--dm-desktop-progress-bottom-space,10px);border:0;border-radius:0;background:transparent;box-shadow:none}
+.categoryRail{justify-content:var(--dm-desktop-category-alignment,flex-start);padding:var(--dm-desktop-progress-top-space,0) var(--dm-desktop-edge-scroll-padding,32px) var(--dm-desktop-progress-bottom-space,10px);border:0;border-radius:0;background:transparent;box-shadow:none}
 .embedded .moduleShell{margin-top:calc(var(--dm-desktop-overlap,28px) * -1)}
 .categoryRail{gap:var(--dm-desktop-card-gap,10px)}
 .categoryRail button{flex-basis:var(--dm-desktop-card-width,190px);min-height:var(--dm-desktop-card-height,150px)}
@@ -34,7 +34,7 @@
   .allDesktopHidden{display:flex!important}
   .allMobileHidden{display:none!important}
   .embedded .moduleShell{margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0}
-  .categoryRail{justify-content:flex-start;padding:var(--dm-mobile-progress-top-space,0) 0 var(--dm-mobile-progress-bottom-space,10px)}
+  .categoryRail{justify-content:flex-start;padding:var(--dm-mobile-progress-top-space,0) var(--dm-mobile-edge-scroll-padding,20px) var(--dm-mobile-progress-bottom-space,10px)}
   .categoryRail{gap:var(--dm-mobile-card-gap,8px)}
   .categoryProgress{left:0;right:0;height:var(--dm-mobile-progress-thickness,2px)}
   .categoryProgress{background:var(--dm-mobile-progress-track,#e1ebe7)}
@@ -54,7 +54,7 @@
 .forceMobile .allMobileHidden{display:none!important}
 .forceMobile{padding-top:0}
 .forceMobile .moduleShell{width:100%;margin-top:calc(var(--dm-mobile-overlap,10px) * -1);padding:0;border-radius:0;border-left:0;border-right:0}
-.forceMobile .categoryRail{justify-content:flex-start;padding:var(--dm-mobile-progress-top-space,0) 0 var(--dm-mobile-progress-bottom-space,10px)}
+.forceMobile .categoryRail{justify-content:flex-start;padding:var(--dm-mobile-progress-top-space,0) var(--dm-mobile-edge-scroll-padding,20px) var(--dm-mobile-progress-bottom-space,10px)}
 .forceMobile .categoryRail{gap:var(--dm-mobile-card-gap,8px)}
 .forceMobile .categoryProgress{left:0;right:0;height:var(--dm-mobile-progress-thickness,2px)}
 .forceMobile .categoryProgress{background:var(--dm-mobile-progress-track,#e1ebe7)}

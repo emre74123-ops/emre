@@ -119,6 +119,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const categoriesRef = useRef<HTMLDivElement>(null);
   const categoryDirectionRef = useRef<1 | -1>(1);
   const categoryPausedRef = useRef(false);
+  const categoryPositionRef = useRef(0);
+  const categoryInitializedRef = useRef(false);
   const [categoryProgress, setCategoryProgress] = useState(0);
   const [category, setCategory] = useState<Category>("all");
   const [selected, setSelected] = useState<Record<string, number>>({});
@@ -139,16 +141,40 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   useEffect(() => {
     const rail = categoriesRef.current;
     if (!rail) return;
-    const timer = window.setInterval(() => {
-      if (!settings.autoScroll || categoryPausedRef.current || rail.scrollWidth <= rail.clientWidth) return;
+    let animationFrame = 0;
+    let previousTime = performance.now();
+    const maxAtStart = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    if (!categoryInitializedRef.current && maxAtStart > 0) {
+      const mobileRail = previewDevice === "mobile" || (!previewDevice && window.matchMedia("(max-width: 640px)").matches);
+      categoryPositionRef.current = Math.min(maxAtStart, mobileRail ? settings.mobileEdgeScrollPadding : settings.desktopEdgeScrollPadding);
+      rail.scrollLeft = categoryPositionRef.current;
+      categoryInitializedRef.current = true;
+    } else {
+      categoryPositionRef.current = rail.scrollLeft;
+    }
+    const animate = (time: number) => {
+      const elapsed = Math.min(68, Math.max(0, time - previousTime));
+      previousTime = time;
+      if (!settings.autoScroll || categoryPausedRef.current || rail.scrollWidth <= rail.clientWidth) {
+        animationFrame = window.requestAnimationFrame(animate);
+        return;
+      }
       const max = rail.scrollWidth - rail.clientWidth;
-      const next = rail.scrollLeft + categoryDirectionRef.current * settings.autoScrollSpeed;
-      if (next >= max) categoryDirectionRef.current = -1;
-      if (next <= 0) categoryDirectionRef.current = 1;
-      rail.scrollLeft = Math.max(0, Math.min(max, next));
-    }, 34);
-    return () => window.clearInterval(timer);
-  }, [settings.autoScroll, settings.autoScrollSpeed]);
+      let next = categoryPositionRef.current + categoryDirectionRef.current * settings.autoScrollSpeed * (elapsed / 34);
+      if (next >= max) {
+        next = max;
+        categoryDirectionRef.current = -1;
+      } else if (next <= 0) {
+        next = 0;
+        categoryDirectionRef.current = 1;
+      }
+      categoryPositionRef.current = next;
+      rail.scrollLeft = next;
+      animationFrame = window.requestAnimationFrame(animate);
+    };
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [previewDevice, settings.autoScroll, settings.autoScrollSpeed, settings.desktopEdgeScrollPadding, settings.mobileEdgeScrollPadding]);
 
   function updateCategoryProgress() {
     const rail = categoriesRef.current;
@@ -198,6 +224,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-mobile-card-height": `${settings.mobileCardHeight}px`,
         "--dm-desktop-card-gap": `${settings.desktopCardGap}px`,
         "--dm-mobile-card-gap": `${settings.mobileCardGap}px`,
+        "--dm-desktop-edge-scroll-padding": `${settings.desktopEdgeScrollPadding}px`,
+        "--dm-mobile-edge-scroll-padding": `${settings.mobileEdgeScrollPadding}px`,
         "--dm-desktop-content-gap": `${settings.desktopContentGap}px`,
         "--dm-mobile-content-gap": `${settings.mobileContentGap}px`,
         "--dm-desktop-progress-start": settings.desktopProgressStartColor,
@@ -332,10 +360,11 @@ export default function DonationModule({ embedded = false, settings = defaultMod
             aria-label="Bağış kategorileri"
             ref={categoriesRef}
             onScroll={updateCategoryProgress}
-            onPointerDown={() => { categoryPausedRef.current = true; }}
-            onPointerUp={() => { categoryPausedRef.current = false; }}
-            onPointerCancel={() => { categoryPausedRef.current = false; }}
-            onPointerLeave={() => { categoryPausedRef.current = false; }}
+            onPointerDown={() => { categoryPausedRef.current = true; categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; }}
+            onPointerUp={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; categoryPausedRef.current = false; }}
+            onPointerCancel={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; categoryPausedRef.current = false; }}
+            onPointerLeave={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; categoryPausedRef.current = false; }}
+            onWheel={() => { categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0; }}
           >
             {visibleCategories.map((item) => (
               <button
