@@ -73,7 +73,7 @@ function subscribeToMobileViewport(callback: () => void) {
 const getMobileViewportSnapshot = () => window.matchMedia("(max-width: 640px)").matches;
 const getDesktopServerSnapshot = () => false;
 
-export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice, previewCategory }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile"; previewCategory?: string }) {
+export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice, previewCategory, onCategoryChange }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile"; previewCategory?: string; onCategoryChange?: (category: string) => void }) {
   const cardsRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const categoryDirectionRef = useRef<1 | -1>(1);
@@ -82,6 +82,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const categoryInitializedRef = useRef(false);
   const categoryPointerActiveRef = useRef(false);
   const categoryResumeAtRef = useRef(0);
+  const categoryMouseDragRef = useRef({ active: false, moved: false, pointerId: -1, startX: 0, startScroll: 0 });
+  const categoryLastDragAtRef = useRef(0);
   const [categoryProgress, setCategoryProgress] = useState(0);
   const [category, setCategory] = useState(previewCategory || settings.allCategoryId || settings.categories[0]?.id || "");
   const [selected, setSelected] = useState<Record<string, number>>({});
@@ -384,20 +386,61 @@ export default function DonationModule({ embedded = false, settings = defaultMod
             onScroll={updateCategoryProgress}
             onPointerDown={(event) => {
               startCategoryInteraction();
-              event.currentTarget.setPointerCapture?.(event.pointerId);
+              if (event.pointerType === "mouse" && event.button === 0) {
+                categoryMouseDragRef.current = {
+                  active: true,
+                  moved: false,
+                  pointerId: event.pointerId,
+                  startX: event.clientX,
+                  startScroll: event.currentTarget.scrollLeft,
+                };
+              }
+            }}
+            onPointerMove={(event) => {
+              const drag = categoryMouseDragRef.current;
+              if (!drag.active || event.pointerType !== "mouse") return;
+              const distance = event.clientX - drag.startX;
+              if (!drag.moved && Math.abs(distance) < 6) return;
+              if (!drag.moved) {
+                drag.moved = true;
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+              }
+              event.preventDefault();
+              event.currentTarget.scrollLeft = drag.startScroll - distance;
+              categoryPositionRef.current = event.currentTarget.scrollLeft;
             }}
             onPointerUp={(event) => {
+              if (categoryMouseDragRef.current.moved) categoryLastDragAtRef.current = performance.now();
+              categoryMouseDragRef.current.active = false;
               finishCategoryInteraction();
               if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
             }}
-            onPointerCancel={finishCategoryInteraction}
+            onPointerCancel={(event) => {
+              if (categoryMouseDragRef.current.moved) categoryLastDragAtRef.current = performance.now();
+              categoryMouseDragRef.current.active = false;
+              finishCategoryInteraction();
+              if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+            onPointerLeave={(event) => {
+              const drag = categoryMouseDragRef.current;
+              if (!drag.active || drag.moved || event.currentTarget.hasPointerCapture?.(drag.pointerId)) return;
+              drag.active = false;
+              finishCategoryInteraction();
+            }}
             onWheel={pauseCategoryForWheel}
           >
             {visibleCategories.map((item) => (
               <button
                 className={effectiveCategory === item.id ? styles.activeCategory : ""}
                 key={item.id}
-                onClick={() => setCategory(item.id)}
+                onClick={(event) => {
+                  if (performance.now() - categoryLastDragAtRef.current < 180) {
+                    event.preventDefault();
+                    return;
+                  }
+                  setCategory(item.id);
+                  onCategoryChange?.(item.id);
+                }}
                 aria-label={item.label}
                 title={item.label}
               >

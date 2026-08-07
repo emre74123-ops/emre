@@ -687,11 +687,19 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     return ratioWidth <= 20 && ratioHeight <= 20 ? `${ratioWidth}:${ratioHeight}` : (width / height).toFixed(2);
   };
 
-  const preview = (device: "desktop" | "mobile") => (
+  function chooseProjectCategory(category: string) {
+    setProjectCategory(category);
+    const projects = category === donation.allCategoryId
+      ? donation.projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
+      : donation.projects.filter((project) => project.category === category);
+    setSelectedProjectId(projects[0]?.id || "");
+  }
+
+  const preview = (device: "desktop" | "mobile", category: string, onCategoryChange: (category: string) => void) => (
     <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
       <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlı görünüm" : "Web canlı görünüm"}</div>
       <div className={styles.modulePreviewViewport}>
-        <DonationModule embedded settings={donation} previewDevice={device} previewCategory={projectCategory} />
+        <DonationModule embedded settings={donation} previewDevice={device} previewCategory={category} onCategoryChange={onCategoryChange} />
         <div className={styles.previewFollowingSection}><span>SONRAKİ BÖLÜM</span></div>
       </div>
     </div>
@@ -1214,7 +1222,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <div className={styles.moduleConfigurationPanel}>
                 {upperDesignSettings("desktop")}
               </div>
-              {preview("desktop")}
+              {preview("desktop", selectedUpperCategory.desktop, (category) => chooseUpperCategory("desktop", category))}
             </div>
           </> : null}
 
@@ -1223,7 +1231,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <div className={styles.moduleConfigurationPanel}>
                 {upperDesignSettings("mobile")}
               </div>
-              {preview("mobile")}
+              {preview("mobile", selectedUpperCategory.mobile, (category) => chooseUpperCategory("mobile", category))}
             </div>
           </> : null}
           </> : null}
@@ -1242,7 +1250,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                 {projectControls(lowerDevice)}
                 {lowerControls(lowerDevice)}
               </div>
-              <div className={styles.lowerPreviewSticky}>{preview(lowerDevice)}</div>
+              <div className={styles.lowerPreviewSticky}>{preview(lowerDevice, projectCategory, chooseProjectCategory)}</div>
             </div>
           </div> : null}
         </div> : null}
