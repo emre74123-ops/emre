@@ -70,6 +70,95 @@ export type DonationModuleSettings = {
   projects: DonationProject[];
 };
 
+export type DonationAmountPreset = {
+  id: string;
+  label: string;
+  amountMinor: number;
+  enabled: boolean;
+  featured: boolean;
+};
+
+export type DonationOptionVisibility = {
+  groupId: string;
+  optionIds: string[];
+};
+
+export type DonationOption = {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  priceMinor: number;
+};
+
+export type DonationOptionGroup = {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  required: boolean;
+  display: "buttons" | "select" | "cards";
+  defaultOptionId?: string;
+  visibleWhen?: DonationOptionVisibility;
+  options: DonationOption[];
+};
+
+export type DonationPriceRule = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  optionIds: string[];
+  amountMinor: number;
+};
+
+export type DonationActionDevice = {
+  visible: boolean;
+  label: string;
+  width: "auto" | "half" | "full";
+  align: "start" | "center" | "end";
+  height: number;
+  radius: number;
+  order: number;
+};
+
+export type DonationProjectAction = {
+  id: string;
+  enabled: boolean;
+  kind: "add-to-cart" | "checkout" | "internal-link" | "external-link" | "whatsapp";
+  icon: "none" | "plus" | "cart" | "heart" | "arrow";
+  href: string;
+  requiresValidSelection: boolean;
+  variant: "solid" | "outline" | "soft" | "gradient";
+  background: string;
+  backgroundEnd: string;
+  textColor: string;
+  borderColor: string;
+  desktop: DonationActionDevice;
+  mobile: DonationActionDevice;
+};
+
+export type DonationProjectCommerce = {
+  version: 2;
+  currency: "TRY";
+  mode: "amount" | "quantity" | "fixed" | "configured";
+  sectionLabel: string;
+  customAmountPlaceholder: string;
+  validationMessage: string;
+  baseAmountMinor: number;
+  quantityPresets: number[];
+  customAmountEnabled: boolean;
+  customAmountMinMinor: number;
+  customAmountMaxMinor: number;
+  amountPresets: DonationAmountPreset[];
+  optionGroups: DonationOptionGroup[];
+  priceRules: DonationPriceRule[];
+  actions: DonationProjectAction[];
+  actionLayoutDesktop: "row" | "stack";
+  actionLayoutMobile: "row" | "stack";
+  actionGapDesktop: number;
+  actionGapMobile: number;
+};
+
 export type DonationProject = {
   id: string;
   category: DonationCategoryId;
@@ -88,6 +177,7 @@ export type DonationProject = {
   fixedPrice: number;
   suggested: number[];
   customAmountEnabled: boolean;
+  commerce: DonationProjectCommerce;
   desktop: DonationProjectDesign;
   mobile: DonationProjectDesign;
 };
@@ -294,6 +384,406 @@ export const defaultDonationCategoryImages = {
   orphan: { desktop: "/donation-categories/yetim-destegi.webp", mobile: "/donation-categories/yetim-destegi.webp" },
 };
 
+const COMMERCE_MAX_MONEY_MINOR = 10_000_000_000;
+
+function commerceNumber(value: unknown, min: number, max: number, fallback: number) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+function commerceInteger(value: unknown, min: number, max: number, fallback: number) {
+  return Math.round(commerceNumber(value, min, max, fallback));
+}
+
+function commerceText(value: unknown, fallback: string, maxLength: number) {
+  const cleaned = String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim()
+    .slice(0, maxLength);
+  return cleaned || fallback;
+}
+
+function commerceColor(value: unknown, fallback: string) {
+  const color = String(value ?? "").trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
+}
+
+function commerceBoolean(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function commerceChoice<T extends string>(value: unknown, choices: readonly T[], fallback: T): T {
+  return choices.includes(value as T) ? value as T : fallback;
+}
+
+function commerceId(value: unknown, fallback: string) {
+  return normalizeDonationCategoryId(value, fallback).slice(0, 64);
+}
+
+function uniqueCommerceId(value: unknown, fallback: string, used: Set<string>) {
+  const base = commerceId(value, fallback);
+  let id = base;
+  let suffix = 2;
+  while (used.has(id)) {
+    const ending = `-${suffix}`;
+    id = `${base.slice(0, Math.max(1, 64 - ending.length))}${ending}`;
+    suffix += 1;
+  }
+  used.add(id);
+  return id;
+}
+
+function commerceHref(value: unknown, kind: DonationProjectAction["kind"]) {
+  const href = String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim()
+    .slice(0, 500);
+  if (kind === "add-to-cart" || kind === "checkout") return "";
+  if (kind === "internal-link") {
+    return href.startsWith("/") && !href.startsWith("//") ? href : "";
+  }
+  try {
+    const url = new URL(href);
+    if (url.protocol !== "https:") return "";
+    if (kind === "external-link") return url.toString().slice(0, 500);
+    if (
+      kind === "whatsapp"
+      && ["wa.me", "api.whatsapp.com", "web.whatsapp.com"].includes(url.hostname.toLowerCase())
+    ) {
+      return url.toString().slice(0, 500);
+    }
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+function legacyMoneyMinor(value: unknown) {
+  return commerceInteger(Number(value) * 100, 0, COMMERCE_MAX_MONEY_MINOR, 0);
+}
+
+function normalizeActionDevice(
+  value: unknown,
+  fallback: DonationActionDevice,
+): DonationActionDevice {
+  const source = value && typeof value === "object"
+    ? value as Partial<DonationActionDevice>
+    : {};
+  return {
+    visible: commerceBoolean(source.visible, fallback.visible),
+    label: commerceText(source.label, fallback.label, 80),
+    width: commerceChoice(source.width, ["auto", "half", "full"] as const, fallback.width),
+    align: commerceChoice(source.align, ["start", "center", "end"] as const, fallback.align),
+    height: commerceInteger(source.height, 32, 80, fallback.height),
+    radius: commerceInteger(source.radius, 0, 40, fallback.radius),
+    order: commerceInteger(source.order, 0, 99, fallback.order),
+  };
+}
+
+function migrateLegacyProjectCommerce(
+  project: Partial<DonationProject> | null | undefined,
+): DonationProjectCommerce {
+  const legacyMode = commerceChoice(
+    (project as { pricingMode?: unknown } | null | undefined)?.pricingMode,
+    ["amount", "quantity", "fixed", "configured"] as const,
+    "amount",
+  );
+  const suggested = Array.isArray(project?.suggested)
+    ? project.suggested
+      .map((value) => commerceNumber(value, 0, 100_000_000, 0))
+      .filter((value) => value > 0)
+      .slice(0, 12)
+    : [];
+  const desktopDesign = project?.desktop;
+  const mobileDesign = project?.mobile;
+  const desktopLabel = commerceText(desktopDesign?.actionText, "Sepete ekle", 80);
+  const mobileLabel = commerceText(mobileDesign?.actionText, desktopLabel, 80);
+  const actionBackground = commerceColor(
+    desktopDesign?.actionBackground ?? mobileDesign?.actionBackground,
+    "#128465",
+  );
+  const actionTextColor = commerceColor(
+    desktopDesign?.actionTextColor ?? mobileDesign?.actionTextColor,
+    "#ffffff",
+  );
+  const amountPresetIds = new Set<string>();
+  const amountPresets = legacyMode === "amount"
+    ? suggested.map((amount, index): DonationAmountPreset => ({
+      id: uniqueCommerceId(`tutar-${amount}`, `tutar-${index + 1}`, amountPresetIds),
+      label: `${amount.toLocaleString("tr-TR")} TL`,
+      amountMinor: legacyMoneyMinor(amount),
+      enabled: true,
+      featured: index === 0,
+    }))
+    : [];
+  const quantityPresets = legacyMode === "quantity"
+    ? [...new Set(suggested.map((value) => commerceInteger(value, 1, 10_000, 1)))]
+    : [];
+  const customAmountEnabled = commerceBoolean(project?.customAmountEnabled, legacyMode === "amount");
+  return {
+    version: 2,
+    currency: "TRY",
+    mode: legacyMode,
+    sectionLabel: legacyMode === "quantity" ? "Hisse adedi" : "Bağış tutarı",
+    customAmountPlaceholder: "Başka tutar",
+    validationMessage: "Lütfen geçerli bir seçim yapın.",
+    baseAmountMinor: legacyMoneyMinor(project?.fixedPrice),
+    quantityPresets,
+    customAmountEnabled,
+    customAmountMinMinor: customAmountEnabled ? 100 : 0,
+    customAmountMaxMinor: COMMERCE_MAX_MONEY_MINOR,
+    amountPresets,
+    optionGroups: [],
+    priceRules: [],
+    actions: [{
+      id: "sepete-ekle",
+      enabled: true,
+      kind: "add-to-cart",
+      icon: "plus",
+      href: "",
+      requiresValidSelection: true,
+      variant: "solid",
+      background: actionBackground,
+      backgroundEnd: actionBackground,
+      textColor: actionTextColor,
+      borderColor: actionBackground,
+      desktop: {
+        visible: true,
+        label: desktopLabel,
+        width: "full",
+        align: "center",
+        height: commerceInteger(desktopDesign?.actionHeight, 32, 80, 46),
+        radius: commerceInteger(desktopDesign?.actionRadius, 0, 40, 9),
+        order: 0,
+      },
+      mobile: {
+        visible: true,
+        label: mobileLabel,
+        width: "full",
+        align: "center",
+        height: commerceInteger(mobileDesign?.actionHeight, 32, 80, 46),
+        radius: commerceInteger(mobileDesign?.actionRadius, 0, 40, 9),
+        order: 0,
+      },
+    }],
+    actionLayoutDesktop: "row",
+    actionLayoutMobile: "stack",
+    actionGapDesktop: 10,
+    actionGapMobile: 10,
+  };
+}
+
+export function resolveDonationProjectCommerce(
+  project: Partial<DonationProject> | null | undefined,
+): DonationProjectCommerce {
+  const fallback = migrateLegacyProjectCommerce(project);
+  const candidate = project?.commerce;
+  if (!candidate || Number(candidate.version) !== 2) return fallback;
+  const source = candidate as Partial<DonationProjectCommerce>;
+
+  const amountPresetIds = new Set<string>();
+  const amountPresetSource = Array.isArray(source.amountPresets)
+    ? source.amountPresets
+    : fallback.amountPresets;
+  const amountPresets = amountPresetSource.slice(0, 12).flatMap((value, index): DonationAmountPreset[] => {
+    if (!value || typeof value !== "object") return [];
+    const preset = value as Partial<DonationAmountPreset>;
+    return [{
+      id: uniqueCommerceId(preset.id, `tutar-${index + 1}`, amountPresetIds),
+      label: commerceText(preset.label, `Tutar ${index + 1}`, 80),
+      amountMinor: commerceInteger(preset.amountMinor, 0, COMMERCE_MAX_MONEY_MINOR, 0),
+      enabled: commerceBoolean(preset.enabled, true),
+      featured: commerceBoolean(preset.featured, false),
+    }];
+  });
+
+  const quantityPresetSource = Array.isArray(source.quantityPresets)
+    ? source.quantityPresets
+    : fallback.quantityPresets;
+  const quantityPresets = [...new Set(
+    quantityPresetSource
+      .map((value) => commerceInteger(value, 1, 10_000, 1))
+      .slice(0, 12),
+  )];
+
+  const groupIds = new Set<string>();
+  const optionIds = new Set<string>();
+  const optionsByGroup = new Map<string, Set<string>>();
+  const enabledOptionsByGroup = new Map<string, Set<string>>();
+  const groupSource = Array.isArray(source.optionGroups)
+    ? source.optionGroups
+    : fallback.optionGroups;
+  const optionGroups = groupSource.slice(0, 12).flatMap((value, groupIndex): DonationOptionGroup[] => {
+    if (!value || typeof value !== "object") return [];
+    const group = value as Partial<DonationOptionGroup>;
+    const id = uniqueCommerceId(group.id, `secenek-grubu-${groupIndex + 1}`, groupIds);
+    const localOptionIds = new Set<string>();
+    const groupOptions = Array.isArray(group.options) ? group.options : [];
+    const options = groupOptions.slice(0, 30).flatMap((optionValue, optionIndex): DonationOption[] => {
+      if (!optionValue || typeof optionValue !== "object") return [];
+      const option = optionValue as Partial<DonationOption>;
+      const optionId = uniqueCommerceId(
+        option.id,
+        `${id}-secenek-${optionIndex + 1}`,
+        optionIds,
+      );
+      localOptionIds.add(optionId);
+      return [{
+        id: optionId,
+        label: commerceText(option.label, `Seçenek ${optionIndex + 1}`, 80),
+        description: commerceText(option.description, "", 300),
+        enabled: commerceBoolean(option.enabled, true),
+        priceMinor: commerceInteger(option.priceMinor, 0, COMMERCE_MAX_MONEY_MINOR, 0),
+      }];
+    });
+    optionsByGroup.set(id, localOptionIds);
+    enabledOptionsByGroup.set(
+      id,
+      new Set(options.filter((option) => option.enabled).map((option) => option.id)),
+    );
+    const requestedDefault = commerceId(group.defaultOptionId, "");
+    const defaultOptionId = requestedDefault && enabledOptionsByGroup.get(id)?.has(requestedDefault)
+      ? requestedDefault
+      : undefined;
+    const rawVisibility = group.visibleWhen;
+    const visibilityGroupId = commerceId(rawVisibility?.groupId, "");
+    const visibilityOptionIds = visibilityGroupId && visibilityGroupId !== id && optionsByGroup.has(visibilityGroupId)
+      ? [...new Set(
+        (Array.isArray(rawVisibility?.optionIds) ? rawVisibility.optionIds : [])
+          .map((optionId) => commerceId(optionId, ""))
+          .filter((optionId) => optionsByGroup.get(visibilityGroupId)?.has(optionId)),
+      )]
+      : [];
+    return [{
+      id,
+      label: commerceText(group.label, `Seçenek grubu ${groupIndex + 1}`, 80),
+      description: commerceText(group.description, "", 300),
+      enabled: commerceBoolean(group.enabled, true),
+      required: commerceBoolean(group.required, false),
+      display: commerceChoice(group.display, ["buttons", "select", "cards"] as const, "buttons"),
+      ...(defaultOptionId ? { defaultOptionId } : {}),
+      ...(visibilityGroupId && visibilityOptionIds.length
+        ? { visibleWhen: { groupId: visibilityGroupId, optionIds: visibilityOptionIds } }
+        : {}),
+      options,
+    }];
+  });
+
+  const ruleIds = new Set<string>();
+  const priceRuleSource = Array.isArray(source.priceRules) ? source.priceRules : fallback.priceRules;
+  const priceRules = priceRuleSource.slice(0, 200).flatMap((value, index): DonationPriceRule[] => {
+    if (!value || typeof value !== "object") return [];
+    const rule = value as Partial<DonationPriceRule>;
+    const validOptionIds = [...new Set(
+      (Array.isArray(rule.optionIds) ? rule.optionIds : [])
+        .map((optionId) => commerceId(optionId, ""))
+        .filter((optionId) => optionIds.has(optionId)),
+    )];
+    if (!validOptionIds.length) return [];
+    return [{
+      id: uniqueCommerceId(rule.id, `fiyat-kurali-${index + 1}`, ruleIds),
+      label: commerceText(rule.label, `Fiyat kuralı ${index + 1}`, 80),
+      enabled: commerceBoolean(rule.enabled, true),
+      optionIds: validOptionIds,
+      amountMinor: commerceInteger(rule.amountMinor, 0, COMMERCE_MAX_MONEY_MINOR, 0),
+    }];
+  });
+
+  const actionIds = new Set<string>();
+  const actionSource = Array.isArray(source.actions) ? source.actions : fallback.actions;
+  const actions = actionSource.slice(0, 4).flatMap((value, index): DonationProjectAction[] => {
+    if (!value || typeof value !== "object") return [];
+    const action = value as Partial<DonationProjectAction>;
+    const fallbackAction = fallback.actions[Math.min(index, fallback.actions.length - 1)]
+      || fallback.actions[0];
+    const kind = commerceChoice(
+      action.kind,
+      ["add-to-cart", "checkout", "internal-link", "external-link", "whatsapp"] as const,
+      fallbackAction.kind,
+    );
+    const background = commerceColor(action.background, fallbackAction.background);
+    return [{
+      id: uniqueCommerceId(action.id, `eylem-${index + 1}`, actionIds),
+      enabled: commerceBoolean(action.enabled, true),
+      kind,
+      icon: commerceChoice(
+        action.icon,
+        ["none", "plus", "cart", "heart", "arrow"] as const,
+        fallbackAction.icon,
+      ),
+      href: commerceHref(action.href, kind),
+      requiresValidSelection: commerceBoolean(action.requiresValidSelection, true),
+      variant: commerceChoice(
+        action.variant,
+        ["solid", "outline", "soft", "gradient"] as const,
+        fallbackAction.variant,
+      ),
+      background,
+      backgroundEnd: commerceColor(action.backgroundEnd, background),
+      textColor: commerceColor(action.textColor, fallbackAction.textColor),
+      borderColor: commerceColor(action.borderColor, background),
+      desktop: normalizeActionDevice(action.desktop, fallbackAction.desktop),
+      mobile: normalizeActionDevice(action.mobile, fallbackAction.mobile),
+    }];
+  });
+
+  const customAmountMinMinor = commerceInteger(
+    source.customAmountMinMinor,
+    0,
+    COMMERCE_MAX_MONEY_MINOR,
+    fallback.customAmountMinMinor,
+  );
+  const requestedCustomAmountMax = commerceInteger(
+    source.customAmountMaxMinor,
+    0,
+    COMMERCE_MAX_MONEY_MINOR,
+    fallback.customAmountMaxMinor,
+  );
+
+  return {
+    version: 2,
+    currency: "TRY",
+    mode: commerceChoice(
+      source.mode,
+      ["amount", "quantity", "fixed", "configured"] as const,
+      fallback.mode,
+    ),
+    sectionLabel: commerceText(source.sectionLabel, fallback.sectionLabel, 80),
+    customAmountPlaceholder: commerceText(
+      source.customAmountPlaceholder,
+      fallback.customAmountPlaceholder,
+      100,
+    ),
+    validationMessage: commerceText(source.validationMessage, fallback.validationMessage, 180),
+    baseAmountMinor: commerceInteger(
+      source.baseAmountMinor,
+      0,
+      COMMERCE_MAX_MONEY_MINOR,
+      fallback.baseAmountMinor,
+    ),
+    quantityPresets,
+    customAmountEnabled: commerceBoolean(source.customAmountEnabled, fallback.customAmountEnabled),
+    customAmountMinMinor,
+    customAmountMaxMinor: Math.max(customAmountMinMinor, requestedCustomAmountMax),
+    amountPresets,
+    optionGroups,
+    priceRules,
+    actions,
+    actionLayoutDesktop: commerceChoice(
+      source.actionLayoutDesktop,
+      ["row", "stack"] as const,
+      fallback.actionLayoutDesktop,
+    ),
+    actionLayoutMobile: commerceChoice(
+      source.actionLayoutMobile,
+      ["row", "stack"] as const,
+      fallback.actionLayoutMobile,
+    ),
+    actionGapDesktop: commerceInteger(source.actionGapDesktop, 0, 40, fallback.actionGapDesktop),
+    actionGapMobile: commerceInteger(source.actionGapMobile, 0, 40, fallback.actionGapMobile),
+  };
+}
+
 const defaultProjectDesign: DonationProjectDesign = {
   useSharedDesign: true,
   mediaThumbnailsVisible: true,
@@ -330,13 +820,22 @@ const defaultProjectDesign: DonationProjectDesign = {
   actionRadius: 9,
 };
 
-export const defaultDonationProjects: DonationProject[] = [
+function createDefaultDonationProject(
+  project: Omit<DonationProject, "commerce">,
+): DonationProject {
+  return {
+    ...project,
+    commerce: resolveDonationProjectCommerce(project),
+  };
+}
+
+export const defaultDonationProjects: DonationProject[] = ([
   { id: "water-africa", category: "water", enabled: true, title: "Afrika Su Kuyusu", description: "Temiz suya erişimi olmayan bir bölgeye kalıcı bir su kaynağı kazandırın.", image: "https://images.unsplash.com/photo-1542810634-71277d95dcbb?auto=format&fit=crop&w=1000&q=85", badge: "Kalıcı iyilik", pricingMode: "quantity", fixedPrice: 2900, suggested: [1, 2, 3, 4], customAmountEnabled: false, desktop: { ...defaultProjectDesign }, mobile: { ...defaultProjectDesign, cardWidth: 330, cardPadding: 20, cardRadius: 16, titleSize: 24, imageHeight: 205 } },
   { id: "general-support", category: "general", enabled: true, title: "İyilik Fonu", description: "Bağışınız, öncelikli ihtiyaçların hızlı ve şeffaf biçimde karşılanmasına destek olur.", image: "https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=1000&q=85", badge: "En çok ihtiyaç duyulan", pricingMode: "amount", fixedPrice: 0, suggested: [250, 500, 1000, 2000], customAmountEnabled: true, desktop: { ...defaultProjectDesign }, mobile: { ...defaultProjectDesign, cardWidth: 330, cardPadding: 20, cardRadius: 16, titleSize: 24, imageHeight: 205 } },
   { id: "orphan-meal", category: "orphan", enabled: true, title: "Yetim Çocuklara Yemek", description: "Bir çocuğun günlük sıcak yemek ihtiyacına katkıda bulunun.", image: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1000&q=85", badge: "Bir sofraya ortak ol", pricingMode: "amount", fixedPrice: 0, suggested: [150, 300, 600, 1200], customAmountEnabled: true, desktop: { ...defaultProjectDesign }, mobile: { ...defaultProjectDesign, cardWidth: 330, cardPadding: 20, cardRadius: 16, titleSize: 24, imageHeight: 205 } },
   { id: "qurban-share", category: "qurban", enabled: true, title: "Kurban Hissesi", description: "Kurban bağışınızı ihtiyaç sahiplerine güvenle ulaştırıyoruz.", image: "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?auto=format&fit=crop&w=1000&q=85", badge: "Hisse bağışı", pricingMode: "quantity", fixedPrice: 4750, suggested: [1, 2, 3, 4], customAmountEnabled: false, desktop: { ...defaultProjectDesign }, mobile: { ...defaultProjectDesign, cardWidth: 330, cardPadding: 20, cardRadius: 16, titleSize: 24, imageHeight: 205 } },
   { id: "zakat", category: "zakat", enabled: true, title: "Zekât Bağışı", description: "Zekâtınızı ihtiyaç sahibi ailelere titizlikle ulaştıralım.", image: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=1000&q=85", badge: "Güvenli ulaştırma", pricingMode: "amount", fixedPrice: 0, suggested: [500, 1000, 2500, 5000], customAmountEnabled: true, desktop: { ...defaultProjectDesign }, mobile: { ...defaultProjectDesign, cardWidth: 330, cardPadding: 20, cardRadius: 16, titleSize: 24, imageHeight: 205 } },
-];
+] satisfies Omit<DonationProject, "commerce">[]).map(createDefaultDonationProject);
 
 export const defaultModuleSettings: ModuleSettings = {
   donation: {
@@ -717,7 +1216,17 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
             project.image,
             `${project.id}-mobile-cover`,
           ),
-          suggested: Array.isArray(project.suggested) && project.suggested.length ? project.suggested : fallback.suggested,
+          pricingMode: project.pricingMode === "quantity" ? "quantity" : "amount",
+          fixedPrice: boundedNumber(project.fixedPrice, 0, 100_000_000, fallback.fixedPrice),
+          suggested: Array.isArray(project.suggested)
+            ? project.suggested
+              .slice(0, 12)
+              .map((value) => boundedNumber(value, 0, 100_000_000, 0))
+            : fallback.suggested,
+          customAmountEnabled: typeof project.customAmountEnabled === "boolean"
+            ? project.customAmountEnabled
+            : fallback.customAmountEnabled,
+          commerce: resolveDonationProjectCommerce(project),
           desktop: normalizeProjectDesign(
             { useSharedImageDesign: true, imageVisible: true, imageFit: "cover", ...project.desktop },
             fallback.desktop,
