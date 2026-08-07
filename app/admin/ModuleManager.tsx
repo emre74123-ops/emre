@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, type DonationCategory, type DonationLowerDeviceSettings, type DonationProject, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
@@ -28,6 +28,89 @@ type GalleryImage = {
 };
 type UpperSettingsGroupRenderer = (id: string, title: string, content: ReactNode) => ReactNode;
 
+function ModulePreview({
+  device,
+  settings,
+  category,
+  onCategoryChange,
+}: {
+  device: Device;
+  settings: ModuleSettings["donation"];
+  category: string;
+  onCategoryChange: (category: string) => void;
+}) {
+  return (
+    <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
+      <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlı görünüm" : "Web canlı görünüm"}</div>
+      <div className={styles.modulePreviewViewport}>
+        <DonationModule embedded settings={settings} previewDevice={device} previewCategory={category} onCategoryChange={onCategoryChange} />
+        <div className={styles.previewFollowingSection}><span>SONRAKİ BÖLÜM</span></div>
+      </div>
+    </div>
+  );
+}
+
+async function optimizeProjectImage(file: File, device: Device) {
+  const accepted = new Set(["image/png", "image/jpeg", "image/webp", "image/avif"]);
+  if (!accepted.has(file.type)) throw new Error("PNG, JPG, WebP veya AVIF biçiminde bir görsel seçin.");
+  if (file.size > 15 * 1024 * 1024) throw new Error("Görsel en fazla 15 MB olabilir.");
+  const bitmap = await createImageBitmap(file);
+  const maxDimension = device === "desktop" ? 1600 : 1200;
+  const ratio = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+  let width = Math.max(1, Math.round(bitmap.width * ratio));
+  let height = Math.max(1, Math.round(bitmap.height * ratio));
+  let quality = .86;
+  let blob: Blob | null = null;
+  const targetSize = device === "desktop" ? 480 * 1024 : 360 * 1024;
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: true });
+    if (!context) {
+      bitmap.close();
+      throw new Error("Görsel işleme başlatılamadı.");
+    }
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(bitmap, 0, 0, width, height);
+    blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+    if (!blob || blob.size <= targetSize || Math.max(width, height) <= 640) break;
+    if (quality > .7) quality -= .04;
+    else {
+      width = Math.max(1, Math.round(width * .88));
+      height = Math.max(1, Math.round(height * .88));
+    }
+  }
+  bitmap.close();
+  if (!blob) throw new Error("Görsel WebP biçimine dönüştürülemedi.");
+  const safeName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9-_]/gi, "-") || "kart-gorseli";
+  return {
+    file: new File([blob], `${safeName}.webp`, { type: "image/webp" }),
+    width,
+    height,
+    originalName: file.name,
+    originalSize: file.size,
+  };
+}
+
+function ProjectMediaPreview({ media, sizes = "120px" }: { media: DonationProjectMedia; sizes?: string }) {
+  const src = media.type === "video" ? media.poster || "" : media.url;
+  return (
+    <span className={styles.projectMediaPreview}>
+      {src
+        ? <Image src={src} alt={media.alt || ""} fill sizes={sizes} />
+        : (
+          // A native image intentionally keeps the browser's broken-image marker for a video without a poster.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/__missing-project-media__.png" alt="" aria-hidden="true" />
+        )}
+      {media.type === "video" ? <i>▶</i> : null}
+    </span>
+  );
+}
+
 export default function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
   const [settings, setSettings] = useState<ModuleSettings>(defaultModuleSettings);
   const [saving, setSaving] = useState(false);
@@ -52,6 +135,10 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [pendingLegacyCategoryImages, setPendingLegacyCategoryImages] = useState<Record<string, GalleryImage[]>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadingPosterId, setUploadingPosterId] = useState("");
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Record<Device, string>>({ desktop: "", mobile: "" });
+  const [mediaSettingsGroup, setMediaSettingsGroup] = useState<"gallery" | "appearance" | "video">("gallery");
+  const [pendingProjectMediaDeletes, setPendingProjectMediaDeletes] = useState<string[]>([]);
+  const [pendingProjectFolderDeletes, setPendingProjectFolderDeletes] = useState<string[]>([]);
   const categoryStripRefs = useRef<Record<Device, HTMLDivElement | null>>({ desktop: null, mobile: null });
   const persistedCategoryIdsRef = useRef<Set<string>>(new Set());
 
@@ -186,17 +273,11 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const deleteProject = () => {
     if (!selectedProject || !window.confirm("Bu bağış kartı ve karta ait web/mobil medya galerileri tamamen silinsin mi?")) return;
     const removedId = selectedProject.id;
-    void fetch("/api/admin/modules/images", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId: removedId, deleteAll: true }),
-    }).then(async (response) => {
-      if (!response.ok) return showToast((await response.json()).error || "Kart galerisi silinemedi.");
-      const next = donation.projects.filter((project) => project.id !== removedId);
-      updateProjects(next);
-      setSelectedProjectId(aggregateCategorySelected ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
-      showToast("Kart ve karta ait medya galerisi silindi.");
-    });
+    const next = donation.projects.filter((project) => project.id !== removedId);
+    setPendingProjectFolderDeletes((current) => [...new Set([...current, removedId])]);
+    updateProjects(next);
+    setSelectedProjectId(aggregateCategorySelected ? next[0]?.id || "" : next.find((project) => project.category === projectCategory)?.id || "");
+    showToast("Kart kaldırıldı. Medya galerisi, ayarlar kaydedildikten sonra depodan silinecek.");
   };
   const moveProject = (direction: -1 | 1) => {
     if (!selectedProject) return;
@@ -225,42 +306,95 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
 
   const projectMedia = (device: Device) => selectedProject?.[device === "desktop" ? "desktopMedia" : "mobileMedia"] || [];
   const updateProjectMedia = (device: Device, media: DonationProjectMedia[]) => updateProject(device === "desktop" ? { desktopMedia: media } : { mobileMedia: media });
-  async function uploadToR2(file: File, device: Device, purpose: "media" | "poster" = "media") {
-    if (!selectedProject) return;
+  const updateProjectMediaById = (
+    projectId: string,
+    device: Device,
+    updater: (media: DonationProjectMedia[]) => DonationProjectMedia[],
+  ) => setSettings((current) => {
+    const mediaKey = device === "desktop" ? "desktopMedia" : "mobileMedia";
+    return {
+      ...current,
+      donation: {
+        ...current.donation,
+        projects: current.donation.projects.map((project) => project.id === projectId
+          ? { ...project, [mediaKey]: updater(project[mediaKey] || []) }
+          : project),
+      },
+    };
+  });
+  async function uploadToR2(projectId: string, file: File, device: Device, purpose: "media" | "poster" = "media", metadata?: { width?: number; height?: number; originalName?: string; originalSize?: number }) {
     const response = await fetch("/api/admin/modules/media", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        projectId: selectedProject.id,
+        projectId,
         device,
         purpose,
         contentType: file.type,
         size: file.size,
+        width: metadata?.width,
+        height: metadata?.height,
+        originalName: metadata?.originalName || file.name,
+        originalSize: metadata?.originalSize || file.size,
       }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Yükleme bağlantısı oluşturulamadı.");
     const uploadResponse = await fetch(result.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": file.type },
+      headers: { "Content-Type": file.type, ...(result.requiredHeaders || {}) },
       body: file,
     });
     if (!uploadResponse.ok) throw new Error("Dosya Cloudflare depolama alanına yüklenemedi.");
-    return result as { url: string; path: string; type: "image" | "video" };
+    const completeResponse = await fetch("/api/admin/modules/media", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "complete",
+        path: result.path,
+        contentType: file.type,
+        size: file.size,
+      }),
+    });
+    const completed = await completeResponse.json();
+    if (!completeResponse.ok) throw new Error(completed.error || "Yüklenen medya doğrulanamadı.");
+    return { ...result, ...completed, ...metadata, size: file.size, originalName: metadata?.originalName || file.name } as {
+      url: string;
+      path: string;
+      type: "image" | "video";
+      width?: number;
+      height?: number;
+      size?: number;
+      originalName?: string;
+    };
   }
   async function uploadProjectMedia(file: File, device: Device) {
+    const targetProjectId = selectedProject?.id;
+    const targetProjectTitle = selectedProject?.title || "";
+    if (!targetProjectId) return;
     setUploading(true);
     try {
-      const result = await uploadToR2(file, device);
+      const isVideo = file.type === "video/mp4";
+      if (!isVideo && !file.type.startsWith("image/")) throw new Error("WebP, JPG, PNG, AVIF görsel veya MP4 video yükleyin.");
+      if (isVideo && file.size > 150 * 1024 * 1024) throw new Error("Video en fazla 150 MB olabilir.");
+      const optimized = isVideo ? null : await optimizeProjectImage(file, device);
+      const uploadFile = optimized?.file || file;
+      const result = await uploadToR2(targetProjectId, uploadFile, device, "media", optimized || { originalName: file.name, originalSize: file.size });
       if (!result) return;
-      updateProjectMedia(device, [...projectMedia(device), {
-        id: crypto.randomUUID(),
+      const id = crypto.randomUUID();
+      updateProjectMediaById(targetProjectId, device, (current) => [...current, {
+        id,
         type: result.type,
         url: result.url,
         path: result.path,
-        alt: selectedProject?.title,
+        alt: targetProjectTitle,
+        width: result.width,
+        height: result.height,
+        size: result.size,
+        originalName: result.originalName,
       }]);
-      showToast(result.type === "video" ? "Video bu karta ait galeriye eklendi." : "Görsel bu karta ait galeriye eklendi.");
+      setSelectedMediaIds((current) => ({ ...current, [device]: id }));
+      showToast(result.type === "video" ? "Video bu karta ait galeriye eklendi." : "Görsel WebP biçimine dönüştürülüp galeriye eklendi.");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Medya yüklenemedi.");
     } finally {
@@ -268,21 +402,28 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     }
   }
   async function uploadProjectPoster(file: File, device: Device, media: DonationProjectMedia) {
+    const targetProjectId = selectedProject?.id;
+    if (!targetProjectId) return;
     setUploadingPosterId(media.id);
     try {
-      const result = await uploadToR2(file, device, "poster");
+      const optimized = await optimizeProjectImage(file, device);
+      const result = await uploadToR2(targetProjectId, optimized.file, device, "poster", optimized);
       if (!result) return;
       if (media.posterPath) {
-        await fetch("/api/admin/modules/media", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ path: media.posterPath }),
-        });
+        setPendingProjectMediaDeletes((current) => [...new Set([...current, media.posterPath!])]);
       }
-      updateProjectMedia(device, projectMedia(device).map((item) => item.id === media.id
-        ? { ...item, poster: result.url, posterPath: result.path }
+      updateProjectMediaById(targetProjectId, device, (current) => current.map((item) => item.id === media.id
+        ? {
+          ...item,
+          poster: result.url,
+          posterPath: result.path,
+          posterWidth: result.width,
+          posterHeight: result.height,
+          posterSize: result.size,
+          posterOriginalName: result.originalName,
+        }
         : item));
-      showToast("Video kapak görseli kaydedildi.");
+      showToast("Video kapağı WebP biçimine dönüştürülüp kaydedildi.");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Video kapağı yüklenemedi.");
     } finally {
@@ -290,15 +431,38 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     }
   }
   async function removeProjectMedia(device: Device, media: DonationProjectMedia) {
-    const r2Paths = [media.path, media.posterPath].filter((path): path is string => Boolean(path?.startsWith("r2:")));
-    if (r2Paths.length) {
-      const response = await fetch("/api/admin/modules/media", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paths: r2Paths }) });
-      if (!response.ok) return showToast((await response.json()).error || "Medya silinemedi.");
-    } else if (media.path) {
-      const response = await fetch("/api/admin/modules/images", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: media.path }) });
-      if (!response.ok) return showToast((await response.json()).error || "Medya silinemedi.");
-    }
+    const paths = [media.path, media.posterPath].filter((path): path is string => Boolean(path));
+    setPendingProjectMediaDeletes((current) => [...new Set([...current, ...paths])]);
     updateProjectMedia(device, projectMedia(device).filter((item) => item.id !== media.id));
+    setSelectedMediaIds((current) => ({ ...current, [device]: current[device] === media.id ? "" : current[device] }));
+    showToast("Medya galeriden kaldırıldı. Dosya, ayarlar kaydedildikten sonra depodan silinecek.");
+  }
+  function removeProjectPoster(device: Device, media: DonationProjectMedia) {
+    if (media.posterPath) setPendingProjectMediaDeletes((current) => [...new Set([...current, media.posterPath!])]);
+    updateProjectMedia(device, projectMedia(device).map((item) => item.id === media.id
+      ? {
+        ...item,
+        poster: "",
+        posterPath: "",
+        posterWidth: undefined,
+        posterHeight: undefined,
+        posterSize: undefined,
+        posterOriginalName: undefined,
+      }
+      : item));
+    showToast("Video kapağı kaldırıldı. Yeni kapak yüklenene kadar kırık görsel gösterilecek.");
+  }
+  function makePrimaryProjectMedia(device: Device, mediaId: string) {
+    const media = [...projectMedia(device)];
+    const index = media.findIndex((item) => item.id === mediaId);
+    if (index <= 0) return;
+    const [item] = media.splice(index, 1);
+    media.unshift(item);
+    updateProjectMedia(device, media);
+    setSelectedMediaIds((current) => ({ ...current, [device]: mediaId }));
+  }
+  function updateProjectMediaItem(device: Device, mediaId: string, changes: Partial<DonationProjectMedia>) {
+    updateProjectMedia(device, projectMedia(device).map((item) => item.id === mediaId ? { ...item, ...changes } : item));
   }
   function moveProjectMedia(device: Device, index: number, direction: -1 | 1) {
     const media = [...projectMedia(device)];
@@ -340,6 +504,43 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       const normalized = normalizeModuleSettings(result.settings);
       setSettings(normalized);
       persistedCategoryIdsRef.current = new Set(normalized.donation.categories.map((category) => category.id));
+      let mediaCleanupFailed = 0;
+
+      if (pendingProjectMediaDeletes.length) {
+        const cleanupResults = await Promise.all(pendingProjectMediaDeletes.map(async (path) => {
+          try {
+            const response = await fetch(path.startsWith("r2:") ? "/api/admin/modules/media" : "/api/admin/modules/images", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path }),
+            });
+            return { path, success: response.ok };
+          } catch {
+            return { path, success: false };
+          }
+        }));
+        const failedPaths = cleanupResults.filter((item) => !item.success).map((item) => item.path);
+        setPendingProjectMediaDeletes(failedPaths);
+        mediaCleanupFailed += failedPaths.length;
+      }
+
+      if (pendingProjectFolderDeletes.length) {
+        const cleanupResults = await Promise.all(pendingProjectFolderDeletes.map(async (projectId) => {
+          try {
+            const response = await fetch("/api/admin/modules/images", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ projectId, deleteAll: true }),
+            });
+            return { projectId, success: response.ok };
+          } catch {
+            return { projectId, success: false };
+          }
+        }));
+        const failedIds = cleanupResults.filter((item) => !item.success).map((item) => item.projectId);
+        setPendingProjectFolderDeletes(failedIds);
+        mediaCleanupFailed += failedIds.length;
+      }
 
       if (pendingCategoryDeletes.length) {
         const cleanupResults = await Promise.all(pendingCategoryDeletes.map(async (categoryId) => {
@@ -372,7 +573,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           return;
         }
       }
-      showToast("Modül ayarları canlı siteye kaydedildi.");
+      showToast(mediaCleanupFailed
+        ? `Ayarlar kaydedildi; ${mediaCleanupFailed} medya dosyası temizlenemedi ve sonraki kayıtta yeniden denenecek.`
+        : "Modül ayarları canlı siteye kaydedildi.");
     } catch {
       showToast("Modül ayarları kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.");
     } finally {
@@ -415,7 +618,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     reorderCategory(device, id, target);
   }
 
-  function chooseUpperCategory(device: Device, id: string) {
+  const chooseUpperCategory = useCallback((device: Device, id: string) => {
     setSelectedUpperCategory((current) => ({ ...current, [device]: id }));
     requestAnimationFrame(() => {
       const rail = categoryStripRefs.current[device];
@@ -424,7 +627,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       const target = card.offsetLeft - Math.max(0, (rail.clientWidth - card.offsetWidth) / 2);
       rail.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
     });
-  }
+  }, []);
+  const chooseDesktopPreviewCategory = useCallback((id: string) => chooseUpperCategory("desktop", id), [chooseUpperCategory]);
+  const chooseMobilePreviewCategory = useCallback((id: string) => chooseUpperCategory("mobile", id), [chooseUpperCategory]);
 
   function updateCategoryDefinition(id: string, changes: Partial<DonationCategory>) {
     update({ categories: donation.categories.map((category) => category.id === id ? { ...category, ...changes, id } : category) });
@@ -695,19 +900,14 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     setSelectedProjectId(projects[0]?.id || "");
   }
 
-  const preview = (device: "desktop" | "mobile", category: string, onCategoryChange: (category: string) => void) => (
-    <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
-      <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlı görünüm" : "Web canlı görünüm"}</div>
-      <div className={styles.modulePreviewViewport}>
-        <DonationModule embedded settings={donation} previewDevice={device} previewCategory={category} onCategoryChange={onCategoryChange} />
-        <div className={styles.previewFollowingSection}><span>SONRAKİ BÖLÜM</span></div>
-      </div>
-    </div>
-  );
-
   const projectControls = (device: Device) => {
     const design = (selectedProject || defaultModuleSettings.donation.projects[0])[device];
     const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
+    const mediaItems = projectMedia(device);
+    const selectedMedia = mediaItems.find((media) => media.id === selectedMediaIds[device]) || mediaItems[0];
+    const selectedMediaIndex = selectedMedia ? mediaItems.findIndex((media) => media.id === selectedMedia.id) : -1;
+    const useSharedMediaDesign = design.useSharedImageDesign !== false;
+    const mediaDesign = useSharedMediaDesign ? sharedImage : design;
     const updateSharedImage = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
     const designRange = (label: string, key: keyof DonationProjectDesign, min: number, max: number, suffix = "px") => (
       <label>{label} <b>{String(design[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => updateProjectDesign(device, { [key]: Number(event.target.value) })} /></label>
@@ -832,26 +1032,89 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
-          <label className={styles.headerCheck}><input type="checkbox" checked={design.imageVisible !== false} onChange={(event) => updateProjectDesign(device, { imageVisible: event.target.checked })} /> Kart medyasını göster</label>
-          <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedImageDesign !== false} onChange={(event) => updateProjectDesign(device, { useSharedImageDesign: event.target.checked })} /> Ortak görsel ayarlarını kullan</label>
-          <label>Görsel davranışı<select value={design.useSharedImageDesign !== false ? sharedImage.imageFit : design.imageFit || "cover"} onChange={(event) => design.useSharedImageDesign !== false ? updateSharedImage({ imageFit: event.target.value as "cover" | "contain" }) : updateProjectDesign(device, { imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
-          {design.useSharedImageDesign !== false ? <>
-            {sharedRange("Görsel yüksekliği", "imageHeight", 80, 500)}
-            {sharedRange("Görsel köşeleri", "imageRadius", 0, 60)}
-          </> : <>
-            {designRange("Görsel yüksekliği", "imageHeight", 80, 500)}
-            {designRange("Görsel köşeleri", "imageRadius", 0, 60)}
-          </>}
-          <div className={styles.projectMediaManager}>
-            <div className={styles.projectMediaHeader}><strong>{device === "desktop" ? "Web" : "Mobil"} kart galerisi</strong><label className={styles.primaryButton}>{uploading ? "Yükleniyor…" : "+ Fotoğraf / video"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,.mp4,image/webp,image/jpeg,image/png,image/avif,video/mp4" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectMedia(file, device); event.target.value = ""; }} /></label></div>
-            {projectMedia(device).length ? <div className={styles.projectMediaGrid}>{projectMedia(device).map((media, index) => <article key={media.id}>
-              <div>{media.type === "video" ? media.poster ? <Image src={media.poster} alt="" fill sizes="100px" /> : <span>▶</span> : <Image src={media.url} alt={media.alt || ""} fill sizes="100px" />}</div>
-              <small>{index === 0 ? "Ana kapak" : `${index + 1}. medya`} · {media.type === "video" ? "Video" : "Görsel"}</small>
-              {media.type === "video" ? <label className={styles.projectPosterButton}>{uploadingPosterId === media.id ? "Kapak yükleniyor…" : media.poster ? "Kapağı değiştir" : "Kapak görseli yükle"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={Boolean(uploadingPosterId)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectPoster(file, device, media); event.target.value = ""; }} /></label> : null}
-              <nav><button type="button" disabled={index === 0} onClick={() => moveProjectMedia(device, index, -1)}>←</button><button type="button" disabled={index === projectMedia(device).length - 1} onClick={() => moveProjectMedia(device, index, 1)}>→</button><button type="button" onClick={() => void removeProjectMedia(device, media)}>Sil</button></nav>
-            </article>)}</div> : <div className={styles.emptyModuleGallery}>Bu karta ait {device === "desktop" ? "web" : "mobil"} galerisi henüz boş.</div>}
-            <p className={styles.moduleHint}>İlk medya ana kapaktır. Video için MP4 (720p önerilir, en fazla 150 MB), görsel için WebP/JPG/PNG/AVIF (en fazla 5 MB) kullanın. Videolar kapak görseliyle açılır ve kullanıcı oynatmadan indirilmez.</p>
+          <div className={styles.projectMediaStatus}>
+            <label><input type="checkbox" checked={design.imageVisible !== false} onChange={(event) => updateProjectDesign(device, { imageVisible: event.target.checked })} /> Kart medyasını göster</label>
+            <label><input type="checkbox" checked={useSharedMediaDesign} onChange={(event) => updateProjectDesign(device, { useSharedImageDesign: event.target.checked })} /> Ortak ölçüleri kullan</label>
+            <span>{device === "desktop" ? "WEB" : "MOBİL"} · {mediaItems.length} medya</span>
           </div>
+          <div className={styles.projectMediaSubtabs}>
+            <button type="button" className={mediaSettingsGroup === "gallery" ? styles.activeProjectMediaSubtab : ""} onClick={() => setMediaSettingsGroup("gallery")}>Medya galerisi</button>
+            <button type="button" className={mediaSettingsGroup === "appearance" ? styles.activeProjectMediaSubtab : ""} onClick={() => setMediaSettingsGroup("appearance")}>Galeri görünümü</button>
+            <button type="button" className={mediaSettingsGroup === "video" ? styles.activeProjectMediaSubtab : ""} onClick={() => setMediaSettingsGroup("video")}>Video penceresi</button>
+          </div>
+
+          {mediaSettingsGroup === "gallery" ? <div className={styles.projectMediaManager}>
+            <div className={styles.projectMediaHeader}>
+              <div><strong>{device === "desktop" ? "Web" : "Mobil"} kart galerisi</strong><small>Görseller WebP’ye dönüştürülür; videolar yalnızca oynatıldığında yüklenir.</small></div>
+              <nav>
+                <label className={styles.secondaryMediaButton}>{uploading ? "Hazırlanıyor…" : "+ Görsel"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectMedia(file, device); event.target.value = ""; }} /></label>
+                <label className={styles.primaryButton}>{uploading ? "Yükleniyor…" : "+ Video"}<input hidden type="file" accept=".mp4,video/mp4" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectMedia(file, device); event.target.value = ""; }} /></label>
+              </nav>
+            </div>
+            {mediaItems.length ? <>
+              <div className={styles.projectMediaStrip}>
+                {mediaItems.map((media, index) => <button type="button" key={media.id} className={selectedMedia?.id === media.id ? styles.activeProjectMediaItem : ""} onClick={() => setSelectedMediaIds((current) => ({ ...current, [device]: media.id }))}>
+                  <ProjectMediaPreview media={media} sizes="90px" />
+                  <strong>{index === 0 ? "Ana medya" : `${index + 1}. medya`}</strong>
+                  <small>{media.type === "video" ? "Video" : "Görsel"}</small>
+                </button>)}
+              </div>
+              {selectedMedia ? <div className={styles.projectMediaInspector}>
+                <ProjectMediaPreview media={selectedMedia} sizes="240px" />
+                <div className={styles.projectMediaDetails}>
+                  <span>{selectedMedia.type === "video" ? "VİDEO" : "GÖRSEL"}{selectedMediaIndex === 0 ? " · ANA MEDYA" : ""}</span>
+                  <strong>{selectedMedia.originalName || `${selectedMediaIndex + 1}. medya`}</strong>
+                  <small>{selectedMedia.width && selectedMedia.height ? `${selectedMedia.width} × ${selectedMedia.height} px · ` : ""}{selectedMedia.size ? formatSize(selectedMedia.size) : "R2 medya dosyası"}</small>
+                  <label>Başlık ve alternatif açıklama<input value={selectedMedia.alt || ""} maxLength={160} onChange={(event) => updateProjectMediaItem(device, selectedMedia.id, { alt: event.target.value })} placeholder="Görseli kısa ve anlaşılır biçimde açıklayın" /></label>
+                  {selectedMedia.type === "video" ? <div className={styles.projectPosterActions}>
+                    <label>{uploadingPosterId === selectedMedia.id ? "Kapak hazırlanıyor…" : selectedMedia.poster ? "Kapağı değiştir" : "Kapak görseli yükle"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={Boolean(uploadingPosterId)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectPoster(file, device, selectedMedia); event.target.value = ""; }} /></label>
+                    {selectedMedia.poster ? <button type="button" onClick={() => removeProjectPoster(device, selectedMedia)}>Kapağı kaldır</button> : null}
+                  </div> : null}
+                  <nav className={styles.projectMediaActions}>
+                    <button type="button" disabled={selectedMediaIndex === 0} onClick={() => makePrimaryProjectMedia(device, selectedMedia.id)}>Ana medya yap</button>
+                    <button type="button" disabled={selectedMediaIndex <= 0} onClick={() => moveProjectMedia(device, selectedMediaIndex, -1)}>←</button>
+                    <button type="button" disabled={selectedMediaIndex < 0 || selectedMediaIndex === mediaItems.length - 1} onClick={() => moveProjectMedia(device, selectedMediaIndex, 1)}>→</button>
+                    <button type="button" onClick={() => void removeProjectMedia(device, selectedMedia)}>Sil</button>
+                  </nav>
+                </div>
+              </div> : null}
+            </> : <div className={styles.emptyModuleGallery}>Bu karta ait {device === "desktop" ? "web" : "mobil"} galerisi henüz boş. Sitede kırık görsel gösterilecek.</div>}
+            <p className={styles.moduleHint}>Video için MP4 (720p önerilir, en fazla 150 MB) kullanın. Fotoğraflar ve video kapakları yükleme sırasında otomatik WebP’ye dönüştürülür.</p>
+          </div>
+          : null}
+
+          {mediaSettingsGroup === "appearance" ? <div className={styles.projectMediaDesignGrid}>
+            <label>Görsel davranışı<select value={mediaDesign.imageFit || "cover"} onChange={(event) => useSharedMediaDesign ? updateSharedImage({ imageFit: event.target.value as "cover" | "contain" }) : updateProjectDesign(device, { imageFit: event.target.value as "cover" | "contain" })}><option value="cover">Alanı doldur</option><option value="contain">Tamamını göster</option></select></label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={mediaDesign.mediaThumbnailsVisible !== false} onChange={(event) => useSharedMediaDesign ? updateSharedImage({ mediaThumbnailsVisible: event.target.checked }) : updateProjectDesign(device, { mediaThumbnailsVisible: event.target.checked })} /> Küçük önizlemeleri göster</label>
+            {useSharedMediaDesign ? <>
+              {sharedRange("Ana medya yüksekliği", "imageHeight", 80, 500)}
+              {sharedRange("Ana medya köşeleri", "imageRadius", 0, 60)}
+              {sharedRange("Küçük görsel boyutu", "mediaThumbnailSize", 28, 96)}
+              {sharedRange("Küçük görsel aralığı", "mediaThumbnailGap", 0, 24)}
+              {sharedRange("Küçük görsel köşeleri", "mediaThumbnailRadius", 0, 30)}
+              {sharedRange("Alt kenar mesafesi", "mediaThumbnailBottom", 0, 32)}
+            </> : <>
+              {designRange("Ana medya yüksekliği", "imageHeight", 80, 500)}
+              {designRange("Ana medya köşeleri", "imageRadius", 0, 60)}
+              {designRange("Küçük görsel boyutu", "mediaThumbnailSize", 28, 96)}
+              {designRange("Küçük görsel aralığı", "mediaThumbnailGap", 0, 24)}
+              {designRange("Küçük görsel köşeleri", "mediaThumbnailRadius", 0, 30)}
+              {designRange("Alt kenar mesafesi", "mediaThumbnailBottom", 0, 32)}
+            </>}
+          </div> : null}
+
+          {mediaSettingsGroup === "video" ? <div className={styles.projectMediaDesignGrid}>
+            <div className={styles.videoModalNote}><i>▶</i><div><strong>Sayfa içi video penceresi</strong><small>Video yalnızca ziyaretçi oynatma düğmesine bastığında yüklenir. Kapatıldığında kullanıcı aynı konumda kalır.</small></div></div>
+            {useSharedMediaDesign ? <>
+              {sharedRange("Pencere genişliği", "videoModalWidth", 320, 1200)}
+              {sharedRange("Pencere köşeleri", "videoModalRadius", 0, 40)}
+              {sharedRange("Arka plan karartması", "videoModalBackdropOpacity", 30, 95, "%")}
+            </> : <>
+              {designRange("Pencere genişliği", "videoModalWidth", 320, 1200)}
+              {designRange("Pencere köşeleri", "videoModalRadius", 0, 40)}
+              {designRange("Arka plan karartması", "videoModalBackdropOpacity", 30, 95, "%")}
+            </>}
+          </div> : null}
         </div> : null}
       </section>
       <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>
@@ -1221,7 +1484,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <div className={styles.moduleConfigurationPanel}>
                 {upperDesignSettings("desktop")}
               </div>
-              {preview("desktop", selectedUpperCategory.desktop, (category) => chooseUpperCategory("desktop", category))}
+              <ModulePreview device="desktop" settings={donation} category={selectedUpperCategory.desktop} onCategoryChange={chooseDesktopPreviewCategory} />
             </div>
           </> : null}
 
@@ -1230,7 +1493,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               <div className={styles.moduleConfigurationPanel}>
                 {upperDesignSettings("mobile")}
               </div>
-              {preview("mobile", selectedUpperCategory.mobile, (category) => chooseUpperCategory("mobile", category))}
+              <ModulePreview device="mobile" settings={donation} category={selectedUpperCategory.mobile} onCategoryChange={chooseMobilePreviewCategory} />
             </div>
           </> : null}
           </> : null}
@@ -1249,7 +1512,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                 {projectControls(lowerDevice)}
                 {lowerControls(lowerDevice)}
               </div>
-              <div className={styles.lowerPreviewSticky}>{preview(lowerDevice, projectCategory, chooseProjectCategory)}</div>
+              <div className={styles.lowerPreviewSticky}>
+                <ModulePreview device={lowerDevice} settings={donation} category={projectCategory} onCategoryChange={chooseProjectCategory} />
+              </div>
             </div>
           </div> : null}
         </div> : null}
