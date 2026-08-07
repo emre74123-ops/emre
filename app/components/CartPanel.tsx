@@ -7,6 +7,7 @@ import { createMemberClient } from "../../lib/supabase/member-browser";
 
 export default function CartPanel({
   open,
+  checkoutIntent = 0,
   items,
   onClose,
   onQuantity,
@@ -15,6 +16,7 @@ export default function CartPanel({
   onOpenAccount,
 }: {
   open: boolean;
+  checkoutIntent?: number;
   items: CartItem[];
   onClose: () => void;
   onQuantity: (id: string, quantity: number) => void;
@@ -24,7 +26,7 @@ export default function CartPanel({
 }) {
   const supabase = useMemo(() => createMemberClient(), []);
   const [user, setUser] = useState<User | null>(null);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(() => checkoutIntent > 0);
   const [checkoutReady, setCheckoutReady] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -46,6 +48,12 @@ export default function CartPanel({
   if (!open) return null;
   const total = cartTotal(items);
 
+  function closePanel() {
+    setCheckoutOpen(false);
+    setCheckoutReady(false);
+    onClose();
+  }
+
   function prepareCheckout(event: React.FormEvent) {
     event.preventDefault();
     if (!consent) return;
@@ -53,11 +61,11 @@ export default function CartPanel({
   }
 
   return (
-    <div className="cart-backdrop" role="presentation" onMouseDown={onClose}>
+    <div className="cart-backdrop" role="presentation" onMouseDown={closePanel}>
       <aside className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title" onMouseDown={(event) => event.stopPropagation()}>
-        <header><div><span>BAĞIŞ SEPETİ</span><h2 id="cart-title">Sepetim</h2></div><button type="button" aria-label="Sepeti kapat" onClick={onClose}>×</button></header>
+        <header><div><span>BAĞIŞ SEPETİ</span><h2 id="cart-title">Sepetim</h2></div><button type="button" aria-label="Sepeti kapat" onClick={closePanel}>×</button></header>
         {!items.length ? (
-          <div className="empty-cart"><i>♡</i><h3>Sepetiniz henüz boş</h3><p>Destek olmak istediğiniz projeyi seçerek güvenli bağış akışına başlayabilirsiniz.</p><button type="button" onClick={onClose}>Projeleri incele</button></div>
+          <div className="empty-cart"><i>♡</i><h3>Sepetiniz henüz boş</h3><p>Destek olmak istediğiniz projeyi seçerek güvenli bağış akışına başlayabilirsiniz.</p><button type="button" onClick={closePanel}>Projeleri incele</button></div>
         ) : checkoutReady ? (
           <div className="checkout-ready">
             <i>✓</i><span>ÖDEMEYE HAZIR</span><h3>Bilgileriniz alındı</h3>
@@ -84,7 +92,12 @@ export default function CartPanel({
               {items.map((item) => (
                 <article key={item.id}>
                   <div className="cart-item-icon">♡</div>
-                  <div><strong>{item.project}</strong><small>Birim destek: {formatTry(item.amount)}</small><span>{formatTry(item.amount * item.quantity)}</span></div>
+                  <div>
+                    <strong>{item.project}</strong>
+                    {item.selections?.length ? <small>{item.selections.map((selection) => `${selection.group}: ${selection.option}`).join(" · ")}</small> : null}
+                    <small>Birim destek: {formatTry(item.amount)}</small>
+                    <span>{formatTry(item.amount * item.quantity)}</span>
+                  </div>
                   <div className="cart-quantity"><button type="button" onClick={() => onQuantity(item.id, item.quantity - 1)}>−</button><b>{item.quantity}</b><button type="button" onClick={() => onQuantity(item.id, item.quantity + 1)}>+</button></div>
                   <button className="cart-remove" type="button" aria-label={`${item.project} sepetten çıkar`} onClick={() => onRemove(item.id)}>×</button>
                 </article>
