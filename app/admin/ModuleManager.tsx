@@ -11,7 +11,19 @@ type ModuleTab = "desktop" | "mobile";
 type ModuleSection = "upper" | "lower";
 type Device = "desktop" | "mobile";
 type ProjectCategory = DonationProject["category"] | "all";
-type GalleryImage = { path: string; url: string; size: number; device: Device };
+type DonationCategoryId = typeof donationCategoryOptions[number][0];
+type GalleryImage = {
+  path: string;
+  url: string;
+  size: number;
+  device: Device;
+  width?: number;
+  height?: number;
+  originalSize?: number;
+  originalName?: string;
+  createdAt?: string;
+  format?: string;
+};
 type UpperSettingsGroupRenderer = (id: string, title: string, content: ReactNode) => ReactNode;
 
 export default function ModuleManager({ showToast }: { showToast: (message: string) => void }) {
@@ -30,18 +42,23 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [upperMobileGroup, setUpperMobileGroup] = useState("publishing");
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [imageMeta, setImageMeta] = useState<Record<string, { width: number; height: number }>>({});
+  const [selectedUpperCategory, setSelectedUpperCategory] = useState<Record<Device, DonationCategoryId>>({ desktop: "all", mobile: "all" });
+  const [draggedUpperCategory, setDraggedUpperCategory] = useState("");
+  const [galleryQuery, setGalleryQuery] = useState("");
+  const [gallerySort, setGallerySort] = useState<"newest" | "oldest" | "smallest" | "largest">("newest");
   const [uploading, setUploading] = useState(false);
   const [uploadingPosterId, setUploadingPosterId] = useState("");
 
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/modules", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/admin/modules/category-media", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/admin/modules/images", { cache: "no-store" }).then((response) => response.json()),
-    ]).then(([settingsResult, imageResult]) => {
+    ]).then(([settingsResult, categoryMediaResult, legacyImageResult]) => {
       if (settingsResult.settings) {
         setSettings(normalizeModuleSettings(settingsResult.settings));
       }
-      setImages(imageResult.images || []);
+      setImages([...(categoryMediaResult.images || []), ...(legacyImageResult.images || [])]);
     }).catch(() => undefined);
   }, []);
 
@@ -84,7 +101,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       return;
     }
     const base = selectedProject || defaultModuleSettings.donation.projects[0];
-    const id = `bagis-${Date.now()}`;
+    const id = `bagis-${crypto.randomUUID()}`;
     const project: DonationProject = {
       ...base,
       id,
@@ -106,7 +123,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   };
   const duplicateProject = () => {
     if (!selectedProject) return;
-    const id = `${selectedProject.id}-kopya-${Date.now()}`;
+    const id = `${selectedProject.id}-kopya-${crypto.randomUUID()}`;
     updateProjects([...donation.projects, { ...selectedProject, id, title: `${selectedProject.title} KopyasÄ±`, desktopMedia: [], mobileMedia: [], desktop: { ...selectedProject.desktop }, mobile: { ...selectedProject.mobile } }]);
     setSelectedProjectId(id);
   };
@@ -267,539 +284,13 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     showToast("ModÃ¼l ayarlarÄ± canlÄ± siteye kaydedildi.");
   }
 
-  function toggleCategory(id: string) {
-    const visible = donation.visibleCategories.includes(id);
-    update({ visibleCategories: visible ? donation.visibleCategories.filter((item) => item !== id) : [...donation.visibleCategories, id] });
-  }
+  const categoryVisibility = (device: Device) => device === "desktop"
+    ? donation.desktopVisibleCategories
+    : donation.mobileVisibleCategories;
+  const categoryOrder = (device: Device) => device === "desktop"
+    ? donation.desktopCategoryOrder
+    : donation.mobileCategoryOrder;
 
-  async function uploadImage(file: File, device: Device) {
-    setUploading(true);
-    const body = new FormData();
-    body.append("file", file);
-    body.append("device", device);
-    const response = await fetch("/api/admin/modules/upload", { method: "POST", body });
-    const result = await response.json();
-    setUploading(false);
-    if (!response.ok) return showToast(result.error || "GÃ¶rsel yÃ¼klenemedi.");
-    setImages((current) => [{ path: result.path, url: result.url, size: file.size, device }, ...current]);
-    showToast("GÃ¶rsel galeriye eklendi.");
-  }
-
-  async function deleteImage(image: GalleryImage) {
-    const usages = donationCategoryOptions.filter(([id]) => donation.categoryImages[id][image.device] === image.url);
-    const usageText = usages.length ? ` Bu gÃ¶rsel ${usages.map(([, label]) => label).join(", ")} kategorilerinde kullanÄ±lÄ±yor; bu kategoriler varsayÄ±lan gÃ¶rsele dÃ¶necek.` : "";
-    if (!window.confirm(`Bu gÃ¶rsel kalÄ±cÄ± olarak silinsin mi?${usageText}`)) return;
-    if (usages.length) {
-      const categoryImages = { ...donation.categoryImages };
-      for (const [id] of usages) {
-        categoryImages[id] = {
-          ...categoryImages[id],
-          [image.device]: defaultModuleSettings.donation.categoryImages[id][image.device],
-        };
-      }
-      const nextSettings = { ...settings, donation: { ...donation, categoryImages } };
-      const settingsResponse = await fetch("/api/admin/modules", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nextSettings),
-      });
-      if (!settingsResponse.ok) return showToast("KullanÄ±mdaki gÃ¶rsel gÃ¼venle kaldÄ±rÄ±lamadÄ±.");
-      setSettings(nextSettings);
-    }
-    const response = await fetch("/api/admin/modules/images", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: image.path }),
-    });
-    const result = await response.json();
-    if (!response.ok) return showToast(result.error || "GÃ¶rsel silinemedi.");
-    setImages((current) => current.filter((item) => item.path !== image.path));
-    showToast("GÃ¶rsel silindi.");
-  }
-
-  function selectCategoryImage(id: string, device: Device, url: string) {
-    update({
-      categoryImages: {
-        ...donation.categoryImages,
-        [id]: { ...donation.categoryImages[id], [device]: url },
-      },
-    });
-  }
-
-  const aspectRatios = [
-    ["custom", "Ã–zel"], ["1:1", "1:1 Kare"], ["4:3", "4:3 Yatay"], ["3:2", "3:2 Yatay"],
-    ["16:9", "16:9 GeniÅŸ"], ["3:4", "3:4 Dikey"], ["2:3", "2:3 Dikey"], ["9:16", "9:16 Uzun"],
-  ] as const;
-
-  function setAspectRatio(device: Device, ratio: string) {
-    const width = device === "desktop" ? donation.desktopCardWidth : donation.mobileCardWidth;
-    if (ratio === "custom") {
-      update(device === "desktop" ? { desktopAspectRatio: ratio } : { mobileAspectRatio: ratio });
-      return;
-    }
-    const [ratioWidth, ratioHeight] = ratio.split(":").map(Number);
-    const height = Math.round(width * ratioHeight / ratioWidth);
-    update(device === "desktop"
-      ? { desktopAspectRatio: ratio, desktopCardHeight: Math.min(500, Math.max(60, height)) }
-      : { mobileAspectRatio: ratio, mobileCardHeight: Math.min(400, Math.max(50, height)) });
-  }
-
-  function updateImageWidth(device: Device, width: number) {
-    const ratio = device === "desktop" ? donation.desktopAspectRatio : donation.mobileAspectRatio;
-    if (ratio === "custom") {
-      update(device === "desktop" ? { desktopCardWidth: width } : { mobileCardWidth: width });
-      return;
-    }
-    const [ratioWidth, ratioHeight] = ratio.split(":").map(Number);
-    const height = Math.round(width * ratioHeight / ratioWidth);
-    update(device === "desktop"
-      ? { desktopCardWidth: width, desktopCardHeight: Math.min(500, Math.max(60, height)) }
-      : { mobileCardWidth: width, mobileCardHeight: Math.min(400, Math.max(50, height)) });
-  }
-
-  const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  const imageRatio = (width: number, height: number) => {
-    const divisor = (a: number, b: number): number => b ? divisor(b, a % b) : a;
-    const common = divisor(width, height);
-    const ratioWidth = width / common;
-    const ratioHeight = height / common;
-    return ratioWidth <= 20 && ratioHeight <= 20 ? `${ratioWidth}:${ratioHeight}` : (width / height).toFixed(2);
-  };
-
-  const preview = (device: "desktop" | "mobile") => (
-    <div className={`${styles.modulePreview} ${device === "mobile" ? styles.modulePreviewMobile : styles.modulePreviewDesktop}`}>
-      <div className={styles.modulePreviewLabel}>{device === "mobile" ? "Mobil canlÄ± gÃ¶rÃ¼nÃ¼m" : "Web canlÄ± gÃ¶rÃ¼nÃ¼m"}</div>
-      <div className={styles.modulePreviewViewport}>
-        <DonationModule embedded settings={donation} previewDevice={device} previewCategory={projectCategory} />
-        <div className={styles.previewFollowingSection}><span>SONRAKÄ° BÃ–LÃœM</span></div>
-      </div>
-    </div>
-  );
-
-  const projectControls = (device: Device) => {
-    if (!selectedProject) return <div className={styles.emptyModuleGallery}>Bu kategoride henÃ¼z baÄŸÄ±ÅŸ kartÄ± yok. â€œYeni Kartâ€ dÃ¼ÄŸmesiyle ilk kartÄ± oluÅŸturun.</div>;
-    const design = selectedProject[device];
-    const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
-    const updateSharedImage = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
-    const designRange = (label: string, key: keyof DonationProjectDesign, min: number, max: number, suffix = "px") => (
-      <label>{label} <b>{String(design[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => updateProjectDesign(device, { [key]: Number(event.target.value) })} /></label>
-    );
-    const sharedRange = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
-      <label>{label} <b>{String(sharedImage[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(sharedImage[key])} onChange={(event) => updateSharedImage({ [key]: Number(event.target.value) })} /></label>
-    );
-    return <div className={styles.lowerAccordion}>
-      <section className={projectSelectorOpen ? styles.lowerAccordionOpen : ""}>
-        <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>BaÄŸÄ±ÅŸ kategorisi ve kart seÃ§imi</span><b>{projectSelectorOpen ? "âˆ’" : "+"}</b></button>
-        {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
-          <div className={styles.miniCategoryPreview}>
-            {donationCategoryOptions.map(([id, label]) => {
-              const projects = id === "all" ? donation.projects : donation.projects.filter((project) => project.category === id);
-              const cover = donation.categoryImages[id]?.[lowerDevice] || donation.categoryImages[id]?.desktop;
-              const active = projectCategory === id;
-              return <button type="button" key={id} className={active ? styles.activeMiniCategory : ""} onClick={() => {
-                const nextCategory = id as ProjectCategory;
-                setProjectCategory(nextCategory);
-                const ordered = id === "all"
-                  ? projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
-                  : projects;
-                setSelectedProjectId(ordered[0]?.id || "");
-              }}>
-                <span>{cover ? <Image src={cover} alt="" fill sizes="72px" /> : <b>{label.slice(0, 1)}</b>}</span>
-                <strong>{label}</strong>
-                <small>{projects.length} kart</small>
-              </button>;
-            })}
-          </div>
-          <div className={styles.miniProjectPreview}>
-            {categoryProjects.length ? categoryProjects.map((project, index) => <button type="button" draggable key={project.id} className={selectedProject?.id === project.id ? styles.activeMiniProject : ""} onDragStart={() => setDraggedProjectId(project.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropProject(project.id)} onDragEnd={() => setDraggedProjectId("")} onClick={() => setSelectedProjectId(project.id)}>
-              <strong>{index + 1}. Kart</strong>
-              <small>{donationCategoryOptions.find(([id]) => id === project.category)?.[1]}{!project.enabled ? " Â· KapalÄ±" : projectCategory === "all" && !(lowerDevice === "desktop" ? project.showInAllDesktop !== false : project.showInAllMobile !== false) ? " Â· Gizli" : ""}</small>
-            </button>) : <small>Bu kategoride henÃ¼z baÄŸÄ±ÅŸ kartÄ± yok.</small>}
-          </div>
-          <label>Kategori<select value={projectCategory} onChange={(event) => {
-            const nextCategory = event.target.value as ProjectCategory;
-            setProjectCategory(nextCategory);
-            const projects = nextCategory === "all"
-              ? donation.projects.slice().sort((a, b) => (a[allOrderKey] ?? donation.projects.indexOf(a)) - (b[allOrderKey] ?? donation.projects.indexOf(b)))
-              : donation.projects.filter((project) => project.category === nextCategory);
-            setSelectedProjectId(projects[0]?.id || "");
-          }}>{donationCategoryOptions.map(([id, label]) => <option value={id} key={id}>{label} Â· {id === "all" ? donation.projects.length : donation.projects.filter((project) => project.category === id).length} kart</option>)}</select></label>
-          <label>BaÄŸÄ±ÅŸ kartÄ±<select value={selectedProject?.id || ""} onChange={(event) => setSelectedProjectId(event.target.value)}>
-            {categoryProjects.length ? categoryProjects.map((project, index) => <option value={project.id} key={project.id}>{index + 1}. {project.title}{project.enabled ? "" : " (KapalÄ±)"}</option>) : <option value="">Bu kategoride kart yok</option>}
-          </select></label>
-          <div className={styles.projectQuickActions}>
-            <button type="button" title={projectCategory === "all" ? "Yeni kart iÃ§in gerÃ§ek kategori seÃ§in" : "Yeni kart"} aria-label="Yeni kart" disabled={projectCategory === "all"} onClick={addProject}>ï¼‹</button>
-            <button type="button" title="KartÄ± Ã§oÄŸalt" aria-label="KartÄ± Ã§oÄŸalt" disabled={!selectedProject} onClick={duplicateProject}>â§‰</button>
-            <button type="button" title="Sola taÅŸÄ±" aria-label="Sola taÅŸÄ±" disabled={!selectedProject} onClick={() => moveProject(-1)}>â†</button>
-            <button type="button" title="SaÄŸa taÅŸÄ±" aria-label="SaÄŸa taÅŸÄ±" disabled={!selectedProject} onClick={() => moveProject(1)}>â†’</button>
-            <button type="button" title="KartÄ± sil" aria-label="KartÄ± sil" disabled={!selectedProject} onClick={deleteProject}>Ã—</button>
-          </div>
-          <small>{categoryProjects.length} kart Â· SeÃ§ilen kartÄ±n ayarlarÄ± aÅŸaÄŸÄ±daki bÃ¶lÃ¼mlerde dÃ¼zenlenir.</small>
-          <nav className={styles.projectSettingsTabs} aria-label="SeÃ§ili kart ayarlarÄ±">
-            {[
-              ["project-measurements", "Kart ayarlarÄ±"],
-              ["project-design", "GÃ¶rsel ayarlarÄ±"],
-              ["project-content", "YazÄ± ayarlarÄ±"],
-              ["project-payment", "Fiyat ve dÃ¼ÄŸme"],
-            ].map(([id, label]) => <button type="button" key={id} className={lowerGroup === id ? styles.activeProjectSettingsTab : ""} onClick={() => setLowerGroup(id)}>{label}</button>)}
-          </nav>
-        </div> : null}
-      </section>
-      <section style={{ order: 2 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-measurements" ? styles.lowerAccordionOpen : ""}`}>
-        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-measurements" ? "" : "project-measurements")}><span>Kart ayarlarÄ±</span><b>{lowerGroup === "project-measurements" ? "âˆ’" : "+"}</b></button>
-        {projectSelectorOpen && lowerGroup === "project-measurements" ? <div className={styles.lowerAccordionContent}>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.showHeading} onChange={(event) => updateSharedImage({ showHeading: event.target.checked })} /> BÃ¶lÃ¼m baÅŸlÄ±ÄŸÄ±nÄ± gÃ¶ster</label>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.titleVisible} onChange={(event) => updateSharedImage({ titleVisible: event.target.checked })} /> Kart baÅŸlÄ±ÄŸÄ±nÄ± gÃ¶ster</label>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={sharedImage.descriptionVisible} onChange={(event) => updateSharedImage({ descriptionVisible: event.target.checked })} /> AÃ§Ä±klamayÄ± gÃ¶ster</label>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={selectedProject.enabled} onChange={(event) => updateProject({ enabled: event.target.checked })} /> Bu kartÄ± gÃ¶ster</label>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={device === "desktop" ? selectedProject.showInAllDesktop !== false : selectedProject.showInAllMobile !== false} onChange={(event) => updateProject(device === "desktop" ? { showInAllDesktop: event.target.checked } : { showInAllMobile: event.target.checked })} /> TÃ¼m BaÄŸÄ±ÅŸlarâ€™da {device === "desktop" ? "webde" : "mobilde"} gÃ¶ster</label>
-          <label className={`${styles.headerCheck} ${styles.compactCardCheck}`}><input type="checkbox" checked={design.useSharedDesign} onChange={(event) => updateProjectDesign(device, { useSharedDesign: event.target.checked })} /> Ortak kart tasarÄ±mÄ±nÄ± kullan</label>
-          {design.useSharedDesign ? <>
-            {sharedRange("Kart geniÅŸliÄŸi", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
-            {sharedRange("Kart iÃ§ boÅŸluÄŸu", "cardPadding", 0, 60)}
-            {sharedRange("Kart kÃ¶ÅŸeleri", "cardRadius", 0, 60)}
-            {sharedRange("Ã‡erÃ§eve kalÄ±nlÄ±ÄŸÄ±", "cardBorderWidth", 0, 8)}
-            <label>Kart arka planÄ±<input type="color" value={sharedImage.cardBackground} onChange={(event) => updateSharedImage({ cardBackground: event.target.value })} /></label>
-            <label>Ã‡erÃ§eve rengi<input type="color" value={sharedImage.cardBorderColor} onChange={(event) => updateSharedImage({ cardBorderColor: event.target.value })} /></label>
-            <label>GÃ¶lge<select value={sharedImage.cardShadow} onChange={(event) => updateSharedImage({ cardShadow: event.target.value as DonationLowerDeviceSettings["cardShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">GÃ¼Ã§lÃ¼</option></select></label>
-          </> : <>
-            {designRange("Kart geniÅŸliÄŸi", "cardWidth", device === "desktop" ? 220 : 180, device === "desktop" ? 700 : 420)}
-            {designRange("Kart iÃ§ boÅŸluÄŸu", "cardPadding", 0, 60)}
-            {designRange("Kart kÃ¶ÅŸeleri", "cardRadius", 0, 60)}
-            {designRange("Ã‡erÃ§eve kalÄ±nlÄ±ÄŸÄ±", "cardBorderWidth", 0, 8)}
-            <label>Kart arka planÄ±<input type="color" value={design.cardBackground} onChange={(event) => updateProjectDesign(device, { cardBackground: event.target.value })} /></label>
-            <label>Ã‡erÃ§eve rengi<input type="color" value={design.cardBorderColor} onChange={(event) => updateProjectDesign(device, { cardBorderColor: event.target.value })} /></label>
-          </>}
-        </div> : null}
-      </section>
-      <section style={{ order: 4 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-content" ? styles.lowerAccordionOpen : ""}`}>
-        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-content" ? "" : "project-content")}><span>YazÄ± ayarlarÄ±</span><b>{lowerGroup === "project-content" ? "âˆ’" : "+"}</b></button>
-        {projectSelectorOpen && lowerGroup === "project-content" ? <div className={styles.lowerAccordionContent}>
-          <div className={styles.moduleTextSettingsGroup}>
-            <strong>BÃ¶lÃ¼m baÅŸlÄ±ÄŸÄ± metinleri</strong>
-            <label>Ãœst etiket<input type="text" value={sharedImage.headingEyebrow} onChange={(event) => updateSharedImage({ headingEyebrow: event.target.value })} /></label>
-            <label>Ana baÅŸlÄ±k<input type="text" value={sharedImage.headingTitle} onChange={(event) => updateSharedImage({ headingTitle: event.target.value })} /></label>
-          </div>
-          <div className={styles.moduleTextSettingsGroup}>
-            <strong>SeÃ§ili kartÄ±n yazÄ±larÄ±</strong>
-          <label>Kart baÅŸlÄ±ÄŸÄ±<input value={selectedProject.title} onChange={(event) => updateProject({ title: event.target.value })} /></label>
-          <label>AÃ§Ä±klama<textarea rows={4} value={selectedProject.description} onChange={(event) => updateProject({ description: event.target.value })} /></label>
-          {design.useSharedDesign ? <>
-            {sharedRange("BaÅŸlÄ±k boyutu", "titleSize", 12, 48)}
-            {sharedRange("BaÅŸlÄ±k kalÄ±nlÄ±ÄŸÄ±", "titleWeight", 300, 900, "")}
-            {sharedRange("AÃ§Ä±klama boyutu", "descriptionSize", 9, 24)}
-            <label>BaÅŸlÄ±k rengi<input type="color" value={sharedImage.titleColor} onChange={(event) => updateSharedImage({ titleColor: event.target.value })} /></label>
-            <label>AÃ§Ä±klama rengi<input type="color" value={sharedImage.descriptionColor} onChange={(event) => updateSharedImage({ descriptionColor: event.target.value })} /></label>
-          </> : <>
-            {designRange("BaÅŸlÄ±k boyutu", "titleSize", 12, 48)}
-            {designRange("BaÅŸlÄ±k kalÄ±nlÄ±ÄŸÄ±", "titleWeight", 300, 900, "")}
-            {designRange("AÃ§Ä±klama boyutu", "descriptionSize", 9, 24)}
-            <label>BaÅŸlÄ±k rengi<input type="color" value={design.titleColor} onChange={(event) => updateProjectDesign(device, { titleColor: event.target.value })} /></label>
-            <label>AÃ§Ä±klama rengi<input type="color" value={design.descriptionColor} onChange={(event) => updateProjectDesign(device, { descriptionColor: event.target.value })} /></label>
-          </>}
-          </div>
-        </div> : null}
-      </section>
-      <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
-        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>GÃ¶rsel ayarlarÄ±</span><b>{lowerGroup === "project-design" ? "âˆ’" : "+"}</b></button>
-        {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
-          <label className={styles.headerCheck}><input type="checkbox" checked={design.imageVisible !== false} onChange={(event) => updateProjectDesign(device, { imageVisible: event.target.checked })} /> Kart medyasÄ±nÄ± gÃ¶ster</label>
-          <label className={styles.headerCheck}><input type="checkbox" checked={design.useSharedImageDesign !== false} onChange={(event) => updateProjectDesign(device, { useSharedImageDesign: event.target.checked })} /> Ortak gÃ¶rsel ayarlarÄ±nÄ± kullan</label>
-          <label>GÃ¶rsel davranÄ±ÅŸÄ±<select value={design.useSharedImageDesign !== false ? sharedImage.imageFit : design.imageFit || "cover"} onChange={(event) => design.useSharedImageDesign !== false ? updateSharedImage({ imageFit: event.target.value as "cover" | "contain" }) : updateProjectDesign(device, { imageFit: event.target.value as "cover" | "contain" })}><option value="cover">AlanÄ± doldur</option><option value="contain">TamamÄ±nÄ± gÃ¶ster</option></select></label>
-          {design.useSharedImageDesign !== false ? <>
-            {sharedRange("GÃ¶rsel yÃ¼ksekliÄŸi", "imageHeight", 80, 500)}
-            {sharedRange("GÃ¶rsel kÃ¶ÅŸeleri", "imageRadius", 0, 60)}
-          </> : <>
-            {designRange("GÃ¶rsel yÃ¼ksekliÄŸi", "imageHeight", 80, 500)}
-            {designRange("GÃ¶rsel kÃ¶ÅŸeleri", "imageRadius", 0, 60)}
-          </>}
-          <div className={styles.projectMediaManager}>
-            <div className={styles.projectMediaHeader}><strong>{device === "desktop" ? "Web" : "Mobil"} kart galerisi</strong><label className={styles.primaryButton}>{uploading ? "YÃ¼kleniyorâ€¦" : "+ FotoÄŸraf / video"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,.mp4,image/webp,image/jpeg,image/png,image/avif,video/mp4" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectMedia(file, device); event.target.value = ""; }} /></label></div>
-            {projectMedia(device).length ? <div className={styles.projectMediaGrid}>{projectMedia(device).map((media, index) => <article key={media.id}>
-              <div>{media.type === "video" ? media.poster ? <Image src={media.poster} alt="" fill sizes="100px" /> : <span>â–¶</span> : <Image src={media.url} alt={media.alt || ""} fill sizes="100px" />}</div>
-              <small>{index === 0 ? "Ana kapak" : `${index + 1}. medya`} Â· {media.type === "video" ? "Video" : "GÃ¶rsel"}</small>
-              {media.type === "video" ? <label className={styles.projectPosterButton}>{uploadingPosterId === media.id ? "Kapak yÃ¼kleniyorâ€¦" : media.poster ? "KapaÄŸÄ± deÄŸiÅŸtir" : "Kapak gÃ¶rseli yÃ¼kle"}<input hidden type="file" accept=".webp,.jpg,.jpeg,.png,.avif,image/webp,image/jpeg,image/png,image/avif" disabled={Boolean(uploadingPosterId)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadProjectPoster(file, device, media); event.target.value = ""; }} /></label> : null}
-              <nav><button type="button" disabled={index === 0} onClick={() => moveProjectMedia(device, index, -1)}>â†</button><button type="button" disabled={index === projectMedia(device).length - 1} onClick={() => moveProjectMedia(device, index, 1)}>â†’</button><button type="button" onClick={() => void removeProjectMedia(device, media)}>Sil</button></nav>
-            </article>)}</div> : <div className={styles.emptyModuleGallery}>Bu karta ait {device === "desktop" ? "web" : "mobil"} galerisi henÃ¼z boÅŸ.</div>}
-            <p className={styles.moduleHint}>Ä°lk medya ana kapaktÄ±r. Video iÃ§in MP4 (720p Ã¶nerilir, en fazla 150 MB), gÃ¶rsel iÃ§in WebP/JPG/PNG/AVIF (en fazla 5 MB) kullanÄ±n. Videolar kapak gÃ¶rseliyle aÃ§Ä±lÄ±r ve kullanÄ±cÄ± oynatmadan indirilmez.</p>
-          </div>
-        </div> : null}
-      </section>
-      <section style={{ order: 5 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-payment" ? styles.lowerAccordionOpen : ""}`}>
-        <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-payment" ? "" : "project-payment")}><span>Fiyat ve dÃ¼ÄŸme ayarlarÄ±</span><b>{lowerGroup === "project-payment" ? "âˆ’" : "+"}</b></button>
-        {projectSelectorOpen && lowerGroup === "project-payment" ? <div className={styles.lowerAccordionContent}>
-          <label>BaÄŸÄ±ÅŸ biÃ§imi<select value={selectedProject.pricingMode} onChange={(event) => updateProject({ pricingMode: event.target.value as DonationProject["pricingMode"] })}><option value="amount">BaÄŸÄ±ÅŸ tutarÄ±</option><option value="quantity">Adet / hisse</option></select></label>
-          {selectedProject.pricingMode === "quantity" ? <label>Birim fiyat<input type="number" min="0" value={selectedProject.fixedPrice} onChange={(event) => updateProject({ fixedPrice: Number(event.target.value) })} /></label> : null}
-          <label>{selectedProject.pricingMode === "quantity" ? "Adet seÃ§enekleri" : "HazÄ±r tutarlar"}<input value={selectedProject.suggested.join(", ")} onChange={(event) => updateProject({ suggested: event.target.value.split(",").map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item > 0).slice(0, 12) })} placeholder="250, 500, 1000" /></label>
-          {selectedProject.pricingMode === "amount" ? <label className={styles.headerCheck}><input type="checkbox" checked={selectedProject.customAmountEnabled} onChange={(event) => updateProject({ customAmountEnabled: event.target.checked })} /> Ã–zel tutar giriÅŸini gÃ¶ster</label> : null}
-          {designRange("Fiyat dÃ¼ÄŸmesi yÃ¼ksekliÄŸi", "priceButtonHeight", 28, 64)}
-          {designRange("Fiyat dÃ¼ÄŸmesi kÃ¶ÅŸeleri", "priceButtonRadius", 0, 32)}
-          <label>Normal fiyat zemini<input type="color" value={design.priceBackground} onChange={(event) => updateProjectDesign(device, { priceBackground: event.target.value })} /></label>
-          <label>Normal fiyat yazÄ±sÄ±<input type="color" value={design.priceTextColor} onChange={(event) => updateProjectDesign(device, { priceTextColor: event.target.value })} /></label>
-          <label>SeÃ§ili fiyat zemini<input type="color" value={design.selectedPriceBackground} onChange={(event) => updateProjectDesign(device, { selectedPriceBackground: event.target.value })} /></label>
-          <label>SeÃ§ili fiyat yazÄ±sÄ±<input type="color" value={design.selectedPriceTextColor} onChange={(event) => updateProjectDesign(device, { selectedPriceTextColor: event.target.value })} /></label>
-          <label>BaÄŸÄ±ÅŸ dÃ¼ÄŸmesi yazÄ±sÄ±<input value={design.actionText} onChange={(event) => updateProjectDesign(device, { actionText: event.target.value })} /></label>
-          {designRange("BaÄŸÄ±ÅŸ dÃ¼ÄŸmesi yÃ¼ksekliÄŸi", "actionHeight", 34, 72)}
-          {designRange("BaÄŸÄ±ÅŸ dÃ¼ÄŸmesi kÃ¶ÅŸeleri", "actionRadius", 0, 36)}
-          <label>BaÄŸÄ±ÅŸ dÃ¼ÄŸmesi rengi<input type="color" value={design.actionBackground} onChange={(event) => updateProjectDesign(device, { actionBackground: event.target.value })} /></label>
-          <label>DÃ¼ÄŸme yazÄ± rengi<input type="color" value={design.actionTextColor} onChange={(event) => updateProjectDesign(device, { actionTextColor: event.target.value })} /></label>
-        </div> : null}
-      </section>
-    </div>;
-  };
-
-  const lowerControls = (device: Device) => {
-    const value = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
-    const change = (changes: Partial<DonationLowerDeviceSettings>) => updateLower(device, changes);
-    const groups = [
-      ["layout", "YerleÅŸim ve Ã¶lÃ§Ã¼ler"],
-      ["arrows", "KaydÄ±rma oklarÄ±"],
-    ] as const;
-    const range = (label: string, key: keyof DonationLowerDeviceSettings, min: number, max: number, suffix = "px") => (
-      <label>{label} <b>{String(value[key])} {suffix}</b><input type="range" min={min} max={max} value={Number(value[key])} onChange={(event) => change({ [key]: Number(event.target.value) })} /></label>
-    );
-    return <div className={styles.lowerAccordion}>
-      {groups.map(([id, label]) => <section key={id} className={lowerGroup === id ? styles.lowerAccordionOpen : ""}>
-        <button type="button" onClick={() => setLowerGroup((current) => current === id ? "" : id)}><span>{label}</span><b>{lowerGroup === id ? "âˆ’" : "+"}</b></button>
-        {lowerGroup === id ? <div className={styles.lowerAccordionContent}>
-          {id === "layout" ? <>
-            <label>GÃ¶sterim biÃ§imi<select value={value.layout} onChange={(event) => change({ layout: event.target.value as "carousel" | "grid" })}><option value="carousel">Yatay kaydÄ±rma</option><option value="grid">Izgara</option></select></label>
-            {value.layout === "grid" ? range("SÃ¼tun sayÄ±sÄ±", "columns", 1, device === "desktop" ? 6 : 2, "") : null}
-            {range("BÃ¶lÃ¼m geniÅŸliÄŸi", "sectionMaxWidth", device === "desktop" ? 700 : 280, device === "desktop" ? 1800 : 640)}
-            {range("Yan iÃ§ boÅŸluk", "sectionPadding", 0, 80)}
-            {range("Ãœst bÃ¶lÃ¼mle mesafe", "sectionGap", 0, 100)}
-            {range("BaÅŸlÄ±k ile kartlar arasÄ± mesafe", "headingGap", 0, 100)}
-            {range("Alt bÃ¶lÃ¼mle mesafe", "sectionBottomGap", 0, 160)}
-            {range("Kartlar arasÄ± boÅŸluk", "cardGap", 0, 60)}
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> KaydÄ±rma oklarÄ±nÄ± gÃ¶ster</label>
-          </> : null}
-          {id === "arrows" ? <>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> KaydÄ±rma oklarÄ±nÄ± gÃ¶ster</label>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.leftArrowVisible} onChange={(event) => change({ leftArrowVisible: event.target.checked })} /> Sol oku gÃ¶ster</label>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.rightArrowVisible} onChange={(event) => change({ rightArrowVisible: event.target.checked })} /> SaÄŸ oku gÃ¶ster</label>
-            <label>HazÄ±r sembol<select value={value.arrowIcon} onChange={(event) => change({ arrowIcon: event.target.value as DonationLowerDeviceSettings["arrowIcon"] })}><option value="thin">Ä°nce ok â† â†’</option><option value="chevron">Sade ok â€¹ â€º</option><option value="bold">KalÄ±n ok â® â¯</option><option value="long">Uzun ok âŸµ âŸ¶</option><option value="triangle">ÃœÃ§gen â—€ â–¶</option></select></label>
-            {range("Ok kutusu boyutu", "arrowSize", 28, 72)}
-            {range("Sembol boyutu", "arrowIconSize", 12, 40)}
-            {range("Kenara bindirme", "arrowOffset", -36, 36)}
-            {range("Dikey konum", "arrowVerticalPosition", 10, 90, "%")}
-            {range("KÃ¶ÅŸe yuvarlaklÄ±ÄŸÄ±", "arrowRadius", 0, 50, "%")}
-            {range("ÅeffaflÄ±k", "arrowOpacity", 10, 100, "%")}
-            {range("Ã‡erÃ§eve kalÄ±nlÄ±ÄŸÄ±", "arrowBorderWidth", 0, 6)}
-            <label>Arka plan rengi<input type="color" value={value.arrowBackground} onChange={(event) => change({ arrowBackground: event.target.value })} /></label>
-            <label>Sembol rengi<input type="color" value={value.arrowColor} onChange={(event) => change({ arrowColor: event.target.value })} /></label>
-            <label>Ã‡erÃ§eve rengi<input type="color" value={value.arrowBorderColor} onChange={(event) => change({ arrowBorderColor: event.target.value })} /></label>
-            <label>GÃ¶lge<select value={value.arrowShadow} onChange={(event) => change({ arrowShadow: event.target.value as DonationLowerDeviceSettings["arrowShadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">GÃ¼Ã§lÃ¼</option></select></label>
-          </> : null}
-        </div> : null}
-      </section>)}
-    </div>;
-  };
-
-  const upperGallerySections = (device: Device, group: UpperSettingsGroupRenderer) => {
-    const deviceImages = images.filter((image) => image.device === device);
-    const deviceLabel = device === "desktop" ? "Web" : "Mobil";
-    const aspectRatio = device === "desktop" ? donation.desktopAspectRatio : donation.mobileAspectRatio;
-    const cardWidth = device === "desktop" ? donation.desktopCardWidth : donation.mobileCardWidth;
-    const cardHeight = device === "desktop" ? donation.desktopCardHeight : donation.mobileCardHeight;
-    const cardGap = device === "desktop" ? donation.desktopCardGap : donation.mobileCardGap;
-    const imageFit = device === "desktop" ? donation.desktopImageFit : donation.mobileImageFit;
-    const imagePosition = device === "desktop" ? donation.desktopImagePosition : donation.mobileImagePosition;
-    const borderRadius = device === "desktop" ? donation.desktopBorderRadius : donation.mobileBorderRadius;
-    const borderWidth = device === "desktop" ? donation.desktopBorderWidth : donation.mobileBorderWidth;
-    const borderColor = device === "desktop" ? donation.desktopBorderColor : donation.mobileBorderColor;
-    const shadow = device === "desktop" ? donation.desktopShadow : donation.mobileShadow;
-    const backgroundColor = device === "desktop" ? donation.desktopImageBackgroundColor : donation.mobileImageBackgroundColor;
-    return <>
-      {group("visual-design", "GÃ¶rsel tasarÄ±mÄ±", <div className={styles.upperVisualDesign}>
-        <div className={styles.compactImageSettings}>
-          <div className={styles.compactSettingGroup}>
-            <strong>Boyut ve oran</strong>
-            <label>En-boy oranÄ±<select value={aspectRatio} onChange={(event) => setAspectRatio(device, event.target.value)}>{aspectRatios.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-            <label>GeniÅŸlik <b>{cardWidth} px</b><input type="range" min={device === "desktop" ? 60 : 50} max={device === "desktop" ? 500 : 320} value={cardWidth} onChange={(event) => updateImageWidth(device, Number(event.target.value))} /></label>
-            {aspectRatio === "custom" ? <label>YÃ¼kseklik <b>{cardHeight} px</b><input type="range" min={device === "desktop" ? 60 : 50} max={device === "desktop" ? 500 : 400} value={cardHeight} onChange={(event) => update(device === "desktop" ? { desktopCardHeight: Number(event.target.value) } : { mobileCardHeight: Number(event.target.value) })} /></label> : <small>YÃ¼kseklik otomatik: {cardHeight} px</small>}
-            <label>GÃ¶rseller arasÄ± boÅŸluk <b>{cardGap} px</b><input type="range" min="0" max={device === "desktop" ? 60 : 40} value={cardGap} onChange={(event) => update(device === "desktop" ? { desktopCardGap: Number(event.target.value) } : { mobileCardGap: Number(event.target.value) })} /></label>
-          </div>
-          <div className={styles.compactSettingGroup}>
-            <strong>YerleÅŸim</strong>
-            <label>GÃ¶rsel davranÄ±ÅŸÄ±<select value={imageFit} onChange={(event) => update(device === "desktop" ? { desktopImageFit: event.target.value as "cover" | "contain" } : { mobileImageFit: event.target.value as "cover" | "contain" })}><option value="cover">AlanÄ± doldur</option><option value="contain">TamamÄ±nÄ± gÃ¶ster</option></select></label>
-            <label>Odak noktasÄ±<select value={imagePosition} onChange={(event) => update(device === "desktop" ? { desktopImagePosition: event.target.value } : { mobileImagePosition: event.target.value })}><option value="center">Orta</option><option value="top">Ãœst</option><option value="bottom">Alt</option><option value="left">Sol</option><option value="right">SaÄŸ</option></select></label>
-            <label>Arka plan<input type="color" value={backgroundColor} onChange={(event) => update(device === "desktop" ? { desktopImageBackgroundColor: event.target.value } : { mobileImageBackgroundColor: event.target.value })} /></label>
-          </div>
-          <div className={styles.compactSettingGroup}>
-            <strong>GÃ¶rÃ¼nÃ¼m</strong>
-            <label>KÃ¶ÅŸe yuvarlaklÄ±ÄŸÄ± <b>{borderRadius} px</b><input type="range" min="0" max="80" value={borderRadius} onChange={(event) => update(device === "desktop" ? { desktopBorderRadius: Number(event.target.value) } : { mobileBorderRadius: Number(event.target.value) })} /></label>
-            <label>Ã‡erÃ§eve kalÄ±nlÄ±ÄŸÄ± <b>{borderWidth} px</b><input type="range" min="0" max="8" value={borderWidth} onChange={(event) => update(device === "desktop" ? { desktopBorderWidth: Number(event.target.value) } : { mobileBorderWidth: Number(event.target.value) })} /></label>
-            <label>Ã‡erÃ§eve rengi<input type="color" value={borderColor} onChange={(event) => update(device === "desktop" ? { desktopBorderColor: event.target.value } : { mobileBorderColor: event.target.value })} /></label>
-            <label>GÃ¶lge<select value={shadow} onChange={(event) => update(device === "desktop" ? { desktopShadow: event.target.value as typeof donation.desktopShadow } : { mobileShadow: event.target.value as typeof donation.mobileShadow })}><option value="none">KapalÄ±</option><option value="soft">Hafif</option><option value="medium">Orta</option><option value="strong">GÃ¼Ã§lÃ¼</option></select></label>
-          </div>
-        </div>
-      </div>)}
-      {group("visual-categories", "Kategori gÃ¶rselleri", <div className={styles.upperVisualLibrary}>
-        <div className={styles.compactCategoryAssignments}>
-          {donationCategoryOptions.map(([id, label]) => <section className={styles.deviceCategoryImageRow} key={id}>
-            <div><strong>{label}</strong><small>Aktif {deviceLabel.toLocaleLowerCase("tr-TR")} gÃ¶rseli</small></div>
-            <div className={styles.selectedModuleImage}><Image src={donation.categoryImages[id][device]} alt="" fill sizes="180px" /></div>
-            <select value={donation.categoryImages[id][device]} onChange={(event) => selectCategoryImage(id, device, event.target.value)}>
-              <option value={defaultModuleSettings.donation.categoryImages[id][device]}>VarsayÄ±lan gÃ¶rsel</option>
-              {deviceImages.map((image, index) => <option value={image.url} key={image.path}>Galeri gÃ¶rseli {index + 1} Â· {formatSize(image.size)}</option>)}
-            </select>
-          </section>)}
-        </div>
-      </div>)}
-      {group("visual-library", "GÃ¶rsel galerisi", <div className={styles.upperVisualLibrary}>
-        <div className={styles.moduleUpload}>
-          <div><h3>{deviceLabel} gÃ¶rsel galerisi</h3><p>WebP Ã¶nerilir. 250 KB Ã¼zerindeki dosyalarda boyut uyarÄ±sÄ± gÃ¶sterilir.</p></div>
-          <label className={styles.primaryButton}>{uploading ? "YÃ¼kleniyor..." : "+ GÃ¶rsel YÃ¼kle"}<input type="file" hidden accept=".webp,.jpg,.jpeg,.png,.svg,image/webp,image/jpeg,image/png,image/svg+xml" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file, device); event.target.value = ""; }} /></label>
-        </div>
-        {deviceImages.length ? <div className={styles.compactGalleryGrid}>
-          {deviceImages.map((image) => {
-            const meta = imageMeta[image.url];
-            const usages = donationCategoryOptions.filter(([id]) => donation.categoryImages[id][device] === image.url);
-            return <article className={styles.compactGalleryCard} key={image.path}>
-              <div>
-                <Image src={image.url} alt={`${deviceLabel} galeri gÃ¶rseli`} fill sizes="130px" onLoad={(event) => {
-                  const element = event.currentTarget;
-                  setImageMeta((current) => current[image.url] ? current : { ...current, [image.url]: { width: element.naturalWidth, height: element.naturalHeight } });
-                }} />
-                {usages.length ? <span>KullanÄ±lÄ±yor</span> : null}
-              </div>
-              <small>{meta ? `${meta.width}Ã—${meta.height} Â· ${imageRatio(meta.width, meta.height)} Â· ` : ""}{formatSize(image.size)}</small>
-              {image.size > 250 * 1024 ? <em>Boyut yÃ¼ksek</em> : null}
-              <p>{usages.length ? usages.map(([, label]) => label).join(", ") : "KullanÄ±lmÄ±yor"}</p>
-              <button type="button" onClick={() => void deleteImage(image)}>Sil</button>
-            </article>;
-          })}
-        </div> : <div className={styles.emptyModuleGallery}>Bu bÃ¶lÃ¼mde henÃ¼z Ã¶zel gÃ¶rsel yok. Mevcut Ã¶rnek gÃ¶rseller kullanÄ±lmaya devam ediyor.</div>}
-      </div>)}
-    </>;
-  };
-
-  const upperDesignSettings = (device: Device) => {
-    const desktop = device === "desktop";
-    const openGroup = desktop ? upperDesktopGroup : upperMobileGroup;
-    const setOpenGroup = desktop ? setUpperDesktopGroup : setUpperMobileGroup;
-    const toggleGroup = (group: string) => setOpenGroup((current) => current === group ? "" : group);
-    const group = (id: string, title: string, content: ReactNode) => (
-      <section className={openGroup === id ? styles.lowerAccordionOpen : ""}>
-        <button type="button" onClick={() => toggleGroup(id)}>
-          <span>{title}</span><b>{openGroup === id ? "âˆ’" : "+"}</b>
-        </button>
-        {openGroup === id ? <div className={styles.lowerAccordionContent}>{content}</div> : null}
-      </section>
-    );
-
-    return <div className={styles.upperUnifiedPanel}>
-      <header className={styles.upperUnifiedHeader}>
-        <span>{desktop ? "WEB" : "MOBÄ°L"}</span>
-        <div><strong>{desktop ? "Web AyarlarÄ±" : "Mobil AyarlarÄ±"}</strong><small>TasarÄ±m, gÃ¶rseller ve galeri tek merkezde</small></div>
-        <i>7 BÃ–LÃœM</i>
-      </header>
-      <div className={`${styles.lowerAccordion} ${styles.upperSettingsAccordion}`}>
-      {group("publishing", "YayÄ±n ve kaydÄ±rma", <>
-        <label className={styles.headerCheck}><input type="checkbox" checked={donation.enabled} onChange={(event) => update({ enabled: event.target.checked })} /> ModÃ¼lÃ¼ ana sayfada gÃ¶ster</label>
-        <label className={styles.headerCheck}><input type="checkbox" checked={donation.autoScroll} onChange={(event) => update({ autoScroll: event.target.checked })} /> Kategorileri otomatik kaydÄ±r</label>
-        <label>KaydÄ±rma hÄ±zÄ± <b>{donation.autoScrollSpeed.toFixed(2)}Ã—</b><input type="range" min=".25" max="4" step=".25" value={donation.autoScrollSpeed} onChange={(event) => update({ autoScrollSpeed: Number(event.target.value) })} /></label>
-        <label>BaÅŸlangÄ±Ã§ ve bitiÅŸ kaydÄ±rma payÄ± <b>{desktop ? donation.desktopEdgeScrollPadding : donation.mobileEdgeScrollPadding} px</b><input type="range" min="0" max={desktop ? "160" : "100"} value={desktop ? donation.desktopEdgeScrollPadding : donation.mobileEdgeScrollPadding} onChange={(event) => update(desktop ? { desktopEdgeScrollPadding: Number(event.target.value) } : { mobileEdgeScrollPadding: Number(event.target.value) })} /></label>
-      </>)}
-      {group("placement", "YerleÅŸim", <>
-        <label>Slider Ã¼zerine bindirme <b>{desktop ? donation.desktopOverlap : donation.mobileOverlap} px</b><input type="range" min="0" max={desktop ? "100" : "60"} value={desktop ? donation.desktopOverlap : donation.mobileOverlap} onChange={(event) => update(desktop ? { desktopOverlap: Number(event.target.value) } : { mobileOverlap: Number(event.target.value) })} /></label>
-        <label>BaÄŸÄ±ÅŸ alanÄ±yla mesafe <b>{desktop ? donation.desktopContentGap : donation.mobileContentGap} px</b><input type="range" min="0" max={desktop ? "120" : "100"} value={desktop ? donation.desktopContentGap : donation.mobileContentGap} onChange={(event) => update(desktop ? { desktopContentGap: Number(event.target.value) } : { mobileContentGap: Number(event.target.value) })} /></label>
-        {desktop ? <label>Kutucuk hizalama<select value={donation.desktopCategoryAlignment} onChange={(event) => update({ desktopCategoryAlignment: event.target.value as typeof donation.desktopCategoryAlignment })}><option value="left">Sola hizala</option><option value="center">Ortaya hizala</option></select></label> : null}
-        <label>Ä°ki Ã§izgi arasÄ± ek boÅŸluk <b>{desktop ? donation.desktopProgressExtraSpace : donation.mobileProgressExtraSpace} px</b><input type="range" min="0" max={desktop ? "160" : "120"} value={desktop ? donation.desktopProgressExtraSpace : donation.mobileProgressExtraSpace} onChange={(event) => update(desktop ? { desktopProgressExtraSpace: Number(event.target.value) } : { mobileProgressExtraSpace: Number(event.target.value) })} /></label>
-      </>)}
-      {group("progress", "Ä°lerleme Ã§izgisi", <>
-        <label className={styles.headerCheck}><input type="checkbox" checked={donation.showProgress} onChange={(event) => update({ showProgress: event.target.checked })} /> Ä°lerleme Ã§izgisini gÃ¶ster</label>
-        <label>BaÅŸlangÄ±Ã§ rengi<input type="color" value={desktop ? donation.desktopProgressStartColor : donation.mobileProgressStartColor} onChange={(event) => update(desktop ? { desktopProgressStartColor: event.target.value } : { mobileProgressStartColor: event.target.value })} /></label>
-        <label>BitiÅŸ rengi<input type="color" value={desktop ? donation.desktopProgressEndColor : donation.mobileProgressEndColor} onChange={(event) => update(desktop ? { desktopProgressEndColor: event.target.value } : { mobileProgressEndColor: event.target.value })} /></label>
-        <label>Ã‡izgi zemini<input type="color" value={desktop ? donation.desktopProgressTrackColor : donation.mobileProgressTrackColor} onChange={(event) => update(desktop ? { desktopProgressTrackColor: event.target.value } : { mobileProgressTrackColor: event.target.value })} /></label>
-        <label>Ã‡izgi konumu<select value={desktop ? donation.desktopProgressPosition : donation.mobileProgressPosition} onChange={(event) => update(desktop ? { desktopProgressPosition: event.target.value as typeof donation.desktopProgressPosition } : { mobileProgressPosition: event.target.value as typeof donation.mobileProgressPosition })}><option value="top">YalnÄ±zca Ã¼stte</option><option value="bottom">YalnÄ±zca altta</option><option value="both">Ãœstte ve altta</option></select></label>
-        <label>Ã‡izgi ile kart aralÄ±ÄŸÄ± <b>{desktop ? donation.desktopProgressGap : donation.mobileProgressGap} px</b><input type="range" min="0" max={desktop ? "60" : "50"} value={desktop ? donation.desktopProgressGap : donation.mobileProgressGap} onChange={(event) => update(desktop ? { desktopProgressGap: Number(event.target.value) } : { mobileProgressGap: Number(event.target.value) })} /></label>
-        <label>Ã‡izgi kalÄ±nlÄ±ÄŸÄ± <b>{desktop ? donation.desktopProgressThickness : donation.mobileProgressThickness} px</b><input type="range" min="1" max="8" value={desktop ? donation.desktopProgressThickness : donation.mobileProgressThickness} onChange={(event) => update(desktop ? { desktopProgressThickness: Number(event.target.value) } : { mobileProgressThickness: Number(event.target.value) })} /></label>
-      </>)}
-      {group("categories", "GÃ¶rÃ¼nen kategoriler", <>
-        {donationCategoryOptions.map(([id, label]) => <label className={styles.headerCheck} key={id}><input type="checkbox" checked={donation.visibleCategories.includes(id)} onChange={() => toggleCategory(id)} /> {label}</label>)}
-      </>)}
-      {upperGallerySections(device, group)}
-      </div>
-    </div>;
-  };
-
-  return (
-    <>
-      <div className={styles.pageHeading}>
-        <div><p>Site bileÅŸenleri</p><h1>ModÃ¼ller</h1><span>BugÃ¼nkÃ¼ ve gelecekte eklenecek site modÃ¼llerini tek merkezden yÃ¶net.</span></div>
-        <button className={styles.primaryButton} type="button" disabled={saving} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve YayÄ±nla"}</button>
-      </div>
-
-      <div className={styles.demoBanner}><span>â—¦</span><p><strong>ModÃ¼l merkezi hazÄ±r.</strong>Her modÃ¼l kendi kartÄ±nda aÃ§Ä±lÄ±r; gelecekte ekleyeceÄŸimiz modÃ¼ller burada sÄ±ralanÄ±r.</p></div>
-
-      <section className={styles.moduleManagerCard}>
-        <button className={styles.moduleManagerHeader} type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
-          <span className={styles.moduleNumber}>01</span>
-          <span><strong>BaÄŸÄ±ÅŸ ModÃ¼lÃ¼</strong><small>Ana sayfa Â· Slider sonrasÄ±</small></span>
-          <i className={donation.enabled ? styles.moduleLive : styles.moduleOff}>{donation.enabled ? "YayÄ±nda" : "KapalÄ±"}</i>
-          <b>{expanded ? "âˆ’" : "+"}</b>
-        </button>
-
-        {expanded ? <div className={styles.moduleManagerBody}>
-          <nav className={styles.moduleSectionTabs} aria-label="BaÄŸÄ±ÅŸ modÃ¼lÃ¼ ana bÃ¶lÃ¼mleri">
-            <button className={section === "upper" ? styles.activeModuleSectionTab : ""} type="button" onClick={() => setSection("upper")}>
-              <span>01</span><strong>Ãœst BÃ¶lÃ¼m</strong><small>BaÄŸÄ±ÅŸ kategorileri</small>
-            </button>
-            <button className={section === "lower" ? styles.activeModuleSectionTab : ""} type="button" onClick={() => setSection("lower")}>
-              <span>02</span><strong>Alt BÃ¶lÃ¼m</strong><small>BaÄŸÄ±ÅŸ seÃ§enekleri</small>
-            </button>
-          </nav>
-
-          {section === "upper" ? <>
-          <div className={styles.moduleSectionIntro}>
-            <span>ÃœST BÃ–LÃœM</span><h2>BaÄŸÄ±ÅŸ Kategorileri</h2><p>Kategori kutularÄ±nÄ±, gÃ¶rselleri, kaydÄ±rma davranÄ±ÅŸÄ±nÄ± ve yerleÅŸimi yÃ¶netin.</p>
-          </div>
-          <nav className={styles.lowerDeviceTabs} aria-label="Ãœst bÃ¶lÃ¼m cihaz ayarlarÄ±">
-            <button className={tab === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => setTab("desktop")}><span>WEB</span><strong>Web AyarlarÄ±</strong><small>MasaÃ¼stÃ¼ gÃ¶rÃ¼nÃ¼mÃ¼</small></button>
-            <button className={tab === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => setTab("mobile")}><span>MOBÄ°L</span><strong>Mobil AyarlarÄ±</strong><small>Telefon gÃ¶rÃ¼nÃ¼mÃ¼</small></button>
-          </nav>
-
-          {tab === "desktop" ? <>
-            <div className={styles.moduleEditorGrid}>
-              <div className={styles.moduleConfigurationPanel}>
-                {upperDesignSettings("desktop")}
-              </div>
-              {preview("desktop")}
-            </div>
-          </> : null}
-
-          {tab === "mobile" ? <>
-            <div className={styles.moduleEditorGrid}>
-              <div className={styles.moduleConfigurationPanel}>
-                {upperDesignSettings("mobile")}
-              </div>
-              {preview("mobile")}
-            </div>
-          </> : null}
-          </> : null}
-
-          {section === "lower" ? <div className={styles.moduleLowerSection}>
-            <div className={styles.moduleSectionIntro}>
-              <span>ALT BÃ–LÃœM</span><h2>BaÄŸÄ±ÅŸ SeÃ§enekleri</h2><p>SeÃ§ilen kategoriye ait baÄŸÄ±ÅŸ kartlarÄ± ve baÄŸÄ±ÅŸ iÅŸlemleri bu ayrÄ± alanda yÃ¶netilecek.</p>
-            </div>
-            <nav className={styles.lowerDeviceTabs} aria-label="Alt bÃ¶lÃ¼m cihaz ayarlarÄ±">
-              <button className={lowerDevice === "desktop" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("desktop"); setLowerGroup("project-content"); }}><span>WEB</span><strong>Web AyarlarÄ±</strong><small>MasaÃ¼stÃ¼ gÃ¶rÃ¼nÃ¼mÃ¼</small></button>
-              <button className={lowerDevice === "mobile" ? styles.activeLowerDeviceTab : ""} type="button" onClick={() => { setLowerDevice("mobile"); setLowerGroup("project-content"); }}><span>MOBÄ°L</span><strong>Mobil AyarlarÄ±</strong><small>Telefon gÃ¶rÃ¼nÃ¼mÃ¼</small></button>
-            </nav>
-            <div className={styles.lowerEditorGrid}>
-              <div className={styles.lowerSettingsPanel}>
-                <div className={styles.lowerPanelHeading}><span>{lowerDevice === "desktop" ? "WEB AYARLARI" : "MOBÄ°L AYARLARI"}</span><p>TÃ¼m tasarÄ±m ve yerleÅŸim ayarlarÄ± bu cihaz iÃ§in baÄŸÄ±msÄ±zdÄ±r.</p></div>
-                {projectControls(lowerDevice)}
-                {lowerControls(lowerDevice)}
-              </div>
-              <div className={styles.lowerPreviewSticky}>{preview(lowerDevice)}</div>
-            </div>
-          </div> : null}
-        </div> : null}
-      </section>
-
-      <button className={styles.futureModuleCard} type="button" disabled><span>02</span><strong>Yeni modÃ¼l alanÄ±</strong><small>Bir sonraki modÃ¼l burada yer alacak.</small><b>YakÄ±nda</b></button>
-    </>
-  );
-}
+  function toggleCategory(id: DonationCategoryId, device: Device) {
+    const current = catego×ŸuêÚ$z{-®éÜj×ìKÆÖ–æÆ,K6–ÃÂö'WGFöãà¢ÆÆ&VÂ6Æ74æÖS×·7G–ÆW2ç&–Ö'”'WGFöçÓà¢·WÆöF–ærò%vV%†¬K&ÆìK–÷.(
+b"¢"²|;g'6VÂœ;Æ¶ÆR'Ğ¢Æ–çWBG—SÒ&f–ÆR"†–FFVâ66WCÒ"çvV'Âæ§rÂæ§VrÂçærÂæf–bÆ–ÖvR÷vV'Æ–ÖvRö§VrÆ–ÖvR÷ærÆ–ÖvRöf–b"F—6&ÆVC×·WÆöF–æwÒöä6†ævS×²†WfVçB’Óâ°¢6öç7Bf–ÆRÒWfVçBçF&vWBæf–ÆW3òå³Ó°¢–b†f–ÆR’fö–BWÆöD–ÖvR†f–ÆRÂFWf–6R“°¢WfVçBçF&vWBçfÇVRÒ"#°¢×Òóà¢ÂöÆ&VÃà¢ÂöF—cà ¢¶f–ÇFW&VD–ÖvW2æÆVæwF‚òÆF—b6Æ74æÖS×·7G–ÆW2æ6FVv÷'”vÆÆW'”w&–GÓà¢¶f–ÇFW&VD–ÖvW2æÖ‚†–ÖvR’Óâ°¢6öç7BÖWFÒ–ÖvRçv–GF‚bb–ÖvRæ†V–v‡Bò²v–GFƒ¢–ÖvRçv–GF‚Â†V–v‡C¢–ÖvRæ†V–v‡BÒ¢–ÖvTÖWF¶–ÖvRçW&ÅÓ°¢6öç7BW6vW2ÒFöæF–öä6FVv÷'”÷F–öç2æf–ÇFW"‚…¶–EÒ’ÓâFöæF–öâæ6FVv÷'”–ÖvW5¶–EÕ¶FWf–6UÒÓÓÒ–ÖvRçW&Â“°¢6öç7B—56VÆV7FVBÒ6VÆV7FVEW&ÂÓÓÒ–ÖvRçW&Ã°¢6öç7B6fVEW&6VçBÒ–ÖvRæ÷&–v–æÅ6—¦Rbb–ÖvRæ÷&–v–æÅ6—¦Râ–ÖvRç6—¦P¢òÖF‚ç&÷VæB‚ƒÒ–ÖvRç6—¦Rò–ÖvRæ÷&–v–æÅ6—¦R’¢¢¢°¢&WGW&âÆ'F–6ÆR6Æ74æÖS×¶—56VÆV7FVBò7G–ÆW2æ6FVv÷'”vÆÆW'”6&E6VÆV7FVB¢7G–ÆW2æ6FVv÷'”vÆÆW'”6&GÒ¶W“×¶–ÖvRçF‡Óà¢Æ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6VÆV7D6FVv÷'”–ÖvR‡6VÆV7FVD–BÂFWf–6RÂ–ÖvRçW&Â—Óà¢Ç7ãà¢Ä–ÖvR7&3×¶–ÖvRçW&ÇÒÇC×¶G¶FWf–6TÆ&VÇÒvÆW&’|;g'6VÆ–Òf–ÆÂ6—¦W3Ò#ƒ‚"öäÆöC×²†WfVçB’Óâ°¢6öç7BVÆVÖVçBÒWfVçBæ7W'&VçEF&vWC°¢6WD–ÖvTÖWF‚†7W'&VçB’Óâ7W'&VçE¶–ÖvRçW&ÅÒò7W'&VçB¢²ââæ7W'&VçBÂ¶–ÖvRçW&ÅÓ¢²v–GFƒ¢VÆVÖVçBææGW&Åv–GF‚Â†V–v‡C¢VÆVÖVçBææGW&Ä†V–v‡BÒÒ“°¢×Òóà¢Â÷7ãà¢Ç7G&öæsç¶–ÖvRæ÷&–v–æÄæÖRÇÂ–ÖvRçF‚ç7Æ—B‚"ò"’æB‚Ó’ÇÂ$¶FVv÷&’|;g'6VÆ’'ÓÂ÷7G&öæsà¢Ç6ÖÆÃç¶ÖWFòG¶ÖWFçv–GF‡Ü9rG¶ÖWFæ†V–v‡GÒ+rG¶–ÖvU&F–ò†ÖWFçv–GF‚ÂÖWFæ†V–v‡B—Ò+r¢"'×²†–ÖvRæf÷&ÖBÇÂ–ÖvRçF‚ç7Æ—B‚"â"’æB‚Ó’ÇÂ&|;g'6VÂ"’çFõWW$66R‚—ÓÂ÷6ÖÆÃà¢Âö'WGFöãà¢ÆF—b6Æ74æÖS×·7G–ÆW2æ6FVv÷'”÷F–Ö—¦F–öçÓà¢¶–ÖvRæ÷&–v–æÅ6—¦Rbb–ÖvRæ÷&–v–æÅ6—¦Râ–ÖvRç6—¦P¢òÇ7ãç¶f÷&ÖE6—¦R†–ÖvRæ÷&–v–æÅ6—¦R—Ò(i"Æ#ç¶f÷&ÖE6—¦R†–ÖvRç6—¦R—ÓÂö#ç·6fVEW&6VçBò+rRG·6fVEW&6VçGÒ¼;Ì:|;Æ¶¢"'ÓÂ÷7ãà¢¢Ç7ãç¶f÷&ÖE6—¦R†–ÖvRç6—¦R—ÓÂ÷7ãçĞ¢·W6vW2æÆVæwF€¢òÇ7â6Æ74æÖS×·7G–ÆW2æ6FVv÷'•W6vT&FvWÓç·W6vW2æÖ‚…²ÂÆ&VÅÒ’ÓâÆ&VÂ’æ¦ö–â‚"Â"—ÓÂ÷7ãà¢¢Ç7ãä·VÆÆìKÆÜK–÷#Â÷7ãçĞ¢ÂöF—cà¢ÆF—b6Æ74æÖS×·7G–ÆW2æ6FVv÷'”ÖævW$7F–öç7Óà¢Æ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6VÆV7D6FVv÷'”–ÖvR‡6VÆV7FVD–BÂFWf–6RÂ–ÖvRçW&Â—Óç¶—56VÆV7FVBò%6\:v–Æ’"¢G·6VÆV7FVDÆ&VÇÒœ:v–â·VÆÆæÓÂö'WGFöãà¢Æ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâfö–BFVÆWFT–ÖvR†–ÖvR—Óå6–ÃÂö'WGFöãà¢ÂöF—cà¢Âö'F–6ÆSã°¢Ò—Ğ¢ÂöF—câ¢ÆF—b6Æ74æÖS×·7G–ÆW2æ6FVv÷'”V×G—Óà¢Ç7G&öæsç·VW'’ò$&ÖìK¦Æ\YöÆ\YöVâ|;g'6VÂ–ö²"¢G¶FWf–6TÆ&VÇÒvÆW&—6’†Vì;Ç¢&üYöÓÂ÷7G&öæsà¢Çç·VW'’ò$&Ö¶VÆ–ÖW6–æ’F\IöœY÷F—&–ââ"¢,KÆ²|;g'6VÆ–æ—¦’œ;Æ¶ÆVFœIö–æ—¦FR÷FöÖF–²öÆ&²vV%(	—–RL;fì;ÌY÷L;Ç,;ÆÌ;Ç'W&F|;g,;ÆæV6V²â'ÓÂ÷à¢ÂöF—cçĞ¢ÂöF—câ“°¢Ó° Ğ¢6öç7BWW$FW6–vå6WGF–æw2Ò†FWf–6S¢FWf–6R’Óâ°¢6öç7BFW6·F÷ÒFWf–6RÓÓÒ&FW6·F÷#°¢6öç7B÷Väw&÷WÒFW6·F÷òWW$FW6·F÷w&÷W¢WW$Öö&–ÆTw&÷W°¢6öç7B6WD÷Väw&÷WÒFW6·F÷ò6WEWW$FW6·F÷w&÷W¢6WEWW$Öö&–ÆTw&÷W°¢6öç7BFövvÆTw&÷WÒ†w&÷W¢7G&–ær’Óâ6WD÷Väw&÷W‚†7W'&VçB’Óâ7W'&VçBÓÓÒw&÷Wò""¢w&÷W“°¢6öç7Bw&÷WÒ†–C¢7G&–ærÂF—FÆS¢7G&–ærÂ6öçFVçC¢&V7DæöFR’Óâ€¢Ç6V7F–öâ6Æ74æÖS×¶÷Väw&÷WÓÓÒ–Bò7G–ÆW2æÆ÷vW$66÷&F–öä÷Vâ¢"'Óà¢Æ'WGFöâG—SÒ&'WGFöâ"öä6Æ–6³×²‚’ÓâFövvÆTw&÷W†–B—Óà¢Ç7ãç·F—FÆWÓÂ÷7ããÆ#ç¶÷Väw&÷WÓÓÒ–Bò.(‰""¢"²'ÓÂö#à¢Âö'WGFöãà¢¶÷Väw&÷WÓÓÒ–BòÆF—b6Æ74æÖS×·7G–ÆW2æÆ÷vW$66÷&F–öä6öçFVçGÓç¶6öçFVçGÓÂöF—câ¢çVÆÇĞ¢Â÷6V7F–öãà¢“° ¢&WGW&âÆF—b6Æ74æÖS×·7G–ÆW2çWW%Væ–f–VEæVÇÓà¢Æ†VFW"6Æ74æÖS×·7G–ÆW2çWW%Væ–f–VD†VFW'Óà¢Ç7ãç¶FW6·F÷ò%tT""¢$Ôô,KÂ'ÓÂ÷7ãà¢ÆF—cãÇ7G&öæsç¶FW6·F÷ò%vV"–&Æ,K"¢$Öö&–Â–&Æ,K'ÓÂ÷7G&öæsãÇ6ÖÆÃåF6,KÒÂ|;g'6VÆÆW"fRvÆW&’FV²ÖW&¶W¦FSÂ÷6ÖÆÃãÂöF—cà¢Æ“ãB,9dÌ9ÄÓÂö“à¢Âö†VFW#à¢ÆF—b6Æ74æÖS×¶G·7G–ÆW2æÆ÷vW$66÷&F–öçÒG·7G–ÆW2çWW%6WGF–æw466÷&F–öçÖÓà¢¶w&÷W‚'V&Æ—6†–ær"Â%–œKâfR¶–LK&Ö"ÂÃà¢ÆÆ&VÂ6Æ74æÖS×·7G–ÆW2æ†VFW$6†V6·ÓãÆ–çWBG—SÒ&6†V6¶&÷‚"6†V6¶VC×¶FöæF–öâæVæ&ÆVGÒöä6†ævS×²†WfVçB’ÓâWFFR‡²Væ&ÆVC¢WfVçBçF&vWBæ6†V6¶VBÒ—ÒóâÖöL;ÆÌ;Âæ6–fF|;g7FW#ÂöÆ&VÃà¢ÆÆ&VÂ6Æ74æÖS×·7G–ÆW2æ†VFW$6†V6·ÓãÆ–çWBG—SÒ&6†V6¶&÷‚"6†V6¶VC×¶FöæF–öâæWFõ67&öÆÇÒöä6†ævS×²†WfVçB’ÓâWFFR‡²WFõ67&öÆÃ¢WfVçBçF&vWBæ6†V6¶VBÒ—Òóâ¶FVv÷&–ÆW&’÷FöÖF–²¶–LK#ÂöÆ&VÃà¢ÆÆ&VÃä¶–LK&ÖŒK¬KÆ#ç¶FöæF–öâæWFõ67&öÆÅ7VVBçFôf—†VBƒ"—Ü9sÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ"ã#R"ÖƒÒ#B"7FWÒ"ã#R"fÇVS×¶FöæF–öâæWFõ67&öÆÅ7VVGÒöä6†ævS×²†WfVçB’ÓâWFFR‡²WFõ67&öÆÅ7VVC¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢ÆÆ&VÃä&YöÆæ|K:rfR&—FœYò¶–LK&ÖœKÆ#ç¶FW6·F÷òFöæF–öâæFW6·F÷VFvU67&öÆÅFF–ær¢FöæF–öâæÖö&–ÆTVFvU67&öÆÅFF–æwÒƒÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ#"Öƒ×¶FW6·F÷ò#c"¢#'ÒfÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷VFvU67&öÆÅFF–ær¢FöæF–öâæÖö&–ÆTVFvU67&öÆÅFF–æwÒöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷VFvU67&öÆÅFF–æs¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò¢²Öö&–ÆTVFvU67&öÆÅFF–æs¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢Âóâ—Ğ¢¶w&÷W‚'Æ6VÖVçB"Â%–W&Æ\Yö–Ò"ÂÃà¢ÆÆ&VÃå6Æ–FW";Ç¦W&–æR&–æF—&ÖRÆ#ç¶FW6·F÷òFöæF–öâæFW6·F÷÷fW&Æ¢FöæF–öâæÖö&–ÆT÷fW&ÆÒƒÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ#"Öƒ×¶FW6·F÷ò#"¢#c'ÒfÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷÷fW&Æ¢FöæF–öâæÖö&–ÆT÷fW&ÆÒöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷÷fW&Æ¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò¢²Öö&–ÆT÷fW&Æ¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢ÆÆ&VÃä&IüKYòÆìK–ÆÖW6fRÆ#ç¶FW6·F÷òFöæF–öâæFW6·F÷6öçFVçDv¢FöæF–öâæÖö&–ÆT6öçFVçDvÒƒÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ#"Öƒ×¶FW6·F÷ò##"¢#'ÒfÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷6öçFVçDv¢FöæF–öâæÖö&–ÆT6öçFVçDvÒöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷6öçFVçDv¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò¢²Öö&–ÆT6öçFVçDv¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢¶FW6·F÷òÆÆ&VÃä·WGV7V²†—¦ÆÖÇ6VÆV7BfÇVS×¶FöæF–öâæFW6·F÷6FVv÷'”Æ–væÖVçGÒöä6†ævS×²†WfVçB’ÓâWFFR‡²FW6·F÷6FVv÷'”Æ–væÖVçC¢WfVçBçF&vWBçfÇVR2G—VöbFöæF–öâæFW6·F÷6FVv÷'”Æ–væÖVçBÒ—ÓãÆ÷F–öâfÇVSÒ&ÆVgB#å6öÆ†—¦ÆÂö÷F–öããÆ÷F–öâfÇVSÒ&6VçFW"#ä÷'F–†—¦ÆÂö÷F–öããÂ÷6VÆV7CãÂöÆ&VÃâ¢çVÆÇĞ¢ÆÆ&VÃìK¶’:v—¦v’&<KV²&üYöÇV²Æ#ç¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W74W‡G&76R¢FöæF–öâæÖö&–ÆU&öw&W74W‡G&76WÒƒÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ#"Öƒ×¶FW6·F÷ò#c"¢##'ÒfÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W74W‡G&76R¢FöæF–öâæÖö&–ÆU&öw&W74W‡G&76WÒöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W74W‡G&76S¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò¢²Öö&–ÆU&öw&W74W‡G&76S¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢Âóâ—Ğ¢¶w&÷W‚'&öw&W72"Â,KÆW&ÆVÖR:v—¦v—6’"ÂÃà¢ÆÆ&VÂ6Æ74æÖS×·7G–ÆW2æ†VFW$6†V6·ÓãÆ–çWBG—SÒ&6†V6¶&÷‚"6†V6¶VC×¶FöæF–öâç6†÷u&öw&W77Òöä6†ævS×²†WfVçB’ÓâWFFR‡²6†÷u&öw&W73¢WfVçBçF&vWBæ6†V6¶VBÒ—ÒóâKÆW&ÆVÖR:v—¦v—6–æ’|;g7FW#ÂöÆ&VÃà¢ÆÆ&VÃä&YöÆæ|K:r&Væv“Æ–çWBG—SÒ&6öÆ÷""fÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W757F'D6öÆ÷"¢FöæF–öâæÖö&–ÆU&öw&W757F'D6öÆ÷'Òöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W757F'D6öÆ÷#¢WfVçBçF&vWBçfÇVRÒ¢²Öö&–ÆU&öw&W757F'D6öÆ÷#¢WfVçBçF&vWBçfÇVRÒ—ÒóãÂöÆ&VÃà¢ÆÆ&VÃä&—FœYò&Væv“Æ–çWBG—SÒ&6öÆ÷""fÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W74VæD6öÆ÷"¢FöæF–öâæÖö&–ÆU&öw&W74VæD6öÆ÷'Òöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W74VæD6öÆ÷#¢WfVçBçF&vWBçfÇVRÒ¢²Öö&–ÆU&öw&W74VæD6öÆ÷#¢WfVçBçF&vWBçfÇVRÒ—ÒóãÂöÆ&VÃà¢ÆÆ&VÃì8v—¦v’¦VÖ–æ“Æ–çWBG—SÒ&6öÆ÷""fÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W75G&6´6öÆ÷"¢FöæF–öâæÖö&–ÆU&öw&W75G&6´6öÆ÷'Òöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W75G&6´6öÆ÷#¢WfVçBçF&vWBçfÇVRÒ¢²Öö&–ÆU&öw&W75G&6´6öÆ÷#¢WfVçBçF&vWBçfÇVRÒ—ÒóãÂöÆ&VÃà¢ÆÆ&VÃì8v—¦v’¶öçV×SÇ6VÆV7BfÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W75÷6—F–öâ¢FöæF–öâæÖö&–ÆU&öw&W75÷6—F–öçÒöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W75÷6—F–öã¢WfVçBçF&vWBçfÇVR2G—VöbFöæF–öâæFW6·F÷&öw&W75÷6—F–öâÒ¢²Öö&–ÆU&öw&W75÷6—F–öã¢WfVçBçF&vWBçfÇVR2G—VöbFöæF–öâæÖö&–ÆU&öw&W75÷6—F–öâÒ—ÓãÆ÷F–öâfÇVSÒ'F÷#å–ÆìK¦6;Ç7GFSÂö÷F–öããÆ÷F–öâfÇVSÒ&&÷GFöÒ#å–ÆìK¦6ÇGFÂö÷F–öããÆ÷F–öâfÇVSÒ&&÷F‚#ì9Ç7GFRfRÇGFÂö÷F–öããÂ÷6VÆV7CãÂöÆ&VÃà¢ÆÆ&VÃì8v—¦v’–ÆR¶'B&ÌKIüKÆ#ç¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W74v¢FöæF–öâæÖö&–ÆU&öw&W74vÒƒÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ#"Öƒ×¶FW6·F÷ò#c"¢#S'ÒfÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W74v¢FöæF–öâæÖö&–ÆU&öw&W74vÒöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W74v¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò¢²Öö&–ÆU&öw&W74v¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢ÆÆ&VÃì8v—¦v’¶ÌKæÌKIüKÆ#ç¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W75F†–6¶æW72¢FöæF–öâæÖö&–ÆU&öw&W75F†–6¶æW77ÒƒÂö#ãÆ–çWBG—SÒ'&ævR"Ö–ãÒ#"ÖƒÒ#‚"fÇVS×¶FW6·F÷òFöæF–öâæFW6·F÷&öw&W75F†–6¶æW72¢FöæF–öâæÖö&–ÆU&öw&W75F†–6¶æW77Òöä6†ævS×²†WfVçB’ÓâWFFR†FW6·F÷ò²FW6·F÷&öw&W75F†–6¶æW73¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò¢²Öö&–ÆU&öw&W75F†–6¶æW73¢çVÖ&W"†WfVçBçF&vWBçfÇVR’Ò—ÒóãÂöÆ&VÃà¢Âóâ—Ğ¢·WW$vÆÆW'•6V7F–öç2†FWf–6RÂw&÷W—Ğ¢ÂöF—cà¢ÂöF—cã°¢Ó° ¢&WGW&â€¢ÃàĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2çvT†VF–æwÓàĞ¢ÆF—cãÇå6—FR&–Æ\YöVæÆW&“Â÷ãÆƒäÖöL;ÆÆÆW#ÂöƒãÇ7ãä'V|;Ææ¼;ÂfRvVÆV6V·FRV¶ÆVæV6V²6—FRÖöL;ÆÆÆW&–æ’FV²ÖW&¶W¦FVâœ;fæWBãÂ÷7ããÂöF—càĞ¢Æ'WGFöâ6Æ74æÖS×·7G–ÆW2ç&–Ö'”'WGFöçÒG—SÒ&'WGFöâ"F—6&ÆVC×·6f–æwÒöä6Æ–6³×·6fWÓç·6f–ærò$¶–FVF–Æ—–÷"âââ"¢$¶–FWBfR–œKæÆ'ÓÂö'WGFöãàĞ¢ÂöF—càĞ Ğ¢ÆF—b6Æ74æÖS×·7G–ÆW2æFVÖô&ææW'ÓãÇ7ãî)zcÂ÷7ããÇãÇ7G&öæsäÖöL;ÆÂÖW&¶W¦’†¬K"ãÂ÷7G&öæsä†W"ÖöL;ÆÂ¶VæF’¶'LKæF:|KÌK#²vVÆV6V·FRV¶ÆW–V6\Iö–Ö—¢ÖöL;ÆÆÆW"'W&F<K&ÆìK"ãÂ÷ãÂöF—càĞ Ğ¢Ç6V7F–öâ6Æ74æÖS×·7G–ÆW2æÖöGVÆTÖævW$6&GÓàĞ¢Æ'WGFöâ6Æ74æÖS×·7G–ÆW2æÖöGVÆTÖævW$†VFW'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6WDW‡æFVB‚‡fÇVR’ÓâfÇVR—Ò&–ÖW‡æFVC×¶W‡æFVGÓàĞ¢Ç7â6Æ74æÖS×·7G–ÆW2æÖöGVÆTçVÖ&W'ÓãÂ÷7ãàĞ¢Ç7ããÇ7G&öæsä&IüKYòÖöL;ÆÌ;ÃÂ÷7G&öæsãÇ6ÖÆÃäæ6–f+r6Æ–FW"6öç&<KÂ÷6ÖÆÃãÂ÷7ãàĞ¢Æ’6Æ74æÖS×¶FöæF–öâæVæ&ÆVBò7G–ÆW2æÖöGVÆTÆ—fR¢7G–ÆW2æÖöGVÆTöfgÓç¶FöæF–öâæVæ&ÆVBò%–œKæF"¢$¶ÌK'ÓÂö“àĞ¢Æ#ç¶W‡æFVBò.(‰""¢"²'ÓÂö#àĞ¢Âö'WGFöãàĞ Ğ¢¶W‡æFVBòÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆTÖævW$&öG—ÓàĞ¢Ææb6Æ74æÖS×·7G–ÆW2æÖöGVÆU6V7F–öåF'7Ò&–ÖÆ&VÃÒ$&IüKYòÖöL;ÆÌ;Âæ,;fÌ;ÆÖÆW&’#àĞ¢Æ'WGFöâ6Æ74æÖS×·6V7F–öâÓÓÒ'WW""ò7G–ÆW2æ7F—fTÖöGVÆU6V7F–öåF"¢"'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6WE6V7F–öâ‚'WW""—ÓàĞ¢Ç7ããÂ÷7ããÇ7G&öæsì9Ç7B,;fÌ;ÆÓÂ÷7G&öæsãÇ6ÖÆÃä&IüKYò¶FVv÷&–ÆW&“Â÷6ÖÆÃàĞ¢Âö'WGFöãàĞ¢Æ'WGFöâ6Æ74æÖS×·6V7F–öâÓÓÒ&Æ÷vW""ò7G–ÆW2æ7F—fTÖöGVÆU6V7F–öåF"¢"'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6WE6V7F–öâ‚&Æ÷vW""—ÓàĞ¢Ç7ãã#Â÷7ããÇ7G&öæsäÇB,;fÌ;ÆÓÂ÷7G&öæsãÇ6ÖÆÃä&IüKYò6\:vVæV¶ÆW&“Â÷6ÖÆÃàĞ¢Âö'WGFöãàĞ¢ÂöæcàĞ Ğ¢·6V7F–öâÓÓÒ'WW""òÃàĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆU6V7F–öä–çG&÷ÓàĞ¢Ç7ãì9Å5B,9dÌ9ÄÓÂ÷7ããÆƒ#ä&IüKYò¶FVv÷&–ÆW&“Âöƒ#ãÇä¶FVv÷&’·WGVÆ,KìKÂ|;g'6VÆÆW&’Â¶–LK&ÖFg&ìKYüKìKfR–W&Æ\Yö–Ö’œ;fæWF–âãÂ÷àĞ¢ÂöF—càĞ¢Ææb6Æ74æÖS×·7G–ÆW2æÆ÷vW$FWf–6UF'7Ò&–ÖÆ&VÃÒ,9Ç7B,;fÌ;ÆÒ6–†¢–&Æ,K#à¢Æ'WGFöâ6Æ74æÖS×·F"ÓÓÒ&FW6·F÷"ò7G–ÆW2æ7F—fTÆ÷vW$FWf–6UF"¢"'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6WEF"‚&FW6·F÷"—ÓãÇ7ãåtT#Â÷7ããÇ7G&öæsåvV"–&Æ,KÂ÷7G&öæsãÇ6ÖÆÃäÖ6;Ç7L;Â|;g,;Æì;ÆÜ;ÃÂ÷6ÖÆÃãÂö'WGFöãà¢Æ'WGFöâ6Æ74æÖS×·F"ÓÓÒ&Öö&–ÆR"ò7G–ÆW2æ7F—fTÆ÷vW$FWf–6UF"¢"'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ6WEF"‚&Öö&–ÆR"—ÓãÇ7ãäÔô,KÃÂ÷7ããÇ7G&öæsäÖö&–Â–&Æ,KÂ÷7G&öæsãÇ6ÖÆÃåFVÆVföâ|;g,;Æì;ÆÜ;ÃÂ÷6ÖÆÃãÂö'WGFöãà¢Âöæcà Ğ¢·F"ÓÓÒ&FW6·F÷"òÃà¢ÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆTVF—F÷$w&–GÓà¢ÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆT6öæf–wW&F–öåæVÇÓà¢·WW$FW6–vå6WGF–æw2‚&FW6·F÷"—Ğ¢ÂöF—cà¢·&Wf–Wr‚&FW6·F÷"—Ğ¢ÂöF—càĞ¢Âóâ¢çVÆÇĞĞ Ğ¢·F"ÓÓÒ&Öö&–ÆR"òÃà¢ÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆTVF—F÷$w&–GÓà¢ÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆT6öæf–wW&F–öåæVÇÓà¢·WW$FW6–vå6WGF–æw2‚&Öö&–ÆR"—Ğ¢ÂöF—cà¢·&Wf–Wr‚&Öö&–ÆR"—ĞĞ¢ÂöF—càĞ¢Âóâ¢çVÆÇĞĞ¢Âóâ¢çVÆÇĞĞ Ğ¢·6V7F–öâÓÓÒ&Æ÷vW""òÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆTÆ÷vW%6V7F–öçÓàĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2æÖöGVÆU6V7F–öä–çG&÷ÓàĞ¢Ç7ãäÅB,9dÌ9ÄÓÂ÷7ããÆƒ#ä&IüKYò6\:vVæV¶ÆW&“Âöƒ#ãÇå6\:v–ÆVâ¶FVv÷&—–R—B&IüKYò¶'FÆ,KfR&IüKYòœYöÆVÖÆW&’'R—,KÆæFœ;fæWF–ÆV6V²ãÂ÷àĞ¢ÂöF—càĞ¢Ææb6Æ74æÖS×·7G–ÆW2æÆ÷vW$FWf–6UF'7Ò&–ÖÆ&VÃÒ$ÇB,;fÌ;ÆÒ6–†¢–&Æ,K#àĞ¢Æ'WGFöâ6Æ74æÖS×¶Æ÷vW$FWf–6RÓÓÒ&FW6·F÷"ò7G–ÆW2æ7F—fTÆ÷vW$FWf–6UF"¢"'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ²6WDÆ÷vW$FWf–6R‚&FW6·F÷"“²6WDÆ÷vW$w&÷W‚'&ö¦V7BÖ6öçFVçB"“²×ÓãÇ7ãåtT#Â÷7ããÇ7G&öæsåvV"–&Æ,KÂ÷7G&öæsãÇ6ÖÆÃäÖ6;Ç7L;Â|;g,;Æì;ÆÜ;ÃÂ÷6ÖÆÃãÂö'WGFöãà¢Æ'WGFöâ6Æ74æÖS×¶Æ÷vW$FWf–6RÓÓÒ&Öö&–ÆR"ò7G–ÆW2æ7F—fTÆ÷vW$FWf–6UF"¢"'ÒG—SÒ&'WGFöâ"öä6Æ–6³×²‚’Óâ²6WDÆ÷vW$FWf–6R‚&Öö&–ÆR"“²6WDÆ÷vW$w&÷W‚'&ö¦V7BÖ6öçFVçB"“²×ÓãÇ7ãäÔô,KÃÂ÷7ããÇ7G&öæsäÖö&–Â–&Æ,KÂ÷7G&öæsãÇ6ÖÆÃåFVÆVföâ|;g,;Æì;ÆÜ;ÃÂ÷6ÖÆÃãÂö'WGFöãà¢ÂöæcàĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2æÆ÷vW$VF—F÷$w&–GÓàĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2æÆ÷vW%6WGF–æw5æVÇÓàĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2æÆ÷vW%æVÄ†VF–æwÓãÇ7ãç¶Æ÷vW$FWf–6RÓÓÒ&FW6·F÷"ò%tT"”$Ä$’"¢$Ôô,KÂ”$Ä$’'ÓÂ÷7ããÇåL;ÆÒF6,KÒfR–W&Æ\Yö–Ò–&Æ,K'R6–†¢œ:v–â&IüK×<K¦LK"ãÂ÷ãÂöF—càĞ¢·&ö¦V7D6öçG&öÇ2†Æ÷vW$FWf–6R—ĞĞ¢¶Æ÷vW$6öçG&öÇ2†Æ÷vW$FWf–6R—ĞĞ¢ÂöF—càĞ¢ÆF—b6Æ74æÖS×·7G–ÆW2æÆ÷vW%&Wf–Wu7F–6·—Óç·&Wf–Wr†Æ÷vW$FWf–6R—ÓÂöF—càĞ¢ÂöF—càĞ¢ÂöF—câ¢çVÆÇĞĞ¢ÂöF—câ¢çVÆÇĞĞ¢Â÷6V7F–öãàĞ Ğ¢Æ'WGFöâ6Æ74æÖS×·7G–ÆW2ægWGW&TÖöGVÆT6&GÒG—SÒ&'WGFöâ"F—6&ÆVCãÇ7ãã#Â÷7ããÇ7G&öæså–Væ’ÖöL;ÆÂÆìKÂ÷7G&öæsãÇ6ÖÆÃä&—"6öç&¶’ÖöL;ÆÂ'W&F–W"Æ6²ãÂ÷6ÖÆÃãÆ#å–¼KæFÂö#ãÂö'WGFöãàĞ¢ÂóàĞ¢“°Ğ§ĞĞ

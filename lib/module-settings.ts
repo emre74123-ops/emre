@@ -1,3 +1,5 @@
+export type DonationCategoryId = "all" | "general" | "qurban" | "water" | "zakat" | "orphan";
+
 export type DonationModuleSettings = {
   enabled: boolean;
   autoScroll: boolean;
@@ -46,7 +48,11 @@ export type DonationModuleSettings = {
   mobileShadow: "none" | "soft" | "medium" | "strong";
   desktopImageBackgroundColor: string;
   mobileImageBackgroundColor: string;
-  visibleCategories: string[];
+  visibleCategories: DonationCategoryId[];
+  desktopVisibleCategories: DonationCategoryId[];
+  mobileVisibleCategories: DonationCategoryId[];
+  desktopCategoryOrder: DonationCategoryId[];
+  mobileCategoryOrder: DonationCategoryId[];
   placement: "home-after-slider";
   categoryImages: Record<string, { desktop: string; mobile: string }>;
   lowerDesktop: DonationLowerDeviceSettings;
@@ -190,6 +196,19 @@ export const donationCategoryOptions = [
   ["orphan", "Yetim Desteği"],
 ] as const;
 
+const donationCategoryIds = donationCategoryOptions.map(([id]) => id);
+
+function normalizeVisibleCategories(value: unknown, fallback: readonly DonationCategoryId[]) {
+  if (!Array.isArray(value)) return [...fallback];
+  const validIds = new Set<string>(donationCategoryIds);
+  return [...new Set(value.filter((id): id is DonationCategoryId => typeof id === "string" && validIds.has(id)))];
+}
+
+function normalizeCategoryOrder(value: unknown) {
+  const selected = normalizeVisibleCategories(value, []);
+  return [...selected, ...donationCategoryIds.filter((id) => !selected.includes(id))];
+}
+
 export const defaultDonationCategoryImages = {
   all: { desktop: "/donation-categories/tum-bagislar.webp", mobile: "/donation-categories/tum-bagislar.webp" },
   general: { desktop: "/donation-categories/genel-bagis.webp", mobile: "/donation-categories/genel-bagis.webp" },
@@ -285,6 +304,10 @@ export const defaultModuleSettings: ModuleSettings = {
     desktopImageBackgroundColor: "#edf6f2",
     mobileImageBackgroundColor: "#edf6f2",
     visibleCategories: donationCategoryOptions.map(([id]) => id),
+    desktopVisibleCategories: donationCategoryOptions.map(([id]) => id),
+    mobileVisibleCategories: donationCategoryOptions.map(([id]) => id),
+    desktopCategoryOrder: donationCategoryOptions.map(([id]) => id),
+    mobileCategoryOrder: donationCategoryOptions.map(([id]) => id),
     placement: "home-after-slider",
     categoryImages: defaultDonationCategoryImages,
     projects: defaultDonationProjects,
@@ -325,6 +348,23 @@ export const defaultModuleSettings: ModuleSettings = {
 
 export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null): ModuleSettings {
   const donation = input?.donation;
+  const legacyVisibleCategories = normalizeVisibleCategories(
+    donation?.visibleCategories,
+    defaultModuleSettings.donation.visibleCategories,
+  );
+  const desktopVisibleCategories = normalizeVisibleCategories(
+    donation?.desktopVisibleCategories,
+    legacyVisibleCategories,
+  );
+  const mobileVisibleCategories = normalizeVisibleCategories(
+    donation?.mobileVisibleCategories,
+    legacyVisibleCategories,
+  );
+  const desktopCategoryOrder = normalizeCategoryOrder(donation?.desktopCategoryOrder);
+  const mobileCategoryOrder = normalizeCategoryOrder(donation?.mobileCategoryOrder);
+  const visibleCategories = donationCategoryIds.filter(
+    (id) => desktopVisibleCategories.includes(id) || mobileVisibleCategories.includes(id),
+  );
   const categoryImages = Object.fromEntries(
     donationCategoryOptions.map(([id]) => [
       id,
@@ -341,6 +381,11 @@ export function normalizeModuleSettings(input?: Partial<ModuleSettings> | null):
     donation: {
       ...defaultModuleSettings.donation,
       ...donation,
+      visibleCategories,
+      desktopVisibleCategories,
+      mobileVisibleCategories,
+      desktopCategoryOrder,
+      mobileCategoryOrder,
       categoryImages,
       lowerDesktop: {
         ...defaultModuleSettings.donation.lowerDesktop,

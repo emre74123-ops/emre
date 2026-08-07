@@ -88,10 +88,34 @@ function cleanLower(source: Record<string, unknown> | undefined, defaults: typeo
 
 function clean(input: Partial<ModuleSettings>): ModuleSettings {
   const source = normalizeModuleSettings(input).donation;
-  const validIds = new Set(donationCategoryOptions.map(([id]) => id));
-  const visibleCategories = Array.isArray(source.visibleCategories)
-    ? source.visibleCategories.filter((id) => validIds.has(id as typeof donationCategoryOptions[number][0]))
-    : defaultModuleSettings.donation.visibleCategories;
+  const categoryIds = donationCategoryOptions.map(([id]) => id);
+  type CategoryId = (typeof categoryIds)[number];
+  const validIds = new Set<string>(categoryIds);
+  const cleanCategorySubset = (value: unknown, fallback: readonly CategoryId[]) => {
+    if (!Array.isArray(value)) return [...fallback];
+    return [...new Set(value.filter((id): id is CategoryId => typeof id === "string" && validIds.has(id)))];
+  };
+  const cleanCategoryOrder = (value: unknown) => {
+    const selected = cleanCategorySubset(value, []);
+    return [...selected, ...categoryIds.filter((id) => !selected.includes(id))];
+  };
+  const legacyVisibleCategories = cleanCategorySubset(
+    source.visibleCategories,
+    defaultModuleSettings.donation.visibleCategories,
+  );
+  const desktopVisibleCategories = cleanCategorySubset(
+    source.desktopVisibleCategories,
+    legacyVisibleCategories,
+  );
+  const mobileVisibleCategories = cleanCategorySubset(
+    source.mobileVisibleCategories,
+    legacyVisibleCategories,
+  );
+  const desktopCategoryOrder = cleanCategoryOrder(source.desktopCategoryOrder);
+  const mobileCategoryOrder = cleanCategoryOrder(source.mobileCategoryOrder);
+  const visibleCategories = categoryIds.filter(
+    (id) => desktopVisibleCategories.includes(id) || mobileVisibleCategories.includes(id),
+  );
   const categoryImages = Object.fromEntries(donationCategoryOptions.map(([id]) => {
     const candidate = source.categoryImages?.[id];
     const fallback = defaultDonationCategoryImages[id];
@@ -154,6 +178,10 @@ function clean(input: Partial<ModuleSettings>): ModuleSettings {
       desktopImageBackgroundColor: color(source.desktopImageBackgroundColor, "#edf6f2"),
       mobileImageBackgroundColor: color(source.mobileImageBackgroundColor, "#edf6f2"),
       visibleCategories,
+      desktopVisibleCategories,
+      mobileVisibleCategories,
+      desktopCategoryOrder,
+      mobileCategoryOrder,
       placement: "home-after-slider",
       categoryImages,
       projects: source.projects.slice(0, 100).map((project) => ({

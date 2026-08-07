@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "pub-d2aa4de4f2b947efb4a28494fe09c1e9.r2.dev",
+        pathname: "/modules/donation/categories/**",
+      },
+      {
+        protocol: "https",
         hostname: "images.unsplash.com",
       },
       {

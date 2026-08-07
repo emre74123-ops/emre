@@ -1,5 +1,6 @@
 import {
   DeleteObjectsCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -20,6 +21,7 @@ function client() {
     region: "auto",
     endpoint,
     credentials: { accessKeyId, secretAccessKey },
+    requestChecksumCalculation: "WHEN_REQUIRED",
   });
 }
 
@@ -28,17 +30,82 @@ export function r2PublicUrl(key: string) {
   return `${publicBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-export async function createR2UploadUrl(key: string, contentType: string) {
+export type R2UploadOptions = {
+  metadata?: Record<string, string>;
+  cacheControl?: string;
+  expiresInSeconds?: number;
+};
+
+export type R2ObjectSummary = {
+  key: string;
+  size: number;
+  lastModified: Date | undefined;
+  eTag: string | undefined;
+};
+
+export type R2ObjectDetails = R2ObjectSummary & {
+  contentType: string | undefined;
+  cacheControl: string | undefined;
+  metadata: Record<string, string>;
+};
+
+export async function createR2UploadUrl(
+  key: string,
+  contentType: string,
+  options: R2UploadOptions = {},
+) {
+  const expiresIn = Math.min(900, Math.max(60, options.expiresInSeconds ?? 300));
   return getSignedUrl(
     client(),
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       ContentType: contentType,
-      CacheControl: "public, max-age=31536000, immutable",
+      CacheControl: options.cacheControl || "public, max-age=31536000, immutable",
+      Metadata: options.metadata,
     }),
-    { expiresIn: 300 },
+    { expiresIn },
   );
+}
+
+export async function listR2Objects(prefix: string) {
+  const objects: R2ObjectSummary[] = [];
+  let continuationToken: string | undefined;
+  do {
+    const result = await client().send(new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+      MaxKeys: 1000,
+    }));
+    for (const item of result.Contents || []) {
+      if (!item.Key) continue;
+      objects.push({
+        key: item.Key,
+        size: Number(item.Size || 0),
+        lastModified: item.LastModified,
+        eTag: item.ETag,
+      });
+    }
+    continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return objects;
+}
+
+export async function headR2Object(key: string): Promise<R2ObjectDetails> {
+  const result = await client().send(new HeadObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  }));
+  return {
+    key,
+    size: Number(result.ContentLength || 0),
+    lastModified: result.LastModified,
+    eTag: result.ETag,
+    contentType: result.ContentType,
+    cacheControl: result.CacheControl,
+    metadata: result.Metadata || {},
+  };
 }
 
 export async function deleteR2Keys(keys: string[]) {
@@ -53,16 +120,7 @@ export async function deleteR2Keys(keys: string[]) {
 }
 
 export async function deleteR2Prefix(prefix: string) {
-  let continuationToken: string | undefined;
-  do {
-    const result = await client().send(new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix,
-      ContinuationToken: continuationToken,
-      MaxKeys: 1000,
-    }));
-    await deleteR2Keys((result.Contents || []).flatMap((item) => item.Key ? [item.Key] : []));
-    continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
-  } while (continuationToken);
+  const objects = await listR2Objects(prefix);
+  await deleteR2Keys(objects.map((item) => item.key));
 }
 
