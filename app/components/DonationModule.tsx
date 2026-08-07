@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, type DonationCategory, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
+import { CART_MAX_QUANTITY, readCart, writeCart, type CartItem } from "../../lib/cart";
+import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Device = "desktop" | "mobile";
@@ -35,6 +35,9 @@ type VideoModalState = {
   title: string;
   preferences: ResolvedCardMediaPreferences;
 };
+type ProjectCommerce = ReturnType<typeof resolveDonationProjectCommerce>;
+type ProjectAction = ProjectCommerce["actions"][number];
+type ProjectActionDevice = ProjectAction["desktop"];
 
 const numberSetting = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
@@ -56,6 +59,275 @@ function resolveCardMediaPreferences(
     modalRadius: numberSetting(source.videoModalRadius, 18, 0, 60),
     modalBackdropOpacity: numberSetting(source.videoModalBackdropOpacity, 84, 0, 100),
   };
+}
+
+const actionIcons = {
+  none: "",
+  plus: "+",
+  cart: "▱",
+  heart: "♡",
+  arrow: "→",
+} as const;
+
+function safeActionHref(action: ProjectAction) {
+  const href = String(action.href || "").trim();
+  if (!href) return "";
+  if (action.kind === "internal-link" && href.startsWith("/") && !href.startsWith("//")) return href;
+  if (action.kind === "whatsapp" && /^https:\/\/(?:wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)\/[a-z0-9/?&=._%-]+$/i.test(href)) return href;
+  if (action.kind === "external-link" && /^https:\/\/[a-z0-9.-]+(?:[/:?#].*)?$/i.test(href)) return href;
+  return "";
+}
+
+function isGroupVisible(
+  group: ProjectCommerce["optionGroups"][number],
+  selections: Record<string, string>,
+) {
+  if (!group.visibleWhen) return true;
+  return group.visibleWhen.optionIds.includes(selections[group.visibleWhen.groupId] || "");
+}
+
+function resolveProjectSelections(
+  commerce: ProjectCommerce,
+  source: Record<string, string>,
+) {
+  const resolved: Record<string, string> = {};
+  commerce.optionGroups.filter((group) => group.enabled).forEach((group) => {
+    if (!isGroupVisible(group, { ...source, ...resolved })) return;
+    const enabledOptions = group.options.filter((option) => option.enabled);
+    const selected = enabledOptions.find((option) => option.id === source[group.id])
+      || enabledOptions.find((option) => option.id === group.defaultOptionId)
+      || (group.required ? enabledOptions[0] : undefined);
+    if (selected) resolved[group.id] = selected.id;
+  });
+  return resolved;
+}
+
+function resolveConfiguredAmountMinor(
+  commerce: ProjectCommerce,
+  selections: Record<string, string>,
+) {
+  const selectedIds = new Set(Object.values(selections));
+  const matchedRule = commerce.priceRules.find(
+    (rule) => rule.enabled && rule.optionIds.length > 0 && rule.optionIds.every((id) => selectedIds.has(id)),
+  );
+  if (matchedRule) return matchedRule.amountMinor;
+  const optionTotal = commerce.optionGroups.reduce((total, group) => {
+    const selected = group.options.find((option) => option.id === selections[group.id]);
+    return total + (selected?.priceMinor || 0);
+  }, 0);
+  return optionTotal > 0 ? optionTotal : commerce.baseAmountMinor;
+}
+
+function actionButtonStyle(action: ProjectAction, device: ProjectActionDevice): CSSProperties {
+  const width = device.width === "full" ? "100%" : device.width === "half" ? "calc(50% - 5px)" : "auto";
+  const background = action.variant === "gradient"
+    ? `linear-gradient(135deg, ${action.background}, ${action.backgroundEnd})`
+    : action.variant === "outline"
+      ? "transparent"
+      : action.variant === "soft"
+        ? `color-mix(in srgb, ${action.background} 13%, white)`
+        : action.background;
+  return {
+    order: device.order,
+    flexBasis: width,
+    width,
+    minHeight: device.height,
+    borderRadius: device.radius,
+    borderColor: action.borderColor,
+    background,
+    color: action.textColor,
+    marginInlineStart: device.align === "end" || device.align === "center" ? "auto" : undefined,
+    marginInlineEnd: device.align === "start" || device.align === "center" ? "auto" : undefined,
+  };
+}
+
+function DonationCardCommerce({
+  project,
+  device,
+  onNotice,
+}: {
+  project: DonationProject;
+  device: Device;
+  onNotice: (message: string) => void;
+}) {
+  const commerce = resolveDonationProjectCommerce(project);
+  const [selectionState, setSelectionState] = useState<Record<string, string>>({});
+  const [presetId, setPresetId] = useState("");
+  const [quantity, setQuantity] = useState(commerce.quantityPresets[0] || 1);
+  const [customAmount, setCustomAmount] = useState("");
+  const selections = resolveProjectSelections(commerce, selectionState);
+  const visibleGroups = commerce.optionGroups.filter((group) => group.enabled && isGroupVisible(group, selections));
+  const enabledPresets = commerce.amountPresets.filter((preset) => preset.enabled);
+  const activePreset = enabledPresets.find((preset) => preset.id === presetId) || enabledPresets[0];
+  const typedAmount = Number(customAmount.replace(",", "."));
+  const typedMinor = Number.isFinite(typedAmount) && typedAmount > 0 ? Math.round(typedAmount * 100) : 0;
+  const configuredMinor = resolveConfiguredAmountMinor(commerce, selections);
+  const customModeEnabled = (commerce.mode === "amount" || commerce.mode === "configured") && commerce.customAmountEnabled;
+  const unitAmountMinor = commerce.mode === "amount"
+    ? (typedMinor || activePreset?.amountMinor || commerce.baseAmountMinor)
+    : commerce.mode === "configured"
+      ? (typedMinor || configuredMinor)
+      : commerce.baseAmountMinor;
+  const activeQuantity = commerce.quantityPresets.includes(quantity) ? quantity : commerce.quantityPresets[0] || 1;
+  const lineQuantity = commerce.mode === "quantity" ? activeQuantity : 1;
+  const totalMinor = unitAmountMinor * lineQuantity;
+  const invalidCustomAmount = customModeEnabled && typedMinor > 0
+    && (typedMinor < commerce.customAmountMinMinor || typedMinor > commerce.customAmountMaxMinor);
+  const missingRequired = visibleGroups.some((group) => group.required && !selections[group.id]);
+  const validSelection = !missingRequired && !invalidCustomAmount && unitAmountMinor > 0;
+  const deviceKey = device === "mobile" ? "mobile" : "desktop";
+  const actionLayout = device === "mobile" ? commerce.actionLayoutMobile : commerce.actionLayoutDesktop;
+  const actionGap = device === "mobile" ? commerce.actionGapMobile : commerce.actionGapDesktop;
+
+  function chooseOption(groupId: string, optionId: string) {
+    setSelectionState((current) => resolveProjectSelections(commerce, { ...current, [groupId]: optionId }));
+  }
+
+  function addConfiguredItem(openCheckout: boolean, requiresValidSelection: boolean) {
+    const invalidPrice = invalidCustomAmount || unitAmountMinor <= 0;
+    if (invalidPrice || (requiresValidSelection && !validSelection)) {
+      onNotice(commerce.validationMessage);
+      return;
+    }
+    const selectionSummary = visibleGroups.flatMap((group) => {
+      const option = group.options.find((candidate) => candidate.id === selections[group.id]);
+      return option ? [{ group: group.label, option: option.label }] : [];
+    });
+    const selectionKey = Object.entries(selections).sort(([a], [b]) => a.localeCompare(b)).map(([groupId, optionId]) => `${groupId}:${optionId}`).join("|");
+    const amount = Math.round(unitAmountMinor) / 100;
+    const id = `${project.id}-${selectionKey || "standard"}-${amount}`;
+    const current = readCart();
+    const existing = current.find((item) => item.id === id);
+    const next: CartItem[] = existing
+      ? current.map((item) => item.id === id ? { ...item, quantity: Math.min(CART_MAX_QUANTITY, item.quantity + lineQuantity) } : item)
+      : [...current, {
+          id,
+          projectId: project.id,
+          project: project.title,
+          amount,
+          quantity: lineQuantity,
+          pricingVersion: 2,
+          selections: selectionSummary,
+        }];
+    writeCart(next);
+    window.dispatchEvent(new CustomEvent("iyilik-cart-updated", { detail: next }));
+    window.dispatchEvent(new Event(openCheckout ? "iyilik-cart-checkout" : "iyilik-cart-open"));
+    onNotice(openCheckout ? `${project.title} ödeme adımına hazır.` : `${project.title} sepete eklendi.`);
+  }
+
+  function runAction(action: ProjectAction) {
+    if (action.requiresValidSelection && !validSelection) {
+      onNotice(commerce.validationMessage);
+      return;
+    }
+    if (action.kind === "add-to-cart" || action.kind === "checkout") {
+      addConfiguredItem(action.kind === "checkout", action.requiresValidSelection);
+      return;
+    }
+    const href = safeActionHref(action);
+    if (!href) {
+      onNotice("Bu düğmenin bağlantısı henüz ayarlanmamış.");
+      return;
+    }
+    if (action.kind === "internal-link") window.location.assign(href);
+    else window.open(href, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <div className={styles.commerce}>
+      {visibleGroups.map((group) => (
+        <fieldset className={styles.optionGroup} key={group.id}>
+          <legend>{group.label}{group.required ? <sup>*</sup> : null}</legend>
+          {group.description ? <p>{group.description}</p> : null}
+          {group.display === "select" ? (
+            <select value={selections[group.id] || ""} onChange={(event) => chooseOption(group.id, event.target.value)}>
+              <option value="">Seçiniz</option>
+              {group.options.filter((option) => option.enabled).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+          ) : (
+            <div className={`${styles.optionChoices}${group.display === "cards" ? ` ${styles.optionCards}` : ""}`}>
+              {group.options.filter((option) => option.enabled).map((option) => (
+                <button className={selections[group.id] === option.id ? styles.selectedChoice : ""} type="button" key={option.id} onClick={() => chooseOption(group.id, option.id)}>
+                  <strong>{option.label}</strong>
+                  {option.description ? <small>{option.description}</small> : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </fieldset>
+      ))}
+
+      {commerce.mode === "amount" ? (
+        <div className={styles.amountArea}>
+          <small>{commerce.sectionLabel}</small>
+          {enabledPresets.length ? <div className={styles.choices}>
+            {enabledPresets.map((preset) => (
+              <button className={(activePreset?.id === preset.id && !typedMinor) ? styles.selectedChoice : ""} type="button" key={preset.id} onClick={() => { setPresetId(preset.id); setCustomAmount(""); }}>
+                {preset.label || money.format(preset.amountMinor / 100)}
+                {preset.featured ? <i>Popüler</i> : null}
+              </button>
+            ))}
+          </div> : null}
+          {commerce.customAmountEnabled ? <label className={styles.customAmount}>
+            <span>₺</span>
+            <input inputMode="decimal" value={customAmount} onChange={(event) => setCustomAmount(event.target.value.replace(/[^\d,.]/g, ""))} placeholder={commerce.customAmountPlaceholder} />
+          </label> : null}
+        </div>
+      ) : null}
+
+      {commerce.mode === "quantity" ? (
+        <div className={styles.amountArea}>
+          <small>{commerce.sectionLabel}</small>
+          <div className={styles.choices}>
+            {commerce.quantityPresets.map((value) => <button className={activeQuantity === value ? styles.selectedChoice : ""} type="button" key={value} onClick={() => setQuantity(value)}>{value}</button>)}
+          </div>
+        </div>
+      ) : null}
+
+      {commerce.mode === "configured" && commerce.customAmountEnabled ? (
+        <div className={styles.amountArea}>
+          <small>{commerce.sectionLabel}</small>
+          <label className={styles.customAmount}>
+            <span>₺</span>
+            <input inputMode="decimal" value={customAmount} onChange={(event) => setCustomAmount(event.target.value.replace(/[^\d,.]/g, ""))} placeholder={commerce.customAmountPlaceholder} />
+          </label>
+        </div>
+      ) : null}
+
+      {commerce.mode !== "amount" || !commerce.customAmountEnabled ? (
+        <div className={styles.resolvedPrice}><span>Toplam</span><strong>{money.format(totalMinor / 100)}</strong></div>
+      ) : null}
+
+      {!validSelection ? <p className={styles.commerceValidation}>{invalidCustomAmount ? commerce.validationMessage : commerce.validationMessage}</p> : null}
+      <div className={`${styles.commerceActions} ${actionLayout === "stack" ? styles.commerceActionsStack : ""}`} style={{ gap: actionGap }}>
+        {commerce.actions
+          .filter((action) => action.enabled && action[deviceKey].visible)
+          .sort((a, b) => a[deviceKey].order - b[deviceKey].order)
+          .map((action) => {
+            const deviceSettings = action[deviceKey];
+            const variantClass = action.variant === "outline"
+              ? styles.commerceButtonOutline
+              : action.variant === "soft"
+                ? styles.commerceButtonSoft
+                : action.variant === "gradient"
+                  ? styles.commerceButtonGradient
+                  : "";
+            return (
+              <button
+                className={`${styles.commerceButton}${variantClass ? ` ${variantClass}` : ""}`}
+                type="button"
+                key={action.id}
+                style={actionButtonStyle(action, deviceSettings)}
+                onClick={() => runAction(action)}
+              >
+                {action.icon !== "none" ? <i aria-hidden="true">{actionIcons[action.icon]}</i> : null}
+                <span>{deviceSettings.label}</span>
+              </button>
+            );
+          })}
+      </div>
+    </div>
+  );
 }
 
 function CategoryImage({ category, src, className, sizes }: { category: DonationCategory; src: string; className: string; sizes: string }) {
@@ -244,8 +516,6 @@ export default function DonationModule({ embedded = false, settings = defaultMod
   const categoryLastDragAtRef = useRef(0);
   const [categoryProgress, setCategoryProgress] = useState(0);
   const [category, setCategory] = useState(previewCategory || settings.allCategoryId || settings.categories[0]?.id || "");
-  const [selected, setSelected] = useState<Record<string, number>>({});
-  const [custom, setCustom] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
   const [videoModal, setVideoModal] = useState<VideoModalState | null>(null);
   const videoModalPanelRef = useRef<HTMLDivElement>(null);
@@ -422,21 +692,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
     categoryResumeAtRef.current = performance.now() + 900;
   }
 
-  function addToCart(project: DonationProject) {
-    const picked = selected[project.id] ?? project.suggested[0];
-    const quantity = project.pricingMode === "quantity" ? picked : 1;
-    const typed = Number(custom[project.id]?.replace(",", "."));
-    const amount = project.pricingMode === "quantity" ? project.fixedPrice : (Number.isFinite(typed) && typed > 0 ? typed : picked);
-    const id = `${project.id}-${amount}`;
-    const current = readCart();
-    const existing = current.find((item) => item.id === id);
-    const next: CartItem[] = existing
-      ? current.map((item) => item.id === id ? { ...item, quantity: Math.min(99, item.quantity + quantity) } : item)
-      : [...current, { id, project: project.title, amount, quantity }];
-    writeCart(next);
-    window.dispatchEvent(new CustomEvent("iyilik-cart-updated", { detail: next }));
-    window.dispatchEvent(new Event("iyilik-cart-open"));
-    setNotice(`${project.title} sepete eklendi.`);
+  function showNotice(message: string) {
+    setNotice(message);
     window.setTimeout(() => setNotice(""), 2200);
   }
 
@@ -680,7 +937,6 @@ export default function DonationModule({ embedded = false, settings = defaultMod
               <button className={`${styles.sideArrow} ${styles.sideArrowLeft}${!settings.lowerDesktop.arrowsVisible || !settings.lowerDesktop.leftArrowVisible ? ` ${styles.desktopArrowOff}` : ""}${!settings.lowerMobile.arrowsVisible || !settings.lowerMobile.leftArrowVisible ? ` ${styles.mobileArrowOff}` : ""}`} type="button" aria-label="Önceki bağış projeleri" onClick={() => moveCards(-1)}><span className={styles.desktopArrowSymbol}>{arrowSymbols[settings.lowerDesktop.arrowIcon][0]}</span><span className={styles.mobileArrowSymbol}>{arrowSymbols[settings.lowerMobile.arrowIcon][0]}</span></button>
               <div className={styles.cards} ref={cardsRef}>
               {filtered.map((project) => {
-                const picked = selected[project.id] ?? project.suggested[0];
                 const sharedDesign = (projectDesign: typeof project.desktop, common: typeof settings.lowerDesktop) => projectDesign.useSharedDesign ? {
                   ...projectDesign,
                   cardWidth: common.cardWidth,
@@ -780,21 +1036,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     <div className={styles.cardBody}>
                       <h3>{project.title}</h3>
                       <p>{project.description}</p>
-                      <small>{project.pricingMode === "quantity" ? "Hisse adedi" : "Bağış tutarı"}</small>
-                      <div className={styles.choices}>
-                        {project.suggested.map((amount) => (
-                          <button className={picked === amount ? styles.selectedChoice : ""} key={amount} onClick={() => setSelected((state) => ({ ...state, [project.id]: amount }))}>
-                            {project.pricingMode === "quantity" ? amount : money.format(amount)}
-                          </button>
-                        ))}
-                      </div>
-                      <div className={styles.cardAction}>
-                        <label>
-                          <span>{project.pricingMode === "quantity" ? money.format(project.fixedPrice * picked) : "₺"}</span>
-                          {project.pricingMode === "amount" && project.customAmountEnabled && <input inputMode="numeric" value={custom[project.id] || ""} onChange={(event) => setCustom((state) => ({ ...state, [project.id]: event.target.value.replace(/[^\d,]/g, "") }))} placeholder="Başka tutar" />}
-                        </label>
-                        <button onClick={() => addToCart(project)}><span className={styles.desktopActionText}>{desktopDesign.actionText}</span><span className={styles.mobileActionText}>{mobileDesign.actionText}</span> <b>+</b></button>
-                      </div>
+                      <DonationCardCommerce project={project} device={activeDevice} onNotice={showNotice} />
                     </div>
                   </article>
                 );
