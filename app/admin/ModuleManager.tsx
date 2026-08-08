@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationLowerDeviceSettings, type DonationOptionGroup, type DonationPriceRule, type DonationProject, type DonationProjectAction, type DonationProjectCommerce, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationLowerDeviceSettings, type DonationOptionDesign, type DonationOptionGroup, type DonationPriceRule, type DonationProject, type DonationProjectAction, type DonationProjectCommerce, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -77,6 +77,8 @@ function cloneOptionGroup(group: DonationOptionGroup): DonationOptionGroup {
         optionIds: group.visibleWhen.optionIds.map((id) => optionIds.get(id) || id),
       }
       : undefined,
+    desktopDesign: group.desktopDesign ? { ...group.desktopDesign } : undefined,
+    mobileDesign: group.mobileDesign ? { ...group.mobileDesign } : undefined,
     options: group.options.map((option) => ({ ...option, id: optionIds.get(option.id)! })),
   };
 }
@@ -86,6 +88,8 @@ function cloneCommerce(commerce: DonationProjectCommerce): DonationProjectCommer
   const optionIds = new Map(commerce.optionGroups.flatMap((group) => group.options.map((option) => [option.id, commerceId("secenek")] as const)));
   return {
     ...commerce,
+    optionDesignDesktop: { ...commerce.optionDesignDesktop },
+    optionDesignMobile: { ...commerce.optionDesignMobile },
     amountPresets: commerce.amountPresets.map((preset) => ({ ...preset, id: commerceId("tutar") })),
     optionGroups: commerce.optionGroups.map((group) => ({
       ...group,
@@ -97,6 +101,8 @@ function cloneCommerce(commerce: DonationProjectCommerce): DonationProjectCommer
           optionIds: group.visibleWhen.optionIds.map((id) => optionIds.get(id) || id),
         }
         : undefined,
+      desktopDesign: group.desktopDesign ? { ...group.desktopDesign } : undefined,
+      mobileDesign: group.mobileDesign ? { ...group.mobileDesign } : undefined,
       options: group.options.map((option) => ({ ...option, id: optionIds.get(option.id)! })),
     })),
     priceRules: commerce.priceRules.map((rule) => ({
@@ -111,6 +117,86 @@ function cloneCommerce(commerce: DonationProjectCommerce): DonationProjectCommer
       mobile: { ...action.mobile },
     })),
   };
+}
+
+function OptionDesignEditor({
+  design,
+  deviceLabel,
+  onChange,
+}: {
+  design: DonationOptionDesign;
+  deviceLabel: string;
+  onChange: (changes: Partial<DonationOptionDesign>) => void;
+}) {
+  const [openSection, setOpenSection] = useState<"" | "header" | "layout" | "appearance">("");
+  const range = (label: string, key: keyof DonationOptionDesign, min: number, max: number, suffix = "px") => (
+    <label className={styles.optionDesignRange}>
+      <span>{label}<b>{String(design[key])}{suffix ? ` ${suffix}` : ""}</b></span>
+      <input aria-label={label} type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => onChange({ [key]: Number(event.target.value) } as Partial<DonationOptionDesign>)} />
+    </label>
+  );
+  const color = (label: string, key: keyof DonationOptionDesign) => (
+    <label className={styles.optionDesignColor}>
+      <span>{label}</span>
+      <span><input aria-label={label} type="color" value={String(design[key])} onChange={(event) => onChange({ [key]: event.target.value } as Partial<DonationOptionDesign>)} /><code>{String(design[key])}</code></span>
+    </label>
+  );
+  const segment = (id: "header" | "layout" | "appearance", label: string, summary: string, content: ReactNode) => {
+    const open = openSection === id;
+    return <section className={`${styles.optionDesignSegment} ${open ? styles.optionDesignSegmentOpen : ""}`}>
+      <button className={styles.optionDesignSegmentHeader} type="button" aria-expanded={open} onClick={() => setOpenSection(open ? "" : id)}>
+        <span><strong>{label}</strong><small>{summary}</small></span><b>{open ? "−" : "+"}</b>
+      </button>
+      {open ? <div className={styles.optionDesignGrid}>{content}</div> : null}
+    </section>;
+  };
+
+  return <div className={styles.optionDesignEditor} aria-label={`${deviceLabel} seçenek görünümü ayarları`}>
+    {segment("header", "Başlık", "Grup başlığı ve açıklama", <>
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.titleVisible} onChange={(event) => onChange({ titleVisible: event.target.checked })} /><span>Grup başlığını göster</span></label>
+      <label>Başlık hizası<select value={design.titleAlign} onChange={(event) => onChange({ titleAlign: event.target.value as DonationOptionDesign["titleAlign"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option></select></label>
+      {range("Başlık boyutu", "titleSize", 10, 30)}
+      <label>Başlık kalınlığı<select value={design.titleWeight} onChange={(event) => onChange({ titleWeight: Number(event.target.value) as DonationOptionDesign["titleWeight"] })}>{[400, 500, 600, 700, 800, 900].map((weight) => <option value={weight} key={weight}>{weight}</option>)}</select></label>
+      {color("Başlık rengi", "titleColor")}
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.descriptionVisible} onChange={(event) => onChange({ descriptionVisible: event.target.checked })} /><span>Grup açıklamasını göster</span></label>
+      {range("Açıklama boyutu", "descriptionSize", 8, 20)}
+      {color("Açıklama rengi", "descriptionColor")}
+      {range("Başlık-açıklama aralığı", "titleDescriptionGap", 0, 20)}
+      {range("Başlık-seçenek aralığı", "headerGap", 0, 40)}
+    </>)}
+
+    {segment("layout", "Yerleşim", "Boyut, sütun ve boşluklar", <>
+      {range("Seçenek yüksekliği", "optionHeight", 32, 100)}
+      {range("En az genişlik", "optionMinWidth", 64, 260)}
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.equalWidth} onChange={(event) => onChange({ equalWidth: event.target.checked })} /><span>Eşit genişlik</span></label>
+      <label>Sütun<select value={design.columns} onChange={(event) => onChange({ columns: Number(event.target.value) as DonationOptionDesign["columns"] })}><option value="0">Otomatik</option><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label>
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.horizontalScroll} onChange={(event) => onChange({ horizontalScroll: event.target.checked })} /><span>Yatay kaydırma</span></label>
+      <label>Hizalama<select value={design.justify} onChange={(event) => onChange({ justify: event.target.value as DonationOptionDesign["justify"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option><option value="stretch">Alana yay</option></select></label>
+      {range("Yatay aralık", "columnGap", 0, 32)}
+      {range("Dikey aralık", "rowGap", 0, 32)}
+      {range("İç yan boşluk", "paddingX", 4, 32)}
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.textWrap} onChange={(event) => onChange({ textWrap: event.target.checked })} /><span>Uzun yazıyı sar</span></label>
+    </>)}
+
+    {segment("appearance", "Görünüm", "Yazı, fiyat, renk ve çerçeve", <>
+      {range("Seçenek yazısı", "labelSize", 9, 22)}
+      <label>Yazı kalınlığı<select value={design.labelWeight} onChange={(event) => onChange({ labelWeight: Number(event.target.value) as DonationOptionDesign["labelWeight"] })}>{[400, 500, 600, 700, 800, 900].map((weight) => <option value={weight} key={weight}>{weight}</option>)}</select></label>
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.optionDescriptionVisible} onChange={(event) => onChange({ optionDescriptionVisible: event.target.checked })} /><span>Seçenek açıklamasını göster</span></label>
+      {range("Seçenek açıklaması", "optionDescriptionSize", 8, 18)}
+      {color("Seçenek açıklama rengi", "optionDescriptionColor")}
+      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.priceVisible} onChange={(event) => onChange({ priceVisible: event.target.checked })} /><span>Fiyatı göster</span></label>
+      <label>Fiyat konumu<select value={design.pricePosition} onChange={(event) => onChange({ pricePosition: event.target.value as DonationOptionDesign["pricePosition"] })}><option value="inline">Aynı satır</option><option value="below">Alt satır</option><option value="badge">Rozet</option></select></label>
+      {color("Normal zemin", "background")}
+      {color("Normal yazı", "textColor")}
+      {color("Normal çerçeve", "borderColor")}
+      {color("Seçili zemin", "selectedBackground")}
+      {color("Seçili yazı", "selectedTextColor")}
+      {color("Seçili çerçeve", "selectedBorderColor")}
+      {range("Çerçeve", "borderWidth", 0, 4)}
+      {range("Köşe", "radius", 0, 36)}
+      <label>Gölge<select value={design.shadow} onChange={(event) => onChange({ shadow: event.target.value as DonationOptionDesign["shadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option></select></label>
+    </>)}
+  </div>;
 }
 
 function ModulePreview({
@@ -224,6 +310,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [mediaSettingsGroup, setMediaSettingsGroup] = useState<"gallery" | "appearance" | "video">("gallery");
   const [paymentWorkspace, setPaymentWorkspace] = useState<PaymentWorkspace>("model");
   const [expandedOptionGroupId, setExpandedOptionGroupId] = useState("");
+  const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string>>({});
+  const [sharedOptionDesignOpen, setSharedOptionDesignOpen] = useState(false);
   const [expandedPriceRuleId, setExpandedPriceRuleId] = useState("");
   const [expandedActionId, setExpandedActionId] = useState("");
   const [pendingProjectMediaDeletes, setPendingProjectMediaDeletes] = useState<string[]>([]);
@@ -1009,6 +1097,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const actionDeviceKey = device;
     const actionLayoutKey = device === "desktop" ? "actionLayoutDesktop" : "actionLayoutMobile";
     const actionGapKey = device === "desktop" ? "actionGapDesktop" : "actionGapMobile";
+    const optionDesignKey = device === "desktop" ? "optionDesignDesktop" : "optionDesignMobile";
+    const groupDesignKey = device === "desktop" ? "desktopDesign" : "mobileDesign";
+    const sharedOptionDesign = commerce[optionDesignKey];
     const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
     const mediaItems = projectMedia(device);
     const selectedMedia = mediaItems.find((media) => media.id === selectedMediaIds[device]) || mediaItems[0];
@@ -1043,6 +1134,20 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
         ? { ...group, options: group.options.map((option) => option.id === optionId ? { ...option, ...changes } : option) }
         : group),
     }));
+    const updateGroupOptions = (groupId: string, updater: (options: DonationOptionGroup["options"]) => DonationOptionGroup["options"]) => changeCommerce((current) => ({
+      ...current,
+      optionGroups: current.optionGroups.map((group) => group.id === groupId ? { ...group, options: updater(group.options) } : group),
+    }));
+    const updateSharedOptionDesign = (changes: Partial<DonationOptionDesign>) => changeCommerce((current) => ({
+      ...current,
+      [optionDesignKey]: { ...current[optionDesignKey], ...changes },
+    }));
+    const updateGroupOptionDesign = (groupId: string, changes: Partial<DonationOptionDesign>) => changeCommerce((current) => ({
+      ...current,
+      optionGroups: current.optionGroups.map((group) => group.id === groupId
+        ? { ...group, [groupDesignKey]: { ...(group[groupDesignKey] || current[optionDesignKey]), ...changes } }
+        : group),
+    }));
     const updatePriceRule = (ruleId: string, changes: Partial<DonationPriceRule>) => changeCommerce((current) => ({
       ...current,
       priceRules: current.priceRules.map((rule) => rule.id === ruleId ? { ...rule, ...changes } : rule),
@@ -1074,6 +1179,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           required: true,
           display: "buttons",
           defaultOptionId: optionId,
+          useSharedDesign: true,
           options: [{ id: optionId, label: "1. seçenek", description: "", enabled: true, priceMinor: 0 }],
         }],
       }));
@@ -1409,10 +1515,23 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <div><strong>Seçenek grupları</strong><small>Ülke, proje türü veya paket gibi seçimleri küçük gruplar halinde kurun.</small></div>
           <button type="button" disabled={commerce.optionGroups.length >= COMMERCE_LIMITS.optionGroups} onClick={addOptionGroup}>＋ Grup</button>
         </div>
+        <section className={`${styles.optionSharedDesign} ${sharedOptionDesignOpen ? styles.optionSharedDesignOpen : ""}`}>
+          <button type="button" aria-expanded={sharedOptionDesignOpen} onClick={() => setSharedOptionDesignOpen((current) => !current)}>
+            <span><strong>Seçenek görünümü</strong><small>{device === "desktop" ? "Web" : "Mobil"} için ortak başlık, yerleşim ve görünüm</small></span><b>{sharedOptionDesignOpen ? "−" : "+"}</b>
+          </button>
+          {sharedOptionDesignOpen ? <OptionDesignEditor design={sharedOptionDesign} deviceLabel={device === "desktop" ? "Web" : "Mobil"} onChange={updateSharedOptionDesign} /> : null}
+        </section>
         <div className={styles.paymentBuilderList}>
           {commerce.optionGroups.length ? commerce.optionGroups.map((group, groupIndex) => {
             const open = expandedOptionGroupId === group.id;
             const conditionGroup = commerce.optionGroups.find((item) => item.id === group.visibleWhen?.groupId);
+            const optionSelectionKey = `${currentProject.id}:${group.id}`;
+            const selectedOptionId = group.options.some((option) => option.id === selectedOptionIds[optionSelectionKey])
+              ? selectedOptionIds[optionSelectionKey]
+              : group.options[0]?.id || "";
+            const selectedOption = group.options.find((option) => option.id === selectedOptionId);
+            const groupUsesSharedDesign = group.useSharedDesign !== false;
+            const groupOptionDesign = group[groupDesignKey] || sharedOptionDesign;
             return <article className={`${styles.paymentBuilderItem} ${open ? styles.paymentBuilderItemOpen : ""}`} key={group.id}>
               <header>
                 <button type="button" aria-expanded={open} onClick={() => setExpandedOptionGroupId(open ? "" : group.id)}>
@@ -1435,10 +1554,23 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                     });
                     setExpandedOptionGroupId(copy.id);
                   },
-                  onMove: (direction) => changeCommerce((current) => ({
-                    ...current,
-                    optionGroups: moveCommerceItem(current.optionGroups, current.optionGroups.findIndex((item) => item.id === group.id), direction),
-                  })),
+                  onMove: (direction) => changeCommerce((current) => {
+                    const moved = moveCommerceItem(
+                      current.optionGroups,
+                      current.optionGroups.findIndex((item) => item.id === group.id),
+                      direction,
+                    );
+                    return {
+                      ...current,
+                      optionGroups: moved.map((item, index) => {
+                        if (!item.visibleWhen) return item;
+                        const dependencyIndex = moved.findIndex((candidate) => candidate.id === item.visibleWhen?.groupId);
+                        return dependencyIndex >= 0 && dependencyIndex < index
+                          ? item
+                          : { ...item, visibleWhen: undefined };
+                      }),
+                    };
+                  }),
                   onDelete: () => {
                     if (!window.confirm(`“${group.label || "Bu grup"}” ve bağlı fiyat koşulları silinsin mi?`)) return;
                     const removedOptionIds = new Set(group.options.map((option) => option.id));
@@ -1468,7 +1600,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                   <div><strong>Görünürlük koşulu</strong><small>Bu grubu başka bir seçim yapıldığında gösterin.</small></div>
                   <label>Bağlı grup<select value={group.visibleWhen?.groupId || ""} onChange={(event) => updateOptionGroup(group.id, {
                     visibleWhen: event.target.value ? { groupId: event.target.value, optionIds: [] } : undefined,
-                  })}><option value="">Her zaman göster</option>{commerce.optionGroups.filter((item) => item.id !== group.id).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+                  })}><option value="">Her zaman göster</option>{commerce.optionGroups.slice(0, groupIndex).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
                   {conditionGroup ? <div className={styles.paymentConditionOptions}>
                     {conditionGroup.options.map((option) => {
                       const checked = group.visibleWhen?.optionIds.includes(option.id) || false;
@@ -1483,54 +1615,101 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                     })}
                   </div> : null}
                 </div>
+                <div className={styles.optionGroupDesign}>
+                  <div>
+                    <span><strong>Grup görünümü</strong><small>{device === "desktop" ? "Web" : "Mobil"} tasarımı</small></span>
+                    <label className={styles.optionDesignToggle}><input type="checkbox" checked={groupUsesSharedDesign} onChange={(event) => {
+                      const useSharedDesign = event.target.checked;
+                      changeCommerce((current) => ({
+                        ...current,
+                        optionGroups: current.optionGroups.map((item) => item.id === group.id
+                          ? {
+                            ...item,
+                            useSharedDesign,
+                            ...(!useSharedDesign && !item[groupDesignKey] ? { [groupDesignKey]: { ...current[optionDesignKey] } } : {}),
+                          }
+                          : item),
+                      }));
+                    }} /><span>Ortak tasarımı kullan</span></label>
+                  </div>
+                  {!groupUsesSharedDesign ? <OptionDesignEditor design={groupOptionDesign} deviceLabel={`${device === "desktop" ? "Web" : "Mobil"} · ${group.label}`} onChange={(changes) => updateGroupOptionDesign(group.id, changes)} /> : null}
+                </div>
                 <div className={styles.paymentCollectionHeader}>
                   <div><strong>Grup seçenekleri</strong><small>Her seçeneğin kendi ek fiyatı olabilir.</small></div>
                   <button type="button" disabled={group.options.length >= COMMERCE_LIMITS.optionsPerGroup} onClick={() => {
                     if (group.options.length >= COMMERCE_LIMITS.optionsPerGroup) return;
                     const id = commerceId("secenek");
-                    updateOptionGroup(group.id, {
-                      options: [...group.options, { id, label: `${group.options.length + 1}. seçenek`, description: "", enabled: true, priceMinor: 0 }],
-                      defaultOptionId: group.defaultOptionId || id,
-                    });
+                    changeCommerce((current) => ({
+                      ...current,
+                      optionGroups: current.optionGroups.map((item) => item.id === group.id
+                        ? {
+                          ...item,
+                          options: [...item.options, { id, label: `${item.options.length + 1}. seçenek`, description: "", enabled: true, priceMinor: 0 }],
+                          defaultOptionId: item.defaultOptionId || id,
+                        }
+                        : item),
+                    }));
+                    setSelectedOptionIds((current) => ({ ...current, [optionSelectionKey]: id }));
                   }}>＋ Seçenek</button>
                 </div>
-                <div className={styles.paymentOptionList}>
-                  {group.options.map((option, optionIndex) => <article key={option.id}>
-                    <span className={styles.paymentDragIndex}>{String(optionIndex + 1).padStart(2, "0")}</span>
-                    <label>Seçenek adı<input maxLength={60} value={option.label} onChange={(event) => updateOption(group.id, option.id, { label: event.target.value })} /></label>
-                    <label>Açıklama<input maxLength={100} value={option.description} onChange={(event) => updateOption(group.id, option.id, { description: event.target.value })} /></label>
-                    <label>Ek / özel fiyat<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(option.priceMinor)} onChange={(event) => updateOption(group.id, option.id, { priceMinor: toMinor(event.target.value) })} /></div></label>
-                    <label className={styles.paymentCompactCheck}><input type="checkbox" checked={option.enabled} onChange={(event) => updateOption(group.id, option.id, { enabled: event.target.checked })} /> Aktif</label>
-                    {commerceRowActions({
-                      label: option.label || "Seçenek",
-                      index: optionIndex,
-                      total: group.options.length,
-                      onDuplicate: () => {
-                        if (group.options.length >= COMMERCE_LIMITS.optionsPerGroup) return showToast(`Bir grupta en fazla ${COMMERCE_LIMITS.optionsPerGroup} seçenek olabilir.`);
-                        const copy = { ...option, id: commerceId("secenek"), label: `${option.label} kopyası` };
-                        const next = [...group.options];
-                        next.splice(optionIndex + 1, 0, copy);
-                        updateOptionGroup(group.id, { options: next });
-                      },
-                      onMove: (direction) => updateOptionGroup(group.id, { options: moveCommerceItem(group.options, optionIndex, direction) }),
-                      onDelete: () => {
-                        const remaining = group.options.filter((item) => item.id !== option.id);
-                        changeCommerce((current) => ({
-                          ...current,
-                          optionGroups: current.optionGroups.map((item) => ({
-                            ...item,
-                            defaultOptionId: item.id === group.id && item.defaultOptionId === option.id ? remaining[0]?.id : item.defaultOptionId,
-                            visibleWhen: item.visibleWhen?.groupId === group.id
-                              ? { ...item.visibleWhen, optionIds: item.visibleWhen.optionIds.filter((id) => id !== option.id) }
-                              : item.visibleWhen,
-                            options: item.id === group.id ? remaining : item.options,
-                          })),
-                          priceRules: current.priceRules.map((rule) => ({ ...rule, optionIds: rule.optionIds.filter((id) => id !== option.id) })),
-                        }));
-                      },
-                    })}
-                  </article>)}
+                <div className={styles.optionCompactList} role="list" aria-label={`${group.label} seçenekleri`}>
+                  {group.options.map((option, optionIndex) => {
+                    const selected = option.id === selectedOptionId;
+                    return <article className={`${styles.optionCompactRow} ${selected ? styles.optionCompactRowActive : ""}`} role="listitem" key={option.id}>
+                      <button className={styles.optionCompactMain} type="button" aria-pressed={selected} onClick={() => setSelectedOptionIds((current) => ({ ...current, [optionSelectionKey]: option.id }))}>
+                        <span className={styles.optionCompactIndex}>{String(optionIndex + 1).padStart(2, "0")}</span>
+                        <span className={styles.optionCompactMeta}><strong>{option.label || "İsimsiz seçenek"}</strong><small>{option.description || "Açıklama yok"}</small></span>
+                        <span className={styles.optionCompactPrice}>{option.priceMinor ? formatMinor(option.priceMinor) : "Temel fiyat"}</span>
+                        <span className={styles.optionCompactStatus} data-active={option.enabled}>{option.enabled ? "Aktif" : "Kapalı"}</span>
+                      </button>
+                      {commerceRowActions({
+                        label: option.label || "Seçenek",
+                        index: optionIndex,
+                        total: group.options.length,
+                        onDuplicate: () => {
+                          if (group.options.length >= COMMERCE_LIMITS.optionsPerGroup) return showToast(`Bir grupta en fazla ${COMMERCE_LIMITS.optionsPerGroup} seçenek olabilir.`);
+                          const copy = { ...option, id: commerceId("secenek"), label: `${option.label} kopyası` };
+                          updateGroupOptions(group.id, (currentOptions) => {
+                            const currentIndex = currentOptions.findIndex((item) => item.id === option.id);
+                            const next = [...currentOptions];
+                            next.splice(currentIndex + 1, 0, copy);
+                            return next;
+                          });
+                          setSelectedOptionIds((current) => ({ ...current, [optionSelectionKey]: copy.id }));
+                        },
+                        onMove: (direction) => updateGroupOptions(group.id, (currentOptions) => moveCommerceItem(currentOptions, currentOptions.findIndex((item) => item.id === option.id), direction)),
+                        onDelete: () => {
+                          const fallbackOptionId = group.options[optionIndex + 1]?.id || group.options[optionIndex - 1]?.id || "";
+                          changeCommerce((current) => ({
+                            ...current,
+                            optionGroups: current.optionGroups.map((item) => {
+                              const remaining = item.id === group.id ? item.options.filter((entry) => entry.id !== option.id) : item.options;
+                              return {
+                                ...item,
+                                defaultOptionId: item.id === group.id && item.defaultOptionId === option.id ? remaining[0]?.id : item.defaultOptionId,
+                                visibleWhen: item.visibleWhen?.groupId === group.id
+                                  ? { ...item.visibleWhen, optionIds: item.visibleWhen.optionIds.filter((id) => id !== option.id) }
+                                  : item.visibleWhen,
+                                options: remaining,
+                              };
+                            }),
+                            priceRules: current.priceRules.map((rule) => ({ ...rule, optionIds: rule.optionIds.filter((id) => id !== option.id) })),
+                          }));
+                          setSelectedOptionIds((current) => current[optionSelectionKey] === option.id ? { ...current, [optionSelectionKey]: fallbackOptionId } : current);
+                        },
+                      })}
+                    </article>;
+                  })}
                 </div>
+                {selectedOption ? <div className={styles.optionCompactEditor}>
+                  <div><strong>Seçeneği düzenle</strong><small>{group.label} · {group.options.findIndex((option) => option.id === selectedOption.id) + 1}. sıra</small></div>
+                  <div className={styles.paymentFieldGrid}>
+                    <label>Seçenek adı<input maxLength={60} value={selectedOption.label} onChange={(event) => updateOption(group.id, selectedOption.id, { label: event.target.value })} /></label>
+                    <label>Ek / özel fiyat<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(selectedOption.priceMinor)} onChange={(event) => updateOption(group.id, selectedOption.id, { priceMinor: toMinor(event.target.value) })} /></div></label>
+                    <label className={styles.paymentFieldWide}>Kısa açıklama<input maxLength={100} value={selectedOption.description} onChange={(event) => updateOption(group.id, selectedOption.id, { description: event.target.value })} /></label>
+                  </div>
+                  <label className={styles.optionDesignToggle}><input type="checkbox" checked={selectedOption.enabled} onChange={(event) => updateOption(group.id, selectedOption.id, { enabled: event.target.checked })} /><span>Bu seçeneği göster</span></label>
+                </div> : null}
               </div> : null}
             </article>;
           }) : <div className={styles.paymentEmpty}><b>Henüz seçenek grubu yok</b><span>Ülke, bağış türü veya paket gibi ilk grubu ekleyin.</span><button type="button" onClick={addOptionGroup}>＋ İlk grubu ekle</button></div>}
