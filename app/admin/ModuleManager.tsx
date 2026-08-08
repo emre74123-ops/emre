@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -244,8 +243,7 @@ function OptionDesignEditor({
       }}><option value="auto">Otomatik</option><option value="fixed">Sabit</option><option value="equal">Eşit dağıt</option><option value="columns">Sütunlu</option></select></label>
       {design.optionWidthMode === "auto" ? range("En az genişlik", "optionMinWidth", 40, 260) : null}
       {design.optionWidthMode === "fixed" ? range("Seçenek genişliği", "optionWidth", 40, 320) : null}
-      {design.optionWidthMode === "columns" ? <label>Sütun sayısı<select value={design.columns || 2} onChange={(event) => onChange({ columns: Number
-(event.target.value) as DonationOptionDesign["columns"] })}><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label> : null}
+      {design.optionWidthMode === "columns" ? <label>Sütun sayısı<select value={design.columns || 2} onChange={(event) => onChange({ columns: Number(event.target.value) as DonationOptionDesign["columns"] })}><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label> : null}
       {design.optionWidthMode === "auto" || design.optionWidthMode === "fixed" ? <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.horizontalScroll} onChange={(event) => onChange({ horizontalScroll: event.target.checked })} /><span>Yatay kaydırma</span></label> : null}
       <label>Yükseklik biçimi<select value={design.optionHeightMode} onChange={(event) => onChange({ optionHeightMode: event.target.value as DonationOptionDesign["optionHeightMode"] })}><option value="auto">Otomatik</option><option value="fixed">Sabit</option></select></label>
       {design.optionHeightMode === "fixed" ? range("Seçenek yüksekliği", "optionHeight", 24, 120) : null}
@@ -363,8 +361,7 @@ function OptionHeaderDesignEditor({
       {usesAccent ? <label className={styles.groupHeaderDesignColor}>{iconBased ? "Simge rengi" : "Çizgi rengi"}<span><input aria-label="Grup başlığı vurgu rengi" type="color" value={design.lineColor} onChange={(event) => onChange({ lineColor: event.target.value })} /><code>{design.lineColor}</code></span></label> : null}
       {lineBased ? <label className={styles.groupHeaderDesignRange}><span>Çizgi kalınlığı<b>{design.lineWidth} px</b></span><input aria-label="Grup başlığı çizgi kalınlığı" type="range" min="1" max="8" value={design.lineWidth} onChange={(event) => onChange({ lineWidth: Number(event.target.value) })} /></label> : null}
       {lineBased ? <label>Çizgi biçimi<select value={design.lineStyle} onChange={(event) => onChange({ lineStyle: event.target.value as DonationOptionHeaderDesign["lineStyle"] })}><option value="solid">Düz</option><option value="dashed">Kesikli</option><option value="dotted">Noktalı</option></select></label> : null}
-      {design.mode === "accordion" ? <label className={styles.groupHeaderDesignToggle}><input type="checkbox" checked={d
-esign.defaultOpen} onChange={(event) => onChange({ defaultOpen: event.target.checked })} /><span>İlk açılışta açık</span></label> : null}
+      {design.mode === "accordion" ? <label className={styles.groupHeaderDesignToggle}><input type="checkbox" checked={design.defaultOpen} onChange={(event) => onChange({ defaultOpen: event.target.checked })} /><span>İlk açılışta açık</span></label> : null}
       {design.mode === "accordion" ? <label className={styles.groupHeaderDesignRange}><span>Geçiş süresi<b>{design.animationMs} ms</b></span><input aria-label="Grup başlığı geçiş süresi" type="range" min="0" max="1000" step="20" value={design.animationMs} onChange={(event) => onChange({ animationMs: Number(event.target.value) })} /></label> : null}
     </div>
     {iconBased ? <section className={`${styles.groupHeaderIconBox} ${iconBoxOpen ? styles.groupHeaderIconBoxOpen : ""}`}>
@@ -558,8 +555,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }, []);
 
   const donation = settings.donation;
-  const allOrd
-erKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
+  const allOrderKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
   const aggregateCategorySelected = Boolean(donation.allCategoryId) && projectCategory === donation.allCategoryId;
   const categoryProjects = (aggregateCategorySelected
     ? donation.projects
@@ -811,8 +807,7 @@ erKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
   }
   async function removeProjectMedia(device: Device, media: DonationProjectMedia) {
     const paths = [media.path, media.posterPath].filter((path): path is string => Boolean(path));
-    setPendingProjectMediaDeletes((current) => [...new Set([...current, ...pa
-ths])]);
+    setPendingProjectMediaDeletes((current) => [...new Set([...current, ...paths])]);
     updateProjectMedia(device, projectMedia(device).filter((item) => item.id !== media.id));
     setSelectedMediaIds((current) => ({ ...current, [device]: current[device] === media.id ? "" : current[device] }));
     showToast("Medya galeriden kaldırıldı. Dosya, ayarlar kaydedildikten sonra depodan silinecek.");
@@ -1048,8 +1043,7 @@ ths])]);
       showToast("En az bir bağış kategorisi kalmalıdır.");
       return;
     }
-    if (!window.confirm(`“${category.label}” kategorisi ve web/mobil görsel gale
-rileri kalıcı olarak silinsin mi?`)) return;
+    if (!window.confirm(`“${category.label}” kategorisi ve web/mobil görsel galerileri kalıcı olarak silinsin mi?`)) return;
     const nextCategories = donation.categories.filter((item) => item.id !== id);
     const categoryUrls = new Set(Object.values(donation.categoryImages[id] || {}).filter(Boolean));
     const legacyImages = images.filter((image) => {
@@ -1290,8 +1284,7 @@ rileri kalıcı olarak silinsin mi?`)) return;
     const actionGapKey = device === "desktop" ? "actionGapDesktop" : "actionGapMobile";
     const optionDesignKey = device === "desktop" ? "optionDesignDesktop" : "optionDesignMobile";
     const groupDesignKey = device === "desktop" ? "desktopDesign" : "mobileDesign";
-    const groupTitleVisibleKey = device === "desktop" ? "
-titleVisibleDesktop" : "titleVisibleMobile";
+    const groupTitleVisibleKey = device === "desktop" ? "titleVisibleDesktop" : "titleVisibleMobile";
     const groupDescriptionVisibleKey = device === "desktop" ? "descriptionVisibleDesktop" : "descriptionVisibleMobile";
     const optionSharedTextKey = device === "desktop" ? "useSharedTextDesignDesktop" : "useSharedTextDesignMobile";
     const optionTextDesignKey = device === "desktop" ? "desktopTextDesign" : "mobileTextDesign";
@@ -1545,8 +1538,7 @@ titleVisibleDesktop" : "titleVisibleMobile";
       fixed: "Sabit",
       configured: "Seçenekli",
     }[commerce.mode];
-    const paymentControls = <div classNam
-e={styles.paymentWorkspace}>
+    const paymentControls = <div className={styles.paymentWorkspace}>
       <header className={styles.paymentWorkspaceHeader}>
         <div>
           <span>{device === "desktop" ? "WEB" : "MOBİL"} · COMMERCE V2</span>
@@ -1724,8 +1716,7 @@ e={styles.paymentWorkspace}>
             )} /><span /></label>
           </div>
           {commerce.customAmountEnabled ? <div className={styles.paymentFieldGrid}>
-            <label>Alan içi örnek<input maxLength={40} valu
-e={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountPlaceholder: event.target.value }))} /></label>
+            <label>Alan içi örnek<input maxLength={40} value={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountPlaceholder: event.target.value }))} /></label>
             <label>En az<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.customAmountMinMinor)} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountMinMinor: toMinor(event.target.value) }))} /></div></label>
             <label>En fazla<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.customAmountMaxMinor)} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountMaxMinor: toMinor(event.target.value) }))} /></div></label>
           </div> : null}
@@ -1872,7 +1863,6 @@ e={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((curren
                     id={groupInfoButtonId}
                     aria-expanded={groupInfoOpen}
                     aria-controls={groupInfoPanelId}
-
                     onClick={() => toggleGroupPanel(groupInfoKey)}
                   >
                     <span><strong>Grup bilgileri</strong><small>{groupInfoSummary}</small></span><b>{groupInfoOpen ? "−" : "+"}</b>
@@ -2016,8 +2006,7 @@ e={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((curren
                         onMove: (direction) => updateGroupOptions(group.id, (currentOptions) => moveCommerceItem(currentOptions, currentOptions.findIndex((item) => item.id === option.id), direction)),
                         onDelete: () => {
                           const fallbackOptionId = group.options[optionIndex + 1]?.id || group.options[optionIndex - 1]?.id || "";
- 
-                         changeCommerce((current) => ({
+                          changeCommerce((current) => ({
                             ...current,
                             optionGroups: current.optionGroups.map((item) => {
                               const remaining = item.id === group.id ? item.options.filter((entry) => entry.id !== option.id) : item.options;
@@ -2173,8 +2162,7 @@ e={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((curren
                                   optionGroups: current.optionGroups.map((item) => {
                                     if (item.id !== childGroup.id) return item;
                                     const currentOptionIds = item.visibleWhen?.groupId === group.id ? item.visibleWhen.optionIds : [];
-           
-                         const optionIds = shouldLink
+                                    const optionIds = shouldLink
                                       ? [...new Set([...currentOptionIds, selectedOption.id])]
                                       : currentOptionIds.filter((id) => id !== selectedOption.id);
                                     return { ...item, visibleWhen: optionIds.length ? { groupId: group.id, optionIds } : undefined };
@@ -2315,8 +2303,7 @@ e={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((curren
             <span>{device === "desktop" ? "Web" : "Mobil"} düğme yerleşimi</span>
             <small>Yalnız aktif cihaz görünümünü değiştirir.</small>
           </div>
-          <label>Dizilim<select value={commerce[actionLayoutKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionLayoutKey]: event.target.value as "row" | "stack" }))}><option value="row">Yan yana</option><option value="st
-ack">Alt alta</option></select></label>
+          <label>Dizilim<select value={commerce[actionLayoutKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionLayoutKey]: event.target.value as "row" | "stack" }))}><option value="row">Yan yana</option><option value="stack">Alt alta</option></select></label>
           <label>Aralık <b>{commerce[actionGapKey]} px</b><input type="range" min="0" max="32" value={commerce[actionGapKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionGapKey]: Number(event.target.value) }))} /></label>
         </div>
         <div className={styles.paymentBuilderList}>
@@ -2443,8 +2430,7 @@ ack">Alt alta</option></select></label>
     return <div className={styles.lowerAccordion}>
       <section className={projectSelectorOpen ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
-        {projectSelectorOpen ? <div className={`${styles.lowerAccordionConten
-t} ${styles.visualProjectSelector}`}>
+        {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
           <div className={styles.miniCategoryPreview}>
             {donation.categories.map(({ id, label, imageAlt }) => {
               const projects = id === donation.allCategoryId ? donation.projects : donation.projects.filter((project) => project.category === id);
@@ -2555,8 +2541,7 @@ t} ${styles.visualProjectSelector}`}>
           </div>
         </div> : null}
       </section>
-      <section style={{ order: 3 }} cl
-assName={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
+      <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
           <div className={styles.projectMediaStatus}>
@@ -2678,8 +2663,7 @@ assName={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? sty
             <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
           </> : null}
           {id === "arrows" ? <>
-   
-         <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
+            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
             <label className={styles.headerCheck}><input type="checkbox" checked={value.leftArrowVisible} onChange={(event) => change({ leftArrowVisible: event.target.checked })} /> Sol oku göster</label>
             <label className={styles.headerCheck}><input type="checkbox" checked={value.rightArrowVisible} onChange={(event) => change({ rightArrowVisible: event.target.checked })} /> Sağ oku göster</label>
             <label>Hazır sembol<select value={value.arrowIcon} onChange={(event) => change({ arrowIcon: event.target.value as DonationLowerDeviceSettings["arrowIcon"] })}><option value="thin">İnce ok ← →</option><option value="chevron">Sade ok ‹ ›</option><option value="bold">Kalın ok ❮ ❯</option><option value="long">Uzun ok ⟵ ⟶</option><option value="triangle">Üçgen ◀ ▶</option></select></label>
@@ -2856,8 +2840,7 @@ assName={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? sty
               const element = event.currentTarget;
               setImageMeta((current) => current[image.url] ? current : { ...current, [image.url]: { width: element.naturalWidth, height: element.naturalHeight } });
             }} /></span>
-            <strong>{image.originalName || ima
-ge.path.split("/").at(-1) || "Kategori görseli"}</strong>
+            <strong>{image.originalName || image.path.split("/").at(-1) || "Kategori görseli"}</strong>
             <small>{meta ? `${meta.width}×${meta.height} · ${imageRatio(meta.width, meta.height)}` : image.path.startsWith("current:") ? "Mevcut görsel" : formatSize(image.size)}</small>
             {savedPercent ? <small>%{savedPercent} küçüldü</small> : null}
             <button type="button" title="Görseli sil" onClick={(event) => {
@@ -2960,8 +2943,7 @@ ge.path.split("/").at(-1) || "Kategori görseli"}</strong>
     <>
       <div className={styles.pageHeading}>
         <div><p>Site bileşenleri</p><h1>Modüller</h1><span>Bugünkü ve gelecekte eklenecek site modüllerini tek merkezden yönet.</span></div>
-        <button className={styles.primaryButton} type="button" disabled={sav
-ing || !settingsReady} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+        <button className={styles.primaryButton} type="button" disabled={saving || !settingsReady} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
       </div>
 
       <div className={styles.demoBanner}><span>◦</span><p><strong>{settingsLoadError ? "Ayarlar yüklenemedi." : "Modül merkezi hazır."}</strong>{settingsLoadError || "Her modül kendi kartında açılır; gelecekte ekleyeceğimiz modüller burada sıralanır."}</p></div>
