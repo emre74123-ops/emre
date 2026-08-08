@@ -83,9 +83,14 @@ function safeActionHref(action: ProjectAction) {
 function isGroupVisible(
   group: ProjectCommerce["optionGroups"][number],
   selections: Record<string, string>,
+  optionGroups: ProjectCommerce["optionGroups"],
 ) {
   if (!group.visibleWhen) return true;
-  return group.visibleWhen.optionIds.includes(selections[group.visibleWhen.groupId] || "");
+  const selectedOptionId = selections[group.visibleWhen.groupId] || "";
+  if (!group.visibleWhen.optionIds.includes(selectedOptionId)) return false;
+  const parentGroup = optionGroups.find((candidate) => candidate.id === group.visibleWhen?.groupId);
+  const selectedOption = parentGroup?.options.find((option) => option.id === selectedOptionId && option.enabled);
+  return Boolean(selectedOption && selectedOption.childFlowEnabled !== false);
 }
 
 function resolveProjectSelections(
@@ -94,7 +99,7 @@ function resolveProjectSelections(
 ) {
   const resolved: Record<string, string> = {};
   commerce.optionGroups.filter((group) => group.enabled).forEach((group) => {
-    if (!isGroupVisible(group, resolved)) return;
+    if (!isGroupVisible(group, resolved, commerce.optionGroups)) return;
     const enabledOptions = group.options.filter((option) => option.enabled);
     const selected = enabledOptions.find((option) => option.id === source[group.id])
       || enabledOptions.find((option) => option.id === group.defaultOptionId)
@@ -281,7 +286,9 @@ function DonationCardCommerce({
   const [quantity, setQuantity] = useState(commerce.quantityPresets[0] || 1);
   const [customAmount, setCustomAmount] = useState("");
   const selections = resolveProjectSelections(commerce, selectionState);
-  const visibleGroups = commerce.optionGroups.filter((group) => group.enabled && isGroupVisible(group, selections));
+  const enabledGroups = commerce.optionGroups.filter((group) => group.enabled);
+  const visibleGroups = enabledGroups.filter((group) => isGroupVisible(group, selections, commerce.optionGroups));
+  const visibleGroupIds = new Set(visibleGroups.map((group) => group.id));
   const enabledPresets = commerce.amountPresets.filter((preset) => preset.enabled);
   const activePreset = enabledPresets.find((preset) => preset.id === presetId) || enabledPresets[0];
   const typedAmount = Number(customAmount.replace(",", "."));
@@ -360,7 +367,9 @@ function DonationCardCommerce({
 
   return (
     <div className={styles.commerce}>
-      {visibleGroups.map((group) => {
+      {enabledGroups.length ? <div className={styles.optionGroups}>
+        {enabledGroups.map((group) => {
+        const groupVisible = visibleGroupIds.has(group.id);
         const sharedDesign = device === "mobile" ? commerce.optionDesignMobile : commerce.optionDesignDesktop;
         const ownDesign = device === "mobile" ? group.mobileDesign : group.desktopDesign;
         const optionDesign = group.useSharedDesign !== false ? sharedDesign : ownDesign || sharedDesign;
@@ -398,13 +407,20 @@ function DonationCardCommerce({
         ].filter(Boolean).join(" ");
         const optionPrice = (priceMinor: number) => `+${money.format(priceMinor / 100)}`;
         return (
-          <fieldset
-            aria-label={group.label}
-            aria-required={group.required}
-            className={`${styles.optionGroup} ${widthModeClass} ${heightModeClass}`}
+          <div
+            aria-hidden={!groupVisible}
+            className={styles.optionGroupMotion}
+            data-visible={groupVisible}
             key={group.id}
-            style={optionGroupStyle(optionDesign)}
           >
+            <div className={styles.optionGroupMotionInner}>
+              <fieldset
+                aria-label={group.label}
+                aria-required={group.required}
+                className={`${styles.optionGroup} ${widthModeClass} ${heightModeClass}`}
+                disabled={!groupVisible}
+                style={optionGroupStyle(optionDesign)}
+              >
             {hasHeader ? <div className={styles.optionGroupHeader}>
               {titleVisible ? <div className={styles.optionGroupTitle}>
                 {group.label}
@@ -462,9 +478,12 @@ function DonationCardCommerce({
                 })}
               </div>
             )}
-          </fieldset>
+              </fieldset>
+            </div>
+          </div>
         );
       })}
+      </div> : null}
 
       {commerce.mode === "amount" ? (
         <div className={styles.amountArea}>
