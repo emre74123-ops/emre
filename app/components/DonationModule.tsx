@@ -102,8 +102,7 @@ function resolveProjectSelections(
     if (!isGroupVisible(group, resolved, commerce.optionGroups)) return;
     const enabledOptions = group.options.filter((option) => option.enabled);
     const selected = enabledOptions.find((option) => option.id === source[group.id])
-      || enabledOptions.find((option) => option.id === group.defaultOptionId)
-      || (group.required ? enabledOptions[0] : undefined);
+      || enabledOptions.find((option) => option.id === group.defaultOptionId);
     if (selected) resolved[group.id] = selected.id;
   });
   return resolved;
