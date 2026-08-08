@@ -1176,3 +1176,155 @@
   .optionCompactEditor>div:first-child{align-items:flex-start;flex-direction:column}
   .optionGroupDesign>div:first-child{align-items:flex-start;flex-direction:column}
 }
+
+/* Compact per-option workspace */
+.optionDesignWarning{
+  grid-column:1/-1;
+  margin:0;
+  padding:7px 9px;
+  border:1px solid #eadcad;
+  border-radius:7px;
+  background:#fffaf0;
+  color:#8b6c19;
+  font-size:6px;
+  font-weight:800;
+}
+.optionCompactEditor{
+  height:256px;
+  gap:0;
+  padding:0;
+  overflow:hidden;
+}
+.optionEditorHeader,
+.optionCompactEditor>.optionEditorHeader:first-child{
+  display:flex;
+  min-height:39px;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 10px 6px;
+}
+.optionEditorHeader strong{color:#17483d;font-size:8px}
+.optionEditorHeader small{color:#7d918a;font-size:6px}
+.optionEditorTabs{
+  display:grid;
+  min-height:32px;
+  flex:0 0 auto;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:3px;
+  padding:3px;
+  border-top:1px solid #deebe6;
+  border-bottom:1px solid #deebe6;
+  background:#edf6f2;
+}
+.optionEditorTabs button{
+  min-width:0;
+  border:1px solid transparent;
+  border-radius:6px;
+  background:transparent;
+  color:#678078;
+  font-size:6px;
+  font-weight:950;
+  cursor:pointer;
+}
+.optionEditorTabs button:hover{background:rgba(255,255,255,.75);color:#25564b}
+.optionEditorTabs button:focus-visible{outline:2px solid rgba(18,132,101,.28);outline-offset:1px}
+.optionEditorTabs .optionEditorTabActive{
+  border-color:#c9ddd6;
+  background:#fff;
+  color:#0d755a;
+  box-shadow:0 2px 7px rgba(19,76,63,.07);
+}
+.optionEditorBody{
+  min-height:0;
+  flex:1 1 auto;
+  padding:9px 10px 10px;
+  overflow:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#bfd1ca transparent;
+}
+.optionEditorBody::-webkit-scrollbar{width:5px}
+.optionEditorBody::-webkit-scrollbar-thumb{border-radius:99px;background:#bfd1ca}
+.optionEditorContent,.optionEditorText,.optionEditorAppearance{min-width:0}
+.optionEditorContent .paymentFieldGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.optionEditorText{display:flex;flex-direction:column;gap:8px}
+.optionEditorAppearance{display:flex;flex-direction:column;gap:8px}
+.optionEditorAppearance p{
+  margin:0;
+  padding:8px 9px;
+  border-radius:7px;
+  background:#edf6f2;
+  color:#657e76;
+  font-size:6px;
+  line-height:1.5;
+}
+.optionTextSharedInfo{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+  padding:9px;
+  border:1px solid #dce9e4;
+  border-radius:8px;
+  background:#fff;
+}
+.optionTextSharedInfo span{color:#647d75;font-size:6px;line-height:1.45}
+.optionTextSharedInfo b{color:#176c58;font-size:6px;line-height:1.4}
+.optionTextDesignGrid{
+  display:grid;
+  min-width:0;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+.optionTextDesignGrid>label{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+  color:#506b63;
+  font-size:6px;
+  font-weight:900;
+}
+.optionTextDesignGrid select{
+  width:100%;
+  height:30px;
+  min-width:0;
+  padding:0 7px;
+  border:1px solid #d8e4df;
+  border-radius:7px;
+  outline:0;
+  background:#fff;
+  color:#294f46;
+  font-size:7px;
+}
+.optionTextDesignGrid select:focus{border-color:#128465;box-shadow:0 0 0 2px rgba(18,132,101,.08)}
+.optionTextRange{
+  padding:6px 7px;
+  border:1px solid #e1e9e6;
+  border-radius:7px;
+  background:#fafcfb;
+}
+.optionTextRange>span{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.optionTextRange b{color:#128465;font-size:6px}
+.optionTextRange input[type=range]{width:100%;margin:2px 0 0;accent-color:#128465}
+.optionTextColor>span{
+  display:grid;
+  height:30px;
+  grid-template-columns:30px minmax(0,1fr);
+  overflow:hidden;
+  border:1px solid #d8e4df;
+  border-radius:7px;
+  background:#fff;
+}
+.optionTextColor input[type=color]{width:30px;height:30px;padding:2px;border:0;border-right:1px solid #d8e4df;background:#fff}
+.optionTextColor code{display:flex;min-width:0;align-items:center;padding:0 6px;overflow:hidden;color:#627870;font:700 6px monospace;text-overflow:ellipsis}
+
+@media(max-width:640px){
+  .optionCompactEditor{height:258px}
+  .optionEditorHeader,.optionCompactEditor>.optionEditorHeader:first-child{min-height:36px;align-items:center;flex-direction:row;padding:7px 9px 5px}
+  .optionEditorContent .paymentFieldGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .optionEditorContent .paymentFieldWide{grid-column:1/-1}
+  .optionTextDesignGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
