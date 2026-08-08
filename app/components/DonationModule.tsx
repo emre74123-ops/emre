@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CART_MAX_QUANTITY, readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
+import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationOptionDesign, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Device = "desktop" | "mobile";
@@ -38,6 +38,7 @@ type VideoModalState = {
 type ProjectCommerce = ReturnType<typeof resolveDonationProjectCommerce>;
 type ProjectAction = ProjectCommerce["actions"][number];
 type ProjectActionDevice = ProjectAction["desktop"];
+type OptionCssProperties = CSSProperties & Record<`--dm-option-${string}`, string | number>;
 
 const numberSetting = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
@@ -141,6 +142,51 @@ function actionButtonStyle(action: ProjectAction, device: ProjectActionDevice): 
   };
 }
 
+function optionShadow(shadow: DonationOptionDesign["shadow"]) {
+  if (shadow === "medium") return "0 8px 20px rgba(18,60,53,.13)";
+  if (shadow === "soft") return "0 4px 12px rgba(18,60,53,.08)";
+  return "0 0 0 transparent";
+}
+
+function optionGroupStyle(design: DonationOptionDesign): OptionCssProperties {
+  const justify = design.justify === "start"
+    ? "flex-start"
+    : design.justify === "end"
+      ? "flex-end"
+      : design.justify;
+  return {
+    "--dm-option-title-align": design.titleAlign,
+    "--dm-option-title-size": `${design.titleSize}px`,
+    "--dm-option-title-weight": design.titleWeight,
+    "--dm-option-title-color": design.titleColor,
+    "--dm-option-description-size": `${design.descriptionSize}px`,
+    "--dm-option-description-color": design.descriptionColor,
+    "--dm-option-title-description-gap": `${design.titleDescriptionGap}px`,
+    "--dm-option-header-gap": `${design.headerGap}px`,
+    "--dm-option-height": `${design.optionHeight}px`,
+    "--dm-option-min-width": `${design.optionMinWidth}px`,
+    "--dm-option-columns": design.columns || 1,
+    "--dm-option-justify": justify,
+    "--dm-option-column-gap": `${design.columnGap}px`,
+    "--dm-option-row-gap": `${design.rowGap}px`,
+    "--dm-option-padding-x": `${design.paddingX}px`,
+    "--dm-option-white-space": design.textWrap ? "normal" : "nowrap",
+    "--dm-option-label-size": `${design.labelSize}px`,
+    "--dm-option-label-weight": design.labelWeight,
+    "--dm-option-item-description-size": `${design.optionDescriptionSize}px`,
+    "--dm-option-item-description-color": design.optionDescriptionColor,
+    "--dm-option-background": design.background,
+    "--dm-option-text-color": design.textColor,
+    "--dm-option-border-color": design.borderColor,
+    "--dm-option-selected-background": design.selectedBackground,
+    "--dm-option-selected-text-color": design.selectedTextColor,
+    "--dm-option-selected-border-color": design.selectedBorderColor,
+    "--dm-option-border-width": `${design.borderWidth}px`,
+    "--dm-option-radius": `${design.radius}px`,
+    "--dm-option-shadow": optionShadow(design.shadow),
+  };
+}
+
 function DonationCardCommerce({
   project,
   device,
@@ -235,27 +281,82 @@ function DonationCardCommerce({
 
   return (
     <div className={styles.commerce}>
-      {visibleGroups.map((group) => (
-        <fieldset className={styles.optionGroup} key={group.id}>
-          <legend>{group.label}{group.required ? <sup>*</sup> : null}</legend>
-          {group.description ? <p>{group.description}</p> : null}
-          {group.display === "select" ? (
-            <select value={selections[group.id] || ""} onChange={(event) => chooseOption(group.id, event.target.value)}>
-              <option value="">Seçiniz</option>
-              {group.options.filter((option) => option.enabled).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-          ) : (
-            <div className={`${styles.optionChoices}${group.display === "cards" ? ` ${styles.optionCards}` : ""}`}>
-              {group.options.filter((option) => option.enabled).map((option) => (
-                <button className={selections[group.id] === option.id ? styles.selectedChoice : ""} type="button" key={option.id} onClick={() => chooseOption(group.id, option.id)}>
-                  <strong>{option.label}</strong>
-                  {option.description ? <small>{option.description}</small> : null}
-                </button>
-              ))}
-            </div>
-          )}
-        </fieldset>
-      ))}
+      {visibleGroups.map((group) => {
+        const sharedDesign = device === "mobile" ? commerce.optionDesignMobile : commerce.optionDesignDesktop;
+        const ownDesign = device === "mobile" ? group.mobileDesign : group.desktopDesign;
+        const optionDesign = group.useSharedDesign !== false ? sharedDesign : ownDesign || sharedDesign;
+        const hasHeader = optionDesign.titleVisible
+          || (optionDesign.descriptionVisible && Boolean(group.description));
+        const choicesClassName = [
+          styles.optionChoices,
+          group.display === "cards" ? styles.optionCards : "",
+          optionDesign.horizontalScroll ? styles.optionChoicesScroll : "",
+          !optionDesign.horizontalScroll && optionDesign.columns > 0 ? styles.optionChoicesColumns : "",
+          optionDesign.equalWidth ? styles.optionChoicesEqual : "",
+          optionDesign.justify === "stretch" ? styles.optionChoicesStretch : "",
+        ].filter(Boolean).join(" ");
+        const optionPrice = (priceMinor: number) => `+${money.format(priceMinor / 100)}`;
+        return (
+          <fieldset
+            aria-label={group.label}
+            aria-required={group.required}
+            className={styles.optionGroup}
+            key={group.id}
+            style={optionGroupStyle(optionDesign)}
+          >
+            {hasHeader ? <div className={styles.optionGroupHeader}>
+              {optionDesign.titleVisible ? <div className={styles.optionGroupTitle}>
+                {group.label}{group.required ? <sup>*</sup> : null}
+              </div> : null}
+              {optionDesign.descriptionVisible && group.description
+                ? <p className={styles.optionGroupDescription}>{group.description}</p>
+                : null}
+            </div> : null}
+            {group.display === "select" ? (
+              <select required={group.required} value={selections[group.id] || ""} onChange={(event) => chooseOption(group.id, event.target.value)}>
+                <option value="">Seçiniz</option>
+                {group.options.filter((option) => option.enabled).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}{optionDesign.priceVisible && option.priceMinor > 0 ? ` · ${optionPrice(option.priceMinor)}` : ""}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div aria-label={group.label} aria-required={group.required} className={choicesClassName} role="radiogroup">
+                {group.options.filter((option) => option.enabled).map((option) => {
+                  const showPrice = optionDesign.priceVisible && option.priceMinor > 0;
+                  return (
+                    <button
+                      aria-checked={selections[group.id] === option.id}
+                      className={selections[group.id] === option.id ? styles.selectedChoice : ""}
+                      role="radio"
+                      type="button"
+                      key={option.id}
+                      onClick={() => chooseOption(group.id, option.id)}
+                    >
+                      <strong className={styles.optionLabel}>
+                        <span>{option.label}</span>
+                        {showPrice && optionDesign.pricePosition === "inline"
+                          ? <em className={styles.optionPriceInline}>{optionPrice(option.priceMinor)}</em>
+                          : null}
+                      </strong>
+                      {optionDesign.optionDescriptionVisible && option.description
+                        ? <small className={styles.optionDescription}>{option.description}</small>
+                        : null}
+                      {showPrice && optionDesign.pricePosition === "below"
+                        ? <em className={styles.optionPriceBelow}>{optionPrice(option.priceMinor)}</em>
+                        : null}
+                      {showPrice && optionDesign.pricePosition === "badge"
+                        ? <em className={styles.optionPriceBadge}>{optionPrice(option.priceMinor)}</em>
+                        : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+        );
+      })}
 
       {commerce.mode === "amount" ? (
         <div className={styles.amountArea}>
