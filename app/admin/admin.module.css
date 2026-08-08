@@ -982,6 +982,107 @@
 .optionSharedDesign>button small{color:#7c9089;font-size:6px}
 .optionSharedDesign>button b{color:#128465;font-size:13px}
 .optionSharedDesignOpen>button{border-bottom:1px solid #e2ebe7;background:#f5faf8}
+.groupCompactAccordion{
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  border:1px solid #dce7e3;
+  border-radius:10px;
+  background:#fff;
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+.groupCompactAccordionOpen{border-color:#a8cec2;box-shadow:0 5px 16px rgba(20,79,66,.045)}
+.groupCompactAccordionHeader{
+  display:flex;
+  width:100%;
+  min-width:0;
+  min-height:45px;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 11px;
+  border:0;
+  background:#fff;
+  color:#244e43;
+  text-align:left;
+  cursor:pointer;
+}
+.groupCompactAccordionHeader:hover{background:#f5faf8}
+.groupCompactAccordionHeader:focus-visible{outline:2px solid rgba(18,132,101,.3);outline-offset:-2px}
+.groupCompactAccordionOpen>.groupCompactAccordionHeader{background:#f3faf7}
+.groupCompactAccordionHeader>span{display:flex;min-width:0;flex:1 1 auto;flex-direction:column;gap:2px}
+.groupCompactAccordionHeader strong,.groupCompactAccordionHeader small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.groupCompactAccordionHeader strong{font-size:8px;font-weight:950}
+.groupCompactAccordionHeader small{color:#7b9089;font-size:6px;font-weight:700}
+.groupCompactAccordionHeader>b{display:grid;place-items:center;width:22px;height:22px;flex:0 0 auto;border-radius:6px;background:#e7f3ef;color:#128465;font-size:12px}
+.groupCompactAccordionPanel{
+  display:flex;
+  min-width:0;
+  max-width:100%;
+  flex-direction:column;
+  gap:10px;
+  padding:10px;
+  overflow:hidden;
+  border-top:1px solid #e2ebe7;
+  background:#fbfdfc;
+  animation:groupCompactPanelIn .16s ease both;
+}
+@keyframes groupCompactPanelIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.groupCompactAccordionPanel>.groupConditionBox{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.groupHeaderDesignEditor{
+  display:flex;
+  min-width:0;
+  max-width:100%;
+  flex-direction:column;
+  gap:8px;
+  padding:9px;
+  border:1px solid #dfe9e5;
+  border-radius:9px;
+  background:linear-gradient(145deg,#fff,#f5faf8);
+}
+.groupHeaderDesignHeading{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:8px}
+.groupHeaderDesignHeading>span{display:flex;min-width:0;flex-direction:column;gap:2px}
+.groupHeaderDesignHeading strong{color:#244f44;font-size:8px}
+.groupHeaderDesignHeading small{color:#81928d;font-size:6px}
+.groupHeaderDesignHeading em{padding:4px 6px;border-radius:6px;background:#e4f2ed;color:#0f775c;font:normal 950 5px/1 Arial,sans-serif;letter-spacing:.06em}
+.groupHeaderDesignGrid{
+  display:grid;
+  min-width:0;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+.groupHeaderDesignGrid>label{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+  color:#506c64;
+  font-size:6px;
+  font-weight:900;
+}
+.groupHeaderDesignGrid select{
+  width:100%;
+  height:30px;
+  min-width:0;
+  padding:0 7px;
+  border:1px solid #d8e4df;
+  border-radius:7px;
+  outline:0;
+  background:#fff;
+  color:#294f46;
+  font-size:7px;
+}
+.groupHeaderDesignGrid select:focus{border-color:#128465;box-shadow:0 0 0 2px rgba(18,132,101,.08)}
+.groupHeaderDesignRange{padding:6px 7px;border:1px solid #e1e9e6;border-radius:7px;background:#fafcfb}
+.groupHeaderDesignRange>span{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.groupHeaderDesignRange b{color:#128465;font-size:6px}
+.groupHeaderDesignRange input[type=range]{width:100%;margin:2px 0 0;accent-color:#128465}
+.groupHeaderDesignColor>span{display:grid;height:30px;grid-template-columns:30px minmax(0,1fr);overflow:hidden;border:1px solid #d8e4df;border-radius:7px;background:#fff}
+.groupHeaderDesignColor input[type=color]{width:30px;height:30px;padding:2px;border:0;border-right:1px solid #d8e4df;background:#fff}
+.groupHeaderDesignColor code{display:flex;min-width:0;align-items:center;padding:0 6px;overflow:hidden;color:#627870;font:700 6px monospace;text-overflow:ellipsis}
+.groupHeaderDesignToggle{min-height:30px;flex-direction:row!important;align-items:center;gap:6px!important;padding:0 7px;border:1px solid #dce7e3;border-radius:7px;background:#fff;cursor:pointer}
+.groupHeaderDesignToggle input{width:13px;height:13px;margin:0;accent-color:#128465}
+.groupHeaderDesignNote{margin:0;padding:7px 8px;border-radius:7px;background:#edf6f2;color:#687f78;font-size:6px;line-height:1.4}
 .optionGroupDesign{
   overflow:hidden;
   border:1px solid #dfe9e5;
@@ -1201,6 +1302,11 @@
 .optionCompactEditor>div:first-child small{color:#7d918a;font-size:6px}
 
 @media(max-width:640px){
+  .groupCompactAccordion,.groupCompactAccordionPanel,.groupHeaderDesignEditor{width:100%;max-width:100%}
+  .groupCompactAccordionPanel{padding:9px}
+  .groupHeaderDesignGrid{grid-template-columns:1fr}
+  .groupHeaderDesignHeading{align-items:flex-start}
+  .groupConditionBox,.groupConditionBox select{max-width:100%}
   .optionDesignGrid{grid-template-columns:1fr}
   .optionCompactMain{grid-template-columns:24px minmax(0,1fr) auto}
   .optionCompactStatus{display:none}
@@ -1487,5 +1593,5 @@
 }
 
 @media(prefers-reduced-motion:reduce){
-  .optionCompactEditor{animation:none}
+  .optionCompactEditor,.groupCompactAccordionPanel{animation:none}
 }
