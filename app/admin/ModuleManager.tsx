@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationLowerDeviceSettings, type DonationOptionDesign, type DonationOptionGroup, type DonationPriceRule, type DonationProject, type DonationProjectAction, type DonationProjectCommerce, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
+import { defaultModuleSettings, normalizeDonationCategoryId, normalizeModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationLowerDeviceSettings, type DonationOptionDesign, type DonationOptionGroup, type DonationOptionTextDesign, type DonationPriceRule, type DonationProject, type DonationProjectAction, type DonationProjectCommerce, type DonationProjectDesign, type DonationProjectMedia, type ModuleSettings } from "../../lib/module-settings";
 import DonationModule from "../components/DonationModule";
 import styles from "./admin.module.css";
 
@@ -13,6 +13,12 @@ type Device = "desktop" | "mobile";
 type ProjectCategory = DonationProject["category"];
 type DonationCategoryId = string;
 type PaymentWorkspace = "model" | "options" | "rules" | "actions";
+type OptionEditorTab = "content" | "text" | "appearance";
+const OPTION_EDITOR_TABS = [
+  ["content", "İçerik"],
+  ["text", "Yazı"],
+  ["appearance", "Görünüm"],
+] as const satisfies ReadonlyArray<readonly [OptionEditorTab, string]>;
 type GalleryImage = {
   path: string;
   url: string;
@@ -61,6 +67,36 @@ function fromMinor(value: number) {
 
 function formatMinor(value: number) {
   return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(fromMinor(value))} ₺`;
+}
+
+function projectCommerceDraft(project: DonationProject) {
+  return project.commerce?.version === 2 ? project.commerce : resolveDonationProjectCommerce(project);
+}
+
+function optionTextDesignFromGroup(design: DonationOptionDesign): DonationOptionTextDesign {
+  return {
+    fontSize: design.labelSize,
+    fontWeight: design.labelWeight,
+    fontFamily: design.optionFontFamily,
+    color: design.textColor,
+    align: design.optionTextAlign,
+    letterSpacing: design.optionLetterSpacing,
+    textTransform: design.optionTextTransform,
+  };
+}
+
+function optionTextDesignChangesToGroup(
+  changes: Partial<DonationOptionTextDesign>,
+): Partial<DonationOptionDesign> {
+  return {
+    ...(changes.fontSize !== undefined ? { labelSize: changes.fontSize } : {}),
+    ...(changes.fontWeight !== undefined ? { labelWeight: changes.fontWeight } : {}),
+    ...(changes.fontFamily !== undefined ? { optionFontFamily: changes.fontFamily } : {}),
+    ...(changes.color !== undefined ? { textColor: changes.color } : {}),
+    ...(changes.align !== undefined ? { optionTextAlign: changes.align } : {}),
+    ...(changes.letterSpacing !== undefined ? { optionLetterSpacing: changes.letterSpacing } : {}),
+    ...(changes.textTransform !== undefined ? { optionTextTransform: changes.textTransform } : {}),
+  };
 }
 
 function cloneOptionGroup(group: DonationOptionGroup): DonationOptionGroup {
@@ -121,18 +157,20 @@ function cloneCommerce(commerce: DonationProjectCommerce): DonationProjectCommer
 
 function OptionDesignEditor({
   design,
+  device,
   deviceLabel,
   onChange,
 }: {
   design: DonationOptionDesign;
+  device: Device;
   deviceLabel: string;
   onChange: (changes: Partial<DonationOptionDesign>) => void;
 }) {
   const [openSection, setOpenSection] = useState<"" | "header" | "layout" | "appearance">("");
-  const range = (label: string, key: keyof DonationOptionDesign, min: number, max: number, suffix = "px") => (
+  const range = (label: string, key: keyof DonationOptionDesign, min: number, max: number, suffix = "px", step = 1) => (
     <label className={styles.optionDesignRange}>
       <span>{label}<b>{String(design[key])}{suffix ? ` ${suffix}` : ""}</b></span>
-      <input aria-label={label} type="range" min={min} max={max} value={Number(design[key])} onChange={(event) => onChange({ [key]: Number(event.target.value) } as Partial<DonationOptionDesign>)} />
+      <input aria-label={label} type="range" min={min} max={max} step={step} value={Number(design[key])} onChange={(event) => onChange({ [key]: Number(event.target.value) } as Partial<DonationOptionDesign>)} />
     </label>
   );
   const color = (label: string, key: keyof DonationOptionDesign) => (
@@ -153,6 +191,7 @@ function OptionDesignEditor({
 
   return <div className={styles.optionDesignEditor} aria-label={`${deviceLabel} seçenek görünümü ayarları`}>
     {segment("header", "Başlık", "Grup başlığı ve açıklama", <>
+      {range("Başlığın üst boşluğu", "groupTopGap", 0, 80)}
       <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.titleVisible} onChange={(event) => onChange({ titleVisible: event.target.checked })} /><span>Grup başlığını göster</span></label>
       <label>Başlık hizası<select value={design.titleAlign} onChange={(event) => onChange({ titleAlign: event.target.value as DonationOptionDesign["titleAlign"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option></select></label>
       {range("Başlık boyutu", "titleSize", 10, 30)}
@@ -166,12 +205,23 @@ function OptionDesignEditor({
     </>)}
 
     {segment("layout", "Yerleşim", "Boyut, sütun ve boşluklar", <>
-      {range("Seçenek yüksekliği", "optionHeight", 32, 100)}
-      {range("En az genişlik", "optionMinWidth", 64, 260)}
-      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.equalWidth} onChange={(event) => onChange({ equalWidth: event.target.checked })} /><span>Eşit genişlik</span></label>
-      <label>Sütun<select value={design.columns} onChange={(event) => onChange({ columns: Number(event.target.value) as DonationOptionDesign["columns"] })}><option value="0">Otomatik</option><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label>
-      <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.horizontalScroll} onChange={(event) => onChange({ horizontalScroll: event.target.checked })} /><span>Yatay kaydırma</span></label>
-      <label>Hizalama<select value={design.justify} onChange={(event) => onChange({ justify: event.target.value as DonationOptionDesign["justify"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option><option value="stretch">Alana yay</option></select></label>
+      <label>Genişlik biçimi<select value={design.optionWidthMode} onChange={(event) => {
+        const optionWidthMode = event.target.value as DonationOptionDesign["optionWidthMode"];
+        onChange({
+          optionWidthMode,
+          ...(optionWidthMode === "equal" || optionWidthMode === "columns" ? { horizontalScroll: false } : {}),
+          ...(optionWidthMode === "columns" && design.columns === 0 ? { columns: 2 } : {}),
+          ...(optionWidthMode !== "auto" && design.justify === "stretch" ? { justify: "start" } : {}),
+        });
+      }}><option value="auto">Otomatik</option><option value="fixed">Sabit</option><option value="equal">Eşit dağıt</option><option value="columns">Sütunlu</option></select></label>
+      {design.optionWidthMode === "auto" ? range("En az genişlik", "optionMinWidth", 40, 260) : null}
+      {design.optionWidthMode === "fixed" ? range("Seçenek genişliği", "optionWidth", 40, 320) : null}
+      {design.optionWidthMode === "columns" ? <label>Sütun sayısı<select value={design.columns || 2} onChange={(event) => onChange({ columns: Number(event.target.value) as DonationOptionDesign["columns"] })}><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label> : null}
+      {design.optionWidthMode === "auto" || design.optionWidthMode === "fixed" ? <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.horizontalScroll} onChange={(event) => onChange({ horizontalScroll: event.target.checked })} /><span>Yatay kaydırma</span></label> : null}
+      <label>Yükseklik biçimi<select value={design.optionHeightMode} onChange={(event) => onChange({ optionHeightMode: event.target.value as DonationOptionDesign["optionHeightMode"] })}><option value="auto">Otomatik</option><option value="fixed">Sabit</option></select></label>
+      {design.optionHeightMode === "fixed" ? range("Seçenek yüksekliği", "optionHeight", 24, 120) : null}
+      {device === "mobile" && design.optionHeightMode === "fixed" && design.optionHeight < 40 ? <p className={styles.optionDesignWarning}>40 px altı dokunmayı zorlaştırabilir.</p> : null}
+      {design.optionWidthMode === "auto" || design.optionWidthMode === "fixed" ? <label>Hizalama<select value={design.justify} onChange={(event) => onChange({ justify: event.target.value as DonationOptionDesign["justify"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option>{design.optionWidthMode === "auto" ? <option value="stretch">Alana yay</option> : null}</select></label> : null}
       {range("Yatay aralık", "columnGap", 0, 32)}
       {range("Dikey aralık", "rowGap", 0, 32)}
       {range("İç yan boşluk", "paddingX", 4, 32)}
@@ -181,6 +231,10 @@ function OptionDesignEditor({
     {segment("appearance", "Görünüm", "Yazı, fiyat, renk ve çerçeve", <>
       {range("Seçenek yazısı", "labelSize", 9, 22)}
       <label>Yazı kalınlığı<select value={design.labelWeight} onChange={(event) => onChange({ labelWeight: Number(event.target.value) as DonationOptionDesign["labelWeight"] })}>{[400, 500, 600, 700, 800, 900].map((weight) => <option value={weight} key={weight}>{weight}</option>)}</select></label>
+      <label>Yazı tipi<select value={design.optionFontFamily} onChange={(event) => onChange({ optionFontFamily: event.target.value as DonationOptionDesign["optionFontFamily"] })}><option value="inherit">Site yazı tipi</option><option value="sans">Modern sans</option><option value="serif">Klasik serif</option></select></label>
+      <label>Yazı hizası<select value={design.optionTextAlign} onChange={(event) => onChange({ optionTextAlign: event.target.value as DonationOptionDesign["optionTextAlign"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option></select></label>
+      {range("Harf aralığı", "optionLetterSpacing", -1, 4, "px", .1)}
+      <label>Harf biçimi<select value={design.optionTextTransform} onChange={(event) => onChange({ optionTextTransform: event.target.value as DonationOptionDesign["optionTextTransform"] })}><option value="none">Olduğu gibi</option><option value="uppercase">BÜYÜK HARF</option><option value="lowercase">küçük harf</option><option value="capitalize">Baş Harf Büyük</option></select></label>
       <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.optionDescriptionVisible} onChange={(event) => onChange({ optionDescriptionVisible: event.target.checked })} /><span>Seçenek açıklamasını göster</span></label>
       {range("Seçenek açıklaması", "optionDescriptionSize", 8, 18)}
       {color("Seçenek açıklama rengi", "optionDescriptionColor")}
@@ -196,6 +250,30 @@ function OptionDesignEditor({
       {range("Köşe", "radius", 0, 36)}
       <label>Gölge<select value={design.shadow} onChange={(event) => onChange({ shadow: event.target.value as DonationOptionDesign["shadow"] })}><option value="none">Yok</option><option value="soft">Hafif</option><option value="medium">Orta</option></select></label>
     </>)}
+  </div>;
+}
+
+function OptionTextDesignEditor({
+  design,
+  onChange,
+}: {
+  design: DonationOptionTextDesign;
+  onChange: (changes: Partial<DonationOptionTextDesign>) => void;
+}) {
+  return <div className={styles.optionTextDesignGrid}>
+    <label className={styles.optionTextRange}>
+      <span>Yazı boyutu<b>{design.fontSize} px</b></span>
+      <input aria-label="Seçenek yazı boyutu" type="range" min="9" max="22" value={design.fontSize} onChange={(event) => onChange({ fontSize: Number(event.target.value) })} />
+    </label>
+    <label>Yazı kalınlığı<select value={design.fontWeight} onChange={(event) => onChange({ fontWeight: Number(event.target.value) as DonationOptionTextDesign["fontWeight"] })}>{[400, 500, 600, 700, 800, 900].map((weight) => <option value={weight} key={weight}>{weight}</option>)}</select></label>
+    <label>Yazı tipi<select value={design.fontFamily} onChange={(event) => onChange({ fontFamily: event.target.value as DonationOptionTextDesign["fontFamily"] })}><option value="inherit">Site yazı tipi</option><option value="sans">Modern sans</option><option value="serif">Klasik serif</option></select></label>
+    <label>Hizalama<select value={design.align} onChange={(event) => onChange({ align: event.target.value as DonationOptionTextDesign["align"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option></select></label>
+    <label className={styles.optionTextRange}>
+      <span>Harf aralığı<b>{design.letterSpacing} px</b></span>
+      <input aria-label="Seçenek harf aralığı" type="range" min="-1" max="4" step=".1" value={design.letterSpacing} onChange={(event) => onChange({ letterSpacing: Number(event.target.value) })} />
+    </label>
+    <label>Harf biçimi<select value={design.textTransform} onChange={(event) => onChange({ textTransform: event.target.value as DonationOptionTextDesign["textTransform"] })}><option value="none">Olduğu gibi</option><option value="uppercase">BÜYÜK HARF</option><option value="lowercase">küçük harf</option><option value="capitalize">Baş Harf Büyük</option></select></label>
+    <label className={styles.optionTextColor}>Yazı rengi<span><input aria-label="Seçenek yazı rengi" type="color" value={design.color} onChange={(event) => onChange({ color: event.target.value })} /><code>{design.color}</code></span></label>
   </div>;
 }
 
@@ -311,6 +389,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const [paymentWorkspace, setPaymentWorkspace] = useState<PaymentWorkspace>("model");
   const [expandedOptionGroupId, setExpandedOptionGroupId] = useState("");
   const [selectedOptionIds, setSelectedOptionIds] = useState<Record<string, string>>({});
+  const [optionEditorTabs, setOptionEditorTabs] = useState<Record<string, OptionEditorTab>>({});
   const [sharedOptionDesignOpen, setSharedOptionDesignOpen] = useState(false);
   const [expandedPriceRuleId, setExpandedPriceRuleId] = useState("");
   const [expandedActionId, setExpandedActionId] = useState("");
@@ -412,7 +491,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   };
   const updateProjectCommerce = (updater: (commerce: DonationProjectCommerce) => DonationProjectCommerce) => {
     if (!selectedProject) return;
-    updateProjectById(selectedProject.id, (project) => ({ ...project, commerce: updater(resolveDonationProjectCommerce(project)) }));
+    updateProjectById(selectedProject.id, (project) => ({ ...project, commerce: updater(projectCommerceDraft(project)) }));
   };
   const addProject = () => {
     if (aggregateCategorySelected) {
@@ -436,7 +515,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       mobileMedia: [],
       desktop: { ...base.desktop },
       mobile: { ...base.mobile },
-      commerce: cloneCommerce(resolveDonationProjectCommerce(base)),
+      commerce: cloneCommerce(projectCommerceDraft(base)),
     };
     updateProjects([...donation.projects, project]);
     setSelectedProjectId(id);
@@ -456,7 +535,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       mobileMedia: [],
       desktop: { ...selectedProject.desktop },
       mobile: { ...selectedProject.mobile },
-      commerce: cloneCommerce(resolveDonationProjectCommerce(selectedProject)),
+      commerce: cloneCommerce(projectCommerceDraft(selectedProject)),
     }]);
     setSelectedProjectId(id);
   };
@@ -1093,12 +1172,14 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   const projectControls = (device: Device) => {
     const currentProject = selectedProject || defaultModuleSettings.donation.projects[0];
     const design = currentProject[device];
-    const commerce = resolveDonationProjectCommerce(currentProject);
+    const commerce = projectCommerceDraft(currentProject);
     const actionDeviceKey = device;
     const actionLayoutKey = device === "desktop" ? "actionLayoutDesktop" : "actionLayoutMobile";
     const actionGapKey = device === "desktop" ? "actionGapDesktop" : "actionGapMobile";
     const optionDesignKey = device === "desktop" ? "optionDesignDesktop" : "optionDesignMobile";
     const groupDesignKey = device === "desktop" ? "desktopDesign" : "mobileDesign";
+    const optionSharedTextKey = device === "desktop" ? "useSharedTextDesignDesktop" : "useSharedTextDesignMobile";
+    const optionTextDesignKey = device === "desktop" ? "desktopTextDesign" : "mobileTextDesign";
     const sharedOptionDesign = commerce[optionDesignKey];
     const sharedImage = device === "desktop" ? donation.lowerDesktop : donation.lowerMobile;
     const mediaItems = projectMedia(device);
@@ -1120,7 +1201,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     ) => {
       if (!selectedProject) return;
       updateProjectById(selectedProject.id, (project) => {
-        const next = updater(resolveDonationProjectCommerce(project));
+        const next = updater(projectCommerceDraft(project));
         return { ...project, ...legacy(project, next), commerce: next };
       });
     };
@@ -1146,6 +1227,42 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       ...current,
       optionGroups: current.optionGroups.map((group) => group.id === groupId
         ? { ...group, [groupDesignKey]: { ...(group[groupDesignKey] || current[optionDesignKey]), ...changes } }
+        : group),
+    }));
+    const updateOptionUseSharedText = (
+      groupId: string,
+      optionId: string,
+      useShared: boolean,
+      fallback: DonationOptionTextDesign,
+    ) => changeCommerce((current) => ({
+      ...current,
+      optionGroups: current.optionGroups.map((group) => group.id === groupId
+        ? {
+          ...group,
+          options: group.options.map((option) => option.id === optionId
+            ? {
+              ...option,
+              [optionSharedTextKey]: useShared,
+              ...(!useShared ? { [optionTextDesignKey]: { ...fallback } } : {}),
+            }
+            : option),
+        }
+        : group),
+    }));
+    const updateOptionTextDesign = (
+      groupId: string,
+      optionId: string,
+      fallback: DonationOptionTextDesign,
+      changes: Partial<DonationOptionTextDesign>,
+    ) => changeCommerce((current) => ({
+      ...current,
+      optionGroups: current.optionGroups.map((group) => group.id === groupId
+        ? {
+          ...group,
+          options: group.options.map((option) => option.id === optionId
+            ? { ...option, [optionTextDesignKey]: { ...fallback, ...option[optionTextDesignKey], ...changes } }
+            : option),
+        }
         : group),
     }));
     const updatePriceRule = (ruleId: string, changes: Partial<DonationPriceRule>) => changeCommerce((current) => ({
@@ -1519,7 +1636,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           <button type="button" aria-expanded={sharedOptionDesignOpen} onClick={() => setSharedOptionDesignOpen((current) => !current)}>
             <span><strong>Seçenek görünümü</strong><small>{device === "desktop" ? "Web" : "Mobil"} için ortak başlık, yerleşim ve görünüm</small></span><b>{sharedOptionDesignOpen ? "−" : "+"}</b>
           </button>
-          {sharedOptionDesignOpen ? <OptionDesignEditor design={sharedOptionDesign} deviceLabel={device === "desktop" ? "Web" : "Mobil"} onChange={updateSharedOptionDesign} /> : null}
+          {sharedOptionDesignOpen ? <OptionDesignEditor design={sharedOptionDesign} device={device} deviceLabel={device === "desktop" ? "Web" : "Mobil"} onChange={updateSharedOptionDesign} /> : null}
         </section>
         <div className={styles.paymentBuilderList}>
           {commerce.optionGroups.length ? commerce.optionGroups.map((group, groupIndex) => {
@@ -1532,6 +1649,14 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             const selectedOption = group.options.find((option) => option.id === selectedOptionId);
             const groupUsesSharedDesign = group.useSharedDesign !== false;
             const groupOptionDesign = group[groupDesignKey] || sharedOptionDesign;
+            const effectiveOptionDesign = groupUsesSharedDesign ? sharedOptionDesign : groupOptionDesign;
+            const sharedOptionTextDesign = optionTextDesignFromGroup(effectiveOptionDesign);
+            const optionEditorKey = `${optionSelectionKey}:${selectedOptionId}`;
+            const optionEditorTab = optionEditorTabs[optionEditorKey] || "content";
+            const optionEditorDomId = `option-editor-${optionEditorKey}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+            const optionEditorPanelId = `${optionEditorDomId}-panel`;
+            const optionUsesSharedText = selectedOption?.[optionSharedTextKey] !== false;
+            const selectedOptionTextDesign = selectedOption?.[optionTextDesignKey] || sharedOptionTextDesign;
             return <article className={`${styles.paymentBuilderItem} ${open ? styles.paymentBuilderItemOpen : ""}`} key={group.id}>
               <header>
                 <button type="button" aria-expanded={open} onClick={() => setExpandedOptionGroupId(open ? "" : group.id)}>
@@ -1582,6 +1707,12 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                       priceRules: current.priceRules.map((rule) => ({ ...rule, optionIds: rule.optionIds.filter((id) => !removedOptionIds.has(id)) })),
                     }));
                     setExpandedOptionGroupId("");
+                    setSelectedOptionIds((current) => {
+                      const next = { ...current };
+                      delete next[optionSelectionKey];
+                      return next;
+                    });
+                    setOptionEditorTabs((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(`${optionSelectionKey}:`))));
                   },
                 })}
               </header>
@@ -1632,7 +1763,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                       }));
                     }} /><span>Ortak tasarımı kullan</span></label>
                   </div>
-                  {!groupUsesSharedDesign ? <OptionDesignEditor design={groupOptionDesign} deviceLabel={`${device === "desktop" ? "Web" : "Mobil"} · ${group.label}`} onChange={(changes) => updateGroupOptionDesign(group.id, changes)} /> : null}
+                  {!groupUsesSharedDesign ? <OptionDesignEditor design={groupOptionDesign} device={device} deviceLabel={`${device === "desktop" ? "Web" : "Mobil"} · ${group.label}`} onChange={(changes) => updateGroupOptionDesign(group.id, changes)} /> : null}
                 </div>
                 <div className={styles.paymentCollectionHeader}>
                   <div><strong>Grup seçenekleri</strong><small>Her seçeneğin kendi ek fiyatı olabilir.</small></div>
@@ -1696,19 +1827,79 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                             priceRules: current.priceRules.map((rule) => ({ ...rule, optionIds: rule.optionIds.filter((id) => id !== option.id) })),
                           }));
                           setSelectedOptionIds((current) => current[optionSelectionKey] === option.id ? { ...current, [optionSelectionKey]: fallbackOptionId } : current);
+                          setOptionEditorTabs((current) => {
+                            const next = { ...current };
+                            delete next[`${optionSelectionKey}:${option.id}`];
+                            return next;
+                          });
                         },
                       })}
                     </article>;
                   })}
                 </div>
                 {selectedOption ? <div className={styles.optionCompactEditor}>
-                  <div><strong>Seçeneği düzenle</strong><small>{group.label} · {group.options.findIndex((option) => option.id === selectedOption.id) + 1}. sıra</small></div>
-                  <div className={styles.paymentFieldGrid}>
-                    <label>Seçenek adı<input maxLength={60} value={selectedOption.label} onChange={(event) => updateOption(group.id, selectedOption.id, { label: event.target.value })} /></label>
-                    <label>Ek / özel fiyat<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(selectedOption.priceMinor)} onChange={(event) => updateOption(group.id, selectedOption.id, { priceMinor: toMinor(event.target.value) })} /></div></label>
-                    <label className={styles.paymentFieldWide}>Kısa açıklama<input maxLength={100} value={selectedOption.description} onChange={(event) => updateOption(group.id, selectedOption.id, { description: event.target.value })} /></label>
+                  <div className={styles.optionEditorHeader}><strong>Seçeneği düzenle</strong><small>{group.label} · {group.options.findIndex((option) => option.id === selectedOption.id) + 1}. sıra</small></div>
+                  <div className={styles.optionEditorTabs} role="tablist" aria-label="Seçenek düzenleme bölümleri">
+                    {OPTION_EDITOR_TABS.map(([tabId, label], tabIndex) => <button
+                      type="button"
+                      role="tab"
+                      id={`${optionEditorDomId}-tab-${tabId}`}
+                      aria-controls={optionEditorPanelId}
+                      aria-selected={optionEditorTab === tabId}
+                      tabIndex={optionEditorTab === tabId ? 0 : -1}
+                      className={optionEditorTab === tabId ? styles.optionEditorTabActive : ""}
+                      key={tabId}
+                      onClick={() => setOptionEditorTabs((current) => ({ ...current, [optionEditorKey]: tabId }))}
+                      onKeyDown={(event) => {
+                        let nextIndex = tabIndex;
+                        if (event.key === "ArrowRight") nextIndex = (tabIndex + 1) % OPTION_EDITOR_TABS.length;
+                        else if (event.key === "ArrowLeft") nextIndex = (tabIndex - 1 + OPTION_EDITOR_TABS.length) % OPTION_EDITOR_TABS.length;
+                        else if (event.key === "Home") nextIndex = 0;
+                        else if (event.key === "End") nextIndex = OPTION_EDITOR_TABS.length - 1;
+                        else return;
+                        event.preventDefault();
+                        const nextTab = OPTION_EDITOR_TABS[nextIndex][0];
+                        setOptionEditorTabs((current) => ({ ...current, [optionEditorKey]: nextTab }));
+                        event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+                      }}
+                    >{label}</button>)}
                   </div>
-                  <label className={styles.optionDesignToggle}><input type="checkbox" checked={selectedOption.enabled} onChange={(event) => updateOption(group.id, selectedOption.id, { enabled: event.target.checked })} /><span>Bu seçeneği göster</span></label>
+                  <div
+                    className={styles.optionEditorBody}
+                    role="tabpanel"
+                    id={optionEditorPanelId}
+                    aria-labelledby={`${optionEditorDomId}-tab-${optionEditorTab}`}
+                  >
+                    {optionEditorTab === "content" ? <div className={styles.optionEditorContent}>
+                      <div className={styles.paymentFieldGrid}>
+                        <label>Seçenek adı<input maxLength={60} value={selectedOption.label} onChange={(event) => updateOption(group.id, selectedOption.id, { label: event.target.value })} /></label>
+                        <label>Ek / özel fiyat<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(selectedOption.priceMinor)} onChange={(event) => updateOption(group.id, selectedOption.id, { priceMinor: toMinor(event.target.value) })} /></div></label>
+                        <label className={styles.paymentFieldWide}>Kısa açıklama<input maxLength={100} value={selectedOption.description} onChange={(event) => updateOption(group.id, selectedOption.id, { description: event.target.value })} /></label>
+                      </div>
+                    </div> : null}
+                    {optionEditorTab === "text" ? <div className={styles.optionEditorText}>
+                      <label className={styles.optionDesignToggle}><input type="checkbox" checked={optionUsesSharedText} onChange={(event) => updateOptionUseSharedText(group.id, selectedOption.id, event.target.checked, sharedOptionTextDesign)} /><span>Ortak yazı tasarımını kullan</span></label>
+                      {optionUsesSharedText ? <div className={styles.optionTextSharedInfo}>
+                        <span>Buradaki değişiklikler bu gruptaki tüm seçeneklere uygulanır.</span>
+                      </div> : null}
+                      <OptionTextDesignEditor
+                        design={optionUsesSharedText ? sharedOptionTextDesign : selectedOptionTextDesign}
+                        onChange={(changes) => {
+                          if (optionUsesSharedText) {
+                            const groupChanges = optionTextDesignChangesToGroup(changes);
+                            if (groupUsesSharedDesign) updateSharedOptionDesign(groupChanges);
+                            else updateGroupOptionDesign(group.id, groupChanges);
+                            return;
+                          }
+                          updateOptionTextDesign(group.id, selectedOption.id, sharedOptionTextDesign, changes);
+                        }}
+                      />
+                    </div> : null}
+                    {optionEditorTab === "appearance" ? <div className={styles.optionEditorAppearance}>
+                      <label className={styles.optionDesignToggle}><input type="checkbox" checked={selectedOption.enabled} onChange={(event) => updateOption(group.id, selectedOption.id, { enabled: event.target.checked })} /><span>Bu seçeneği göster</span></label>
+                      <p>Görünüm kapatılırsa seçenek yönetimde korunur fakat ziyaretçilere gösterilmez.</p>
+                    </div> : null}
+                  </div>
                 </div> : null}
               </div> : null}
             </article>;
