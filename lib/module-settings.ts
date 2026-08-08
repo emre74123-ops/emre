@@ -91,6 +91,47 @@ export type DonationOption = {
   priceMinor: number;
 };
 
+export type DonationOptionFontWeight = 400 | 500 | 600 | 700 | 800 | 900;
+
+export type DonationOptionDesign = {
+  titleVisible: boolean;
+  titleAlign: "start" | "center" | "end";
+  titleSize: number;
+  titleWeight: DonationOptionFontWeight;
+  titleColor: string;
+  descriptionVisible: boolean;
+  descriptionSize: number;
+  descriptionColor: string;
+  titleDescriptionGap: number;
+  headerGap: number;
+  optionHeight: number;
+  optionMinWidth: number;
+  equalWidth: boolean;
+  columns: 0 | 1 | 2 | 3 | 4;
+  horizontalScroll: boolean;
+  justify: "start" | "center" | "end" | "stretch";
+  columnGap: number;
+  rowGap: number;
+  paddingX: number;
+  textWrap: boolean;
+  labelSize: number;
+  labelWeight: DonationOptionFontWeight;
+  optionDescriptionVisible: boolean;
+  optionDescriptionSize: number;
+  optionDescriptionColor: string;
+  priceVisible: boolean;
+  pricePosition: "inline" | "below" | "badge";
+  background: string;
+  textColor: string;
+  borderColor: string;
+  selectedBackground: string;
+  selectedTextColor: string;
+  selectedBorderColor: string;
+  borderWidth: number;
+  radius: number;
+  shadow: "none" | "soft" | "medium";
+};
+
 export type DonationOptionGroup = {
   id: string;
   label: string;
@@ -101,6 +142,9 @@ export type DonationOptionGroup = {
   defaultOptionId?: string;
   visibleWhen?: DonationOptionVisibility;
   options: DonationOption[];
+  useSharedDesign?: boolean;
+  desktopDesign?: DonationOptionDesign;
+  mobileDesign?: DonationOptionDesign;
 };
 
 export type DonationPriceRule = {
@@ -150,6 +194,8 @@ export type DonationProjectCommerce = {
   customAmountMinMinor: number;
   customAmountMaxMinor: number;
   amountPresets: DonationAmountPreset[];
+  optionDesignDesktop: DonationOptionDesign;
+  optionDesignMobile: DonationOptionDesign;
   optionGroups: DonationOptionGroup[];
   priceRules: DonationPriceRule[];
   actions: DonationProjectAction[];
@@ -480,6 +526,120 @@ function normalizeActionDevice(
   };
 }
 
+export const defaultDonationOptionDesignDesktop: DonationOptionDesign = {
+  titleVisible: true,
+  titleAlign: "start",
+  titleSize: 10,
+  titleWeight: 900,
+  titleColor: "#345b54",
+  descriptionVisible: true,
+  descriptionSize: 10,
+  descriptionColor: "#81918d",
+  titleDescriptionGap: 4,
+  headerGap: 9,
+  optionHeight: 38,
+  optionMinWidth: 64,
+  equalWidth: false,
+  columns: 0,
+  horizontalScroll: false,
+  justify: "start",
+  columnGap: 7,
+  rowGap: 7,
+  paddingX: 12,
+  textWrap: true,
+  labelSize: 10,
+  labelWeight: 800,
+  optionDescriptionVisible: true,
+  optionDescriptionSize: 8,
+  optionDescriptionColor: "#6e827d",
+  priceVisible: true,
+  pricePosition: "inline",
+  background: "#ffffff",
+  textColor: "#365f57",
+  borderColor: "#d6e2de",
+  selectedBackground: "#e7f4ef",
+  selectedTextColor: "#0d7258",
+  selectedBorderColor: "#128465",
+  borderWidth: 1,
+  radius: 8,
+  shadow: "none",
+};
+
+export const defaultDonationOptionDesignMobile: DonationOptionDesign = {
+  ...defaultDonationOptionDesignDesktop,
+  optionMinWidth: 72,
+  paddingX: 10,
+};
+
+function normalizeOptionFontWeight(
+  value: unknown,
+  fallback: DonationOptionFontWeight,
+): DonationOptionFontWeight {
+  const weight = commerceInteger(value, 400, 900, fallback);
+  return ([400, 500, 600, 700, 800, 900] as const).includes(weight as DonationOptionFontWeight)
+    ? weight as DonationOptionFontWeight
+    : fallback;
+}
+
+function normalizeOptionColumns(value: unknown, fallback: DonationOptionDesign["columns"]) {
+  const columns = commerceInteger(value, 0, 4, fallback);
+  return ([0, 1, 2, 3, 4] as const).includes(columns as DonationOptionDesign["columns"])
+    ? columns as DonationOptionDesign["columns"]
+    : fallback;
+}
+
+function normalizeDonationOptionDesign(
+  value: unknown,
+  fallback: DonationOptionDesign,
+): DonationOptionDesign {
+  const source = value && typeof value === "object"
+    ? value as Partial<DonationOptionDesign>
+    : {};
+  return {
+    titleVisible: commerceBoolean(source.titleVisible, fallback.titleVisible),
+    titleAlign: commerceChoice(source.titleAlign, ["start", "center", "end"] as const, fallback.titleAlign),
+    titleSize: commerceInteger(source.titleSize, 10, 30, fallback.titleSize),
+    titleWeight: normalizeOptionFontWeight(source.titleWeight, fallback.titleWeight),
+    titleColor: commerceColor(source.titleColor, fallback.titleColor),
+    descriptionVisible: commerceBoolean(source.descriptionVisible, fallback.descriptionVisible),
+    descriptionSize: commerceInteger(source.descriptionSize, 8, 20, fallback.descriptionSize),
+    descriptionColor: commerceColor(source.descriptionColor, fallback.descriptionColor),
+    titleDescriptionGap: commerceInteger(source.titleDescriptionGap, 0, 20, fallback.titleDescriptionGap),
+    headerGap: commerceInteger(source.headerGap, 0, 40, fallback.headerGap),
+    optionHeight: commerceInteger(source.optionHeight, 32, 100, fallback.optionHeight),
+    optionMinWidth: commerceInteger(source.optionMinWidth, 64, 260, fallback.optionMinWidth),
+    equalWidth: commerceBoolean(source.equalWidth, fallback.equalWidth),
+    columns: normalizeOptionColumns(source.columns, fallback.columns),
+    horizontalScroll: commerceBoolean(source.horizontalScroll, fallback.horizontalScroll),
+    justify: commerceChoice(source.justify, ["start", "center", "end", "stretch"] as const, fallback.justify),
+    columnGap: commerceInteger(source.columnGap, 0, 32, fallback.columnGap),
+    rowGap: commerceInteger(source.rowGap, 0, 32, fallback.rowGap),
+    paddingX: commerceInteger(source.paddingX, 4, 32, fallback.paddingX),
+    textWrap: commerceBoolean(source.textWrap, fallback.textWrap),
+    labelSize: commerceInteger(source.labelSize, 9, 22, fallback.labelSize),
+    labelWeight: normalizeOptionFontWeight(source.labelWeight, fallback.labelWeight),
+    optionDescriptionVisible: commerceBoolean(source.optionDescriptionVisible, fallback.optionDescriptionVisible),
+    optionDescriptionSize: commerceInteger(
+      source.optionDescriptionSize,
+      8,
+      18,
+      fallback.optionDescriptionSize,
+    ),
+    optionDescriptionColor: commerceColor(source.optionDescriptionColor, fallback.optionDescriptionColor),
+    priceVisible: commerceBoolean(source.priceVisible, fallback.priceVisible),
+    pricePosition: commerceChoice(source.pricePosition, ["inline", "below", "badge"] as const, fallback.pricePosition),
+    background: commerceColor(source.background, fallback.background),
+    textColor: commerceColor(source.textColor, fallback.textColor),
+    borderColor: commerceColor(source.borderColor, fallback.borderColor),
+    selectedBackground: commerceColor(source.selectedBackground, fallback.selectedBackground),
+    selectedTextColor: commerceColor(source.selectedTextColor, fallback.selectedTextColor),
+    selectedBorderColor: commerceColor(source.selectedBorderColor, fallback.selectedBorderColor),
+    borderWidth: commerceInteger(source.borderWidth, 0, 4, fallback.borderWidth),
+    radius: commerceInteger(source.radius, 0, 36, fallback.radius),
+    shadow: commerceChoice(source.shadow, ["none", "soft", "medium"] as const, fallback.shadow),
+  };
+}
+
 function migrateLegacyProjectCommerce(
   project: Partial<DonationProject> | null | undefined,
 ): DonationProjectCommerce {
@@ -533,6 +693,8 @@ function migrateLegacyProjectCommerce(
     customAmountMinMinor: customAmountEnabled ? 100 : 0,
     customAmountMaxMinor: COMMERCE_MAX_MONEY_MINOR,
     amountPresets,
+    optionDesignDesktop: { ...defaultDonationOptionDesignDesktop },
+    optionDesignMobile: { ...defaultDonationOptionDesignMobile },
     optionGroups: [],
     priceRules: [],
     actions: [{
@@ -606,6 +768,15 @@ export function resolveDonationProjectCommerce(
       .slice(0, 12),
   )];
 
+  const optionDesignDesktop = normalizeDonationOptionDesign(
+    source.optionDesignDesktop,
+    fallback.optionDesignDesktop,
+  );
+  const optionDesignMobile = normalizeDonationOptionDesign(
+    source.optionDesignMobile,
+    fallback.optionDesignMobile,
+  );
+
   const groupIds = new Set<string>();
   const optionIds = new Set<string>();
   const optionsByGroup = new Map<string, Set<string>>();
@@ -666,6 +837,9 @@ export function resolveDonationProjectCommerce(
         ? { visibleWhen: { groupId: visibilityGroupId, optionIds: visibilityOptionIds } }
         : {}),
       options,
+      useSharedDesign: commerceBoolean(group.useSharedDesign, true),
+      desktopDesign: normalizeDonationOptionDesign(group.desktopDesign, optionDesignDesktop),
+      mobileDesign: normalizeDonationOptionDesign(group.mobileDesign, optionDesignMobile),
     }];
   });
 
@@ -766,6 +940,8 @@ export function resolveDonationProjectCommerce(
     customAmountMinMinor,
     customAmountMaxMinor: Math.max(customAmountMinMinor, requestedCustomAmountMax),
     amountPresets,
+    optionDesignDesktop,
+    optionDesignMobile,
     optionGroups,
     priceRules,
     actions,
