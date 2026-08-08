@@ -101,6 +101,7 @@ export type DonationOption = {
   description: string;
   enabled: boolean;
   priceMinor: number;
+  childFlowEnabled?: boolean;
   useSharedTextDesignDesktop?: boolean;
   useSharedTextDesignMobile?: boolean;
   desktopTextDesign?: DonationOptionTextDesign;
@@ -914,6 +915,7 @@ export function resolveDonationProjectCommerce(
         description: commerceText(option.description, "", 300),
         enabled: commerceBoolean(option.enabled, true),
         priceMinor: commerceInteger(option.priceMinor, 0, COMMERCE_MAX_MONEY_MINOR, 0),
+        childFlowEnabled: commerceBoolean(option.childFlowEnabled, true),
         useSharedTextDesignDesktop: commerceBoolean(option.useSharedTextDesignDesktop, true),
         useSharedTextDesignMobile: commerceBoolean(option.useSharedTextDesignMobile, true),
         desktopTextDesign: normalizeDonationOptionTextDesign(option.desktopTextDesign, desktopTextFallback),
