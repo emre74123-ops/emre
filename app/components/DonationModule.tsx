@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CART_MAX_QUANTITY, readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationOption, type DonationOptionDesign, type DonationOptionTextDesign, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
+import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationOption, type DonationOptionDesign, type DonationOptionHeaderDesign, type DonationOptionTextDesign, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Device = "desktop" | "mobile";
@@ -40,6 +40,7 @@ type ProjectAction = ProjectCommerce["actions"][number];
 type ProjectActionDevice = ProjectAction["desktop"];
 type OptionCssProperties = CSSProperties & Record<`--dm-option-${string}`, string | number>;
 type OptionItemCssProperties = CSSProperties & Record<`--dm-option-item-${string}`, string | number>;
+type OptionHeaderCssProperties = CSSProperties & Record<`--dm-option-header-${string}`, string | number>;
 
 const numberSetting = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
@@ -270,6 +271,113 @@ function optionGroupStyle(design: DonationOptionDesign): OptionCssProperties {
   };
 }
 
+function resolveOptionHeaderDesign(
+  group: ProjectCommerce["optionGroups"][number],
+  optionDesign: DonationOptionDesign,
+  device: Device,
+): DonationOptionHeaderDesign {
+  return (device === "mobile" ? group.headerMobile : group.headerDesktop) || {
+    mode: "text",
+    icon: "chevron",
+    iconPosition: "end",
+    defaultOpen: true,
+    lineColor: optionDesign.titleColor || "#345b54",
+    lineWidth: 1,
+    lineStyle: "solid",
+    animationMs: 220,
+  };
+}
+
+function optionHeaderStyle(design: DonationOptionHeaderDesign): OptionHeaderCssProperties {
+  return {
+    "--dm-option-header-line-color": design.lineColor,
+    "--dm-option-header-line-width": `${design.lineWidth}px`,
+    "--dm-option-header-line-style": design.lineStyle,
+    "--dm-option-header-animation": `${design.animationMs}ms`,
+  };
+}
+
+function OptionHeaderIcon({ design, open }: { design: DonationOptionHeaderDesign; open: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={styles.optionHeaderIcon}
+      data-icon={design.icon}
+      data-open={open}
+    />
+  );
+}
+
+function OptionGroupHeader({
+  design,
+  title,
+  description,
+  titleVisible,
+  descriptionVisible,
+  open,
+  triggerId,
+  panelId,
+  onToggle,
+}: {
+  design: DonationOptionHeaderDesign;
+  title: string;
+  description: string;
+  titleVisible: boolean;
+  descriptionVisible: boolean;
+  open: boolean;
+  triggerId: string;
+  panelId: string;
+  onToggle: () => void;
+}) {
+  const showDescription = descriptionVisible && Boolean(description);
+  const hasCopy = titleVisible || showDescription;
+  if (design.mode === "line") {
+    return <div aria-hidden="true" className={styles.optionHeaderLine} />;
+  }
+  if (design.mode === "symbol") {
+    return <div className={styles.optionHeaderSymbol} data-position={design.iconPosition}>
+      <OptionHeaderIcon design={design} open={false} />
+    </div>;
+  }
+  if (design.mode === "accordion") {
+    return (
+      <button
+        aria-controls={panelId}
+        aria-expanded={open}
+        aria-label={titleVisible ? undefined : title}
+        className={styles.optionAccordionTrigger}
+        data-icon-position={design.iconPosition}
+        id={triggerId}
+        onClick={onToggle}
+        type="button"
+      >
+        {design.iconPosition === "start" ? <OptionHeaderIcon design={design} open={open} /> : null}
+        {hasCopy ? <span className={styles.optionAccordionCopy}>
+          {titleVisible ? <strong className={styles.optionGroupTitle}>{title}</strong> : null}
+          {showDescription ? <small className={styles.optionGroupDescription}>{description}</small> : null}
+        </span> : null}
+        {design.iconPosition === "end" ? <OptionHeaderIcon design={design} open={open} /> : null}
+      </button>
+    );
+  }
+  if (design.mode === "divider") {
+    return (
+      <div className={`${styles.optionGroupHeader} ${styles.optionHeaderDivider}`}>
+        <div className={styles.optionHeaderDividerRow}>
+          <span aria-hidden="true" />
+          {titleVisible ? <div className={styles.optionGroupTitle}>{title}</div> : null}
+          <span aria-hidden="true" />
+        </div>
+        {showDescription ? <p className={styles.optionGroupDescription}>{description}</p> : null}
+      </div>
+    );
+  }
+  return hasCopy ? <div className={styles.optionGroupHeader}>
+    {titleVisible ? <div className={styles.optionGroupTitle}>{title}</div> : null}
+    {showDescription ? <p className={styles.optionGroupDescription}>{description}</p> : null}
+  </div> : null;
+}
+
 function DonationCardCommerce({
   project,
   device,
@@ -280,7 +388,9 @@ function DonationCardCommerce({
   onNotice: (message: string) => void;
 }) {
   const commerce = resolveDonationProjectCommerce(project);
+  const accordionIdPrefix = useId().replace(/:/g, "");
   const [selectionState, setSelectionState] = useState<Record<string, string>>({});
+  const [accordionOpenByGroup, setAccordionOpenByGroup] = useState<Record<string, boolean>>({});
   const [presetId, setPresetId] = useState("");
   const [quantity, setQuantity] = useState(commerce.quantityPresets[0] || 1);
   const [customAmount, setCustomAmount] = useState("");
@@ -312,6 +422,20 @@ function DonationCardCommerce({
 
   function chooseOption(groupId: string, optionId: string) {
     setSelectionState((current) => resolveProjectSelections(commerce, { ...current, [groupId]: optionId }));
+  }
+
+  function openFirstMissingRequiredAccordion() {
+    const missingGroup = visibleGroups.find((group) => group.required && !selections[group.id]);
+    if (!missingGroup) return;
+    const sharedDesign = device === "mobile" ? commerce.optionDesignMobile : commerce.optionDesignDesktop;
+    const ownDesign = device === "mobile" ? missingGroup.mobileDesign : missingGroup.desktopDesign;
+    const optionDesign = missingGroup.useSharedDesign !== false ? sharedDesign : ownDesign || sharedDesign;
+    const headerDesign = resolveOptionHeaderDesign(missingGroup, optionDesign, device);
+    if (headerDesign.mode !== "accordion") return;
+    const stateKey = `${device}:${missingGroup.id}`;
+    setAccordionOpenByGroup((current) => current[stateKey] === true
+      ? current
+      : { ...current, [stateKey]: true });
   }
 
   function addConfiguredItem(openCheckout: boolean, requiresValidSelection: boolean) {
@@ -348,6 +472,7 @@ function DonationCardCommerce({
 
   function runAction(action: ProjectAction) {
     if (action.requiresValidSelection && !validSelection) {
+      if (missingRequired) openFirstMissingRequiredAccordion();
       onNotice(commerce.validationMessage);
       return;
     }
@@ -372,10 +497,19 @@ function DonationCardCommerce({
         const sharedDesign = device === "mobile" ? commerce.optionDesignMobile : commerce.optionDesignDesktop;
         const ownDesign = device === "mobile" ? group.mobileDesign : group.desktopDesign;
         const optionDesign = group.useSharedDesign !== false ? sharedDesign : ownDesign || sharedDesign;
+        const headerDesign = resolveOptionHeaderDesign(group, optionDesign, device);
+        const accordionStateKey = `${device}:${group.id}`;
+        const isAccordion = headerDesign.mode === "accordion";
+        const accordionOpen = accordionOpenByGroup[accordionStateKey] ?? headerDesign.defaultOpen;
+        const contentOpen = !isAccordion || accordionOpen;
+        const triggerId = `${accordionIdPrefix}-${device}-${group.id}-trigger`;
+        const panelId = `${accordionIdPrefix}-${device}-${group.id}-panel`;
         const titleVisible = (device === "mobile" ? group.titleVisibleMobile : group.titleVisibleDesktop)
           ?? optionDesign.titleVisible;
         const descriptionVisible = (device === "mobile" ? group.descriptionVisibleMobile : group.descriptionVisibleDesktop)
           ?? optionDesign.descriptionVisible;
+        const headerHasCopy = titleVisible || (descriptionVisible && Boolean(group.description));
+        const headerRendered = headerDesign.mode !== "text" || headerHasCopy;
         const optionWidthMode = optionDesign.optionWidthMode;
         const horizontalScroll = optionDesign.horizontalScroll
           && (optionWidthMode === "auto" || optionWidthMode === "fixed");
@@ -389,7 +523,6 @@ function DonationCardCommerce({
         const heightModeClass = optionDesign.optionHeightMode === "fixed"
           ? styles.optionHeightFixed
           : styles.optionHeightAuto;
-        const hasHeader = titleVisible || (descriptionVisible && Boolean(group.description));
         const enabledOptions = group.options.filter((option) => option.enabled);
         const selectedOption = enabledOptions.find((option) => option.id === selections[group.id]);
         const selectedSelectStyle = selectedOption && !optionUsesSharedTextDesign(selectedOption, device)
@@ -418,16 +551,33 @@ function DonationCardCommerce({
                 aria-required={group.required}
                 className={`${styles.optionGroup} ${widthModeClass} ${heightModeClass}`}
                 disabled={!groupVisible}
-                style={optionGroupStyle(optionDesign)}
+                style={{ ...optionGroupStyle(optionDesign), ...optionHeaderStyle(headerDesign) }}
               >
-            {hasHeader ? <div className={styles.optionGroupHeader}>
-              {titleVisible ? <div className={styles.optionGroupTitle}>
-                {group.label}
-              </div> : null}
-              {descriptionVisible && group.description
-                ? <p className={styles.optionGroupDescription}>{group.description}</p>
-                : null}
-            </div> : null}
+                <OptionGroupHeader
+                  description={group.description}
+                  descriptionVisible={descriptionVisible}
+                  design={headerDesign}
+                  onToggle={() => setAccordionOpenByGroup((current) => ({
+                    ...current,
+                    [accordionStateKey]: !(current[accordionStateKey] ?? headerDesign.defaultOpen),
+                  }))}
+                  open={accordionOpen}
+                  panelId={panelId}
+                  title={group.label}
+                  titleVisible={titleVisible}
+                  triggerId={triggerId}
+                />
+                <div
+                  aria-hidden={isAccordion ? !contentOpen : undefined}
+                  aria-labelledby={isAccordion ? triggerId : undefined}
+                  className={styles.optionContentMotion}
+                  data-has-header={headerRendered}
+                  data-open={contentOpen}
+                  id={isAccordion ? panelId : undefined}
+                  inert={isAccordion && !contentOpen ? true : undefined}
+                  role={isAccordion ? "region" : undefined}
+                >
+                  <div className={styles.optionContentMotionInner}>
             {group.display === "select" ? (
               <select required={group.required} style={selectedSelectStyle} value={selections[group.id] || ""} onChange={(event) => chooseOption(group.id, event.target.value)}>
                 <option value="">Seçiniz</option>
@@ -477,6 +627,8 @@ function DonationCardCommerce({
                 })}
               </div>
             )}
+                  </div>
+                </div>
               </fieldset>
             </div>
           </div>
