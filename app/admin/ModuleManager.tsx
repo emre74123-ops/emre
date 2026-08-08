@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -105,6 +106,13 @@ function optionHeaderDesignFallback(titleColor = "#345b54"): DonationOptionHeade
     mode: "text",
     icon: "chevron",
     iconPosition: "end",
+    iconSize: 22,
+    iconGap: 10,
+    iconBackgroundEnabled: false,
+    iconBackground: "#ffffff",
+    iconRadius: 6,
+    iconBorderWidth: 0,
+    iconBorderColor: titleColor,
     defaultOpen: true,
     lineColor: titleColor,
     lineWidth: 1,
@@ -211,7 +219,7 @@ function OptionDesignEditor({
 
   return <div className={styles.optionDesignEditor} aria-label={`${deviceLabel} seçenek görünümü ayarları`}>
     {segment("header", "Başlık", "Grup başlığı ve açıklama", <>
-      {range("Başlığın üst boşluğu", "groupTopGap", 0, 80)}
+      {range("Başlık dikey konumu", "groupTopGap", -80, 80)}
       {showVisibilityControls ? <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.titleVisible} onChange={(event) => onChange({ titleVisible: event.target.checked })} /><span>Grup başlığını göster</span></label> : null}
       <label>Başlık hizası<select value={design.titleAlign} onChange={(event) => onChange({ titleAlign: event.target.value as DonationOptionDesign["titleAlign"] })}><option value="start">Başlangıç</option><option value="center">Orta</option><option value="end">Bitiş</option></select></label>
       {range("Başlık boyutu", "titleSize", 10, 30)}
@@ -236,7 +244,8 @@ function OptionDesignEditor({
       }}><option value="auto">Otomatik</option><option value="fixed">Sabit</option><option value="equal">Eşit dağıt</option><option value="columns">Sütunlu</option></select></label>
       {design.optionWidthMode === "auto" ? range("En az genişlik", "optionMinWidth", 40, 260) : null}
       {design.optionWidthMode === "fixed" ? range("Seçenek genişliği", "optionWidth", 40, 320) : null}
-      {design.optionWidthMode === "columns" ? <label>Sütun sayısı<select value={design.columns || 2} onChange={(event) => onChange({ columns: Number(event.target.value) as DonationOptionDesign["columns"] })}><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label> : null}
+      {design.optionWidthMode === "columns" ? <label>Sütun sayısı<select value={design.columns || 2} onChange={(event) => onChange({ columns: Number
+(event.target.value) as DonationOptionDesign["columns"] })}><option value="1">1 sütun</option><option value="2">2 sütun</option><option value="3">3 sütun</option><option value="4">4 sütun</option></select></label> : null}
       {design.optionWidthMode === "auto" || design.optionWidthMode === "fixed" ? <label className={styles.optionDesignToggle}><input type="checkbox" checked={design.horizontalScroll} onChange={(event) => onChange({ horizontalScroll: event.target.checked })} /><span>Yatay kaydırma</span></label> : null}
       <label>Yükseklik biçimi<select value={design.optionHeightMode} onChange={(event) => onChange({ optionHeightMode: event.target.value as DonationOptionDesign["optionHeightMode"] })}><option value="auto">Otomatik</option><option value="fixed">Sabit</option></select></label>
       {design.optionHeightMode === "fixed" ? range("Seçenek yüksekliği", "optionHeight", 24, 120) : null}
@@ -297,18 +306,44 @@ function OptionTextDesignEditor({
   </div>;
 }
 
+const ACCORDION_HEADER_ICONS = [
+  ["chevron", "Şevron"],
+  ["double-chevron", "Çift şevron"],
+  ["arrow", "Ok"],
+  ["plus-minus", "Artı / eksi"],
+] as const satisfies ReadonlyArray<readonly [DonationOptionHeaderDesign["icon"], string]>;
+
+const SYMBOL_HEADER_ICONS = [
+  ...ACCORDION_HEADER_ICONS,
+  ["dash", "Çizgi"],
+  ["dot", "Nokta"],
+  ["circle", "Daire"],
+  ["square", "Kare"],
+  ["diamond", "Elmas"],
+  ["star", "Yıldız"],
+  ["heart", "Kalp"],
+  ["info", "Bilgi"],
+  ["details", "Detay"],
+] as const satisfies ReadonlyArray<readonly [DonationOptionHeaderDesign["icon"], string]>;
+
 function OptionHeaderDesignEditor({
   design,
   deviceLabel,
+  panelId,
   onChange,
 }: {
   design: DonationOptionHeaderDesign;
   deviceLabel: string;
+  panelId: string;
   onChange: (changes: Partial<DonationOptionHeaderDesign>) => void;
 }) {
+  const [iconBoxOpen, setIconBoxOpen] = useState(false);
   const lineBased = design.mode === "divider" || design.mode === "line";
   const iconBased = design.mode === "accordion" || design.mode === "symbol";
   const usesAccent = design.mode !== "text";
+  const iconOptions = design.mode === "accordion" ? ACCORDION_HEADER_ICONS : SYMBOL_HEADER_ICONS;
+  const iconBoxButtonId = `${panelId}-button`;
+  const iconBoxPanelId = `${panelId}-panel`;
   return <div className={styles.groupHeaderDesignEditor} role="group" aria-label={`${deviceLabel} grup başlığı tasarımı`}>
     <div className={styles.groupHeaderDesignHeading}>
       <span><strong>Grup başlığı stili</strong><small>Yalnız {deviceLabel.toLocaleLowerCase("tr-TR")} görünümünü etkiler.</small></span>
@@ -317,17 +352,35 @@ function OptionHeaderDesignEditor({
     <div className={styles.groupHeaderDesignGrid}>
       <label>Başlık biçimi<select value={design.mode} onChange={(event) => {
         const mode = event.target.value as DonationOptionHeaderDesign["mode"];
-        const supportsCurrentIcon = mode !== "accordion" || design.icon === "chevron" || design.icon === "plus-minus";
+        const supportsCurrentIcon = mode !== "accordion" || ACCORDION_HEADER_ICONS.some(([icon]) => icon === design.icon);
+        if (mode !== "accordion" && mode !== "symbol") setIconBoxOpen(false);
         onChange({ mode, ...(supportsCurrentIcon ? {} : { icon: "chevron" }) });
       }}><option value="text">Yalnız metin</option><option value="divider">Ayırıcı</option><option value="line">Çizgi</option><option value="accordion">Açılır başlık</option><option value="symbol">Sembollü</option></select></label>
-      {iconBased ? <label>Simge<select value={design.icon} onChange={(event) => onChange({ icon: event.target.value as DonationOptionHeaderDesign["icon"] })}><option value="chevron">Şevron</option><option value="plus-minus">Artı / eksi</option>{design.mode === "symbol" ? <><option value="dash">Çizgi</option><option value="dot">Nokta</option><option value="diamond">Elmas</option></> : null}</select></label> : null}
-      {iconBased ? <label>Simge konumu<select value={design.iconPosition} onChange={(event) => onChange({ iconPosition: event.target.value as DonationOptionHeaderDesign["iconPosition"] })}><option value="start">Başta</option><option value="end">Sonda</option></select></label> : null}
-      {usesAccent ? <label className={styles.groupHeaderDesignColor}>Vurgu rengi<span><input aria-label="Grup başlığı vurgu rengi" type="color" value={design.lineColor} onChange={(event) => onChange({ lineColor: event.target.value })} /><code>{design.lineColor}</code></span></label> : null}
+      {iconBased ? <label>Simge<select value={design.icon} onChange={(event) => onChange({ icon: event.target.value as DonationOptionHeaderDesign["icon"] })}>{iconOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label> : null}
+      {iconBased ? <label>Simge konumu<select value={design.iconPosition} onChange={(event) => onChange({ iconPosition: event.target.value as DonationOptionHeaderDesign["iconPosition"] })}><option value="start">Başta</option><option value="center">Tam ortada</option><option value="end">Sonda</option></select></label> : null}
+      {iconBased ? <label className={styles.groupHeaderDesignRange}><span>Simge boyutu<b>{design.iconSize} px</b></span><input aria-label="Grup başlığı simge boyutu" type="range" min="10" max="64" value={design.iconSize} onChange={(event) => onChange({ iconSize: Number(event.target.value) })} /></label> : null}
+      {iconBased ? <label className={styles.groupHeaderDesignRange}><span>Simge aralığı<b>{design.iconGap} px</b></span><input aria-label="Grup başlığı simge aralığı" type="range" min="0" max="32" value={design.iconGap} onChange={(event) => onChange({ iconGap: Number(event.target.value) })} /></label> : null}
+      {usesAccent ? <label className={styles.groupHeaderDesignColor}>{iconBased ? "Simge rengi" : "Çizgi rengi"}<span><input aria-label="Grup başlığı vurgu rengi" type="color" value={design.lineColor} onChange={(event) => onChange({ lineColor: event.target.value })} /><code>{design.lineColor}</code></span></label> : null}
       {lineBased ? <label className={styles.groupHeaderDesignRange}><span>Çizgi kalınlığı<b>{design.lineWidth} px</b></span><input aria-label="Grup başlığı çizgi kalınlığı" type="range" min="1" max="8" value={design.lineWidth} onChange={(event) => onChange({ lineWidth: Number(event.target.value) })} /></label> : null}
       {lineBased ? <label>Çizgi biçimi<select value={design.lineStyle} onChange={(event) => onChange({ lineStyle: event.target.value as DonationOptionHeaderDesign["lineStyle"] })}><option value="solid">Düz</option><option value="dashed">Kesikli</option><option value="dotted">Noktalı</option></select></label> : null}
-      {design.mode === "accordion" ? <label className={styles.groupHeaderDesignToggle}><input type="checkbox" checked={design.defaultOpen} onChange={(event) => onChange({ defaultOpen: event.target.checked })} /><span>İlk açılışta açık</span></label> : null}
+      {design.mode === "accordion" ? <label className={styles.groupHeaderDesignToggle}><input type="checkbox" checked={d
+esign.defaultOpen} onChange={(event) => onChange({ defaultOpen: event.target.checked })} /><span>İlk açılışta açık</span></label> : null}
       {design.mode === "accordion" ? <label className={styles.groupHeaderDesignRange}><span>Geçiş süresi<b>{design.animationMs} ms</b></span><input aria-label="Grup başlığı geçiş süresi" type="range" min="0" max="1000" step="20" value={design.animationMs} onChange={(event) => onChange({ animationMs: Number(event.target.value) })} /></label> : null}
     </div>
+    {iconBased ? <section className={`${styles.groupHeaderIconBox} ${iconBoxOpen ? styles.groupHeaderIconBoxOpen : ""}`}>
+      <button type="button" id={iconBoxButtonId} aria-expanded={iconBoxOpen} aria-controls={iconBoxPanelId} onClick={() => setIconBoxOpen((current) => !current)}>
+        <span><strong>Simge kutusu</strong><small>{design.iconBackgroundEnabled ? "Arka plan ve çerçeve açık" : "Kapalı"}</small></span><b>{iconBoxOpen ? "−" : "+"}</b>
+      </button>
+      {iconBoxOpen ? <div className={styles.groupHeaderIconBoxPanel} id={iconBoxPanelId} role="region" aria-labelledby={iconBoxButtonId}>
+        <label className={styles.groupHeaderDesignToggle}><input type="checkbox" checked={design.iconBackgroundEnabled} onChange={(event) => onChange({ iconBackgroundEnabled: event.target.checked })} /><span>Simge arka planını göster</span></label>
+        {design.iconBackgroundEnabled ? <div className={styles.groupHeaderDesignGrid}>
+          <label className={styles.groupHeaderDesignColor}>Arka plan<span><input aria-label="Simge kutusu arka plan rengi" type="color" value={design.iconBackground} onChange={(event) => onChange({ iconBackground: event.target.value })} /><code>{design.iconBackground}</code></span></label>
+          <label className={styles.groupHeaderDesignRange}><span>Köşe yuvarlaklığı<b>{design.iconRadius} px</b></span><input aria-label="Simge kutusu köşe yuvarlaklığı" type="range" min="0" max="50" value={design.iconRadius} onChange={(event) => onChange({ iconRadius: Number(event.target.value) })} /></label>
+          <label className={styles.groupHeaderDesignRange}><span>Çerçeve kalınlığı<b>{design.iconBorderWidth} px</b></span><input aria-label="Simge kutusu çerçeve kalınlığı" type="range" min="0" max="4" value={design.iconBorderWidth} onChange={(event) => onChange({ iconBorderWidth: Number(event.target.value) })} /></label>
+          {design.iconBorderWidth > 0 ? <label className={styles.groupHeaderDesignColor}>Çerçeve rengi<span><input aria-label="Simge kutusu çerçeve rengi" type="color" value={design.iconBorderColor} onChange={(event) => onChange({ iconBorderColor: event.target.value })} /><code>{design.iconBorderColor}</code></span></label> : null}
+        </div> : <p className={styles.groupHeaderDesignNote}>Kutuyu açtığınızda arka plan, köşe ve çerçeve ayarları görünür.</p>}
+      </div> : null}
+    </section> : null}
     {design.mode === "text" ? <p className={styles.groupHeaderDesignNote}>Başlık, mevcut yazı ayarlarıyla sade metin olarak gösterilir.</p> : null}
   </div>;
 }
@@ -505,7 +558,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }, []);
 
   const donation = settings.donation;
-  const allOrderKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
+  const allOrd
+erKey = lowerDevice === "desktop" ? "allOrderDesktop" : "allOrderMobile";
   const aggregateCategorySelected = Boolean(donation.allCategoryId) && projectCategory === donation.allCategoryId;
   const categoryProjects = (aggregateCategorySelected
     ? donation.projects
@@ -757,7 +811,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
   }
   async function removeProjectMedia(device: Device, media: DonationProjectMedia) {
     const paths = [media.path, media.posterPath].filter((path): path is string => Boolean(path));
-    setPendingProjectMediaDeletes((current) => [...new Set([...current, ...paths])]);
+    setPendingProjectMediaDeletes((current) => [...new Set([...current, ...pa
+ths])]);
     updateProjectMedia(device, projectMedia(device).filter((item) => item.id !== media.id));
     setSelectedMediaIds((current) => ({ ...current, [device]: current[device] === media.id ? "" : current[device] }));
     showToast("Medya galeriden kaldırıldı. Dosya, ayarlar kaydedildikten sonra depodan silinecek.");
@@ -993,7 +1048,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       showToast("En az bir bağış kategorisi kalmalıdır.");
       return;
     }
-    if (!window.confirm(`“${category.label}” kategorisi ve web/mobil görsel galerileri kalıcı olarak silinsin mi?`)) return;
+    if (!window.confirm(`“${category.label}” kategorisi ve web/mobil görsel gale
+rileri kalıcı olarak silinsin mi?`)) return;
     const nextCategories = donation.categories.filter((item) => item.id !== id);
     const categoryUrls = new Set(Object.values(donation.categoryImages[id] || {}).filter(Boolean));
     const legacyImages = images.filter((image) => {
@@ -1234,7 +1290,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     const actionGapKey = device === "desktop" ? "actionGapDesktop" : "actionGapMobile";
     const optionDesignKey = device === "desktop" ? "optionDesignDesktop" : "optionDesignMobile";
     const groupDesignKey = device === "desktop" ? "desktopDesign" : "mobileDesign";
-    const groupTitleVisibleKey = device === "desktop" ? "titleVisibleDesktop" : "titleVisibleMobile";
+    const groupTitleVisibleKey = device === "desktop" ? "
+titleVisibleDesktop" : "titleVisibleMobile";
     const groupDescriptionVisibleKey = device === "desktop" ? "descriptionVisibleDesktop" : "descriptionVisibleMobile";
     const optionSharedTextKey = device === "desktop" ? "useSharedTextDesignDesktop" : "useSharedTextDesignMobile";
     const optionTextDesignKey = device === "desktop" ? "desktopTextDesign" : "mobileTextDesign";
@@ -1488,7 +1545,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
       fixed: "Sabit",
       configured: "Seçenekli",
     }[commerce.mode];
-    const paymentControls = <div className={styles.paymentWorkspace}>
+    const paymentControls = <div classNam
+e={styles.paymentWorkspace}>
       <header className={styles.paymentWorkspaceHeader}>
         <div>
           <span>{device === "desktop" ? "WEB" : "MOBİL"} · COMMERCE V2</span>
@@ -1666,7 +1724,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             )} /><span /></label>
           </div>
           {commerce.customAmountEnabled ? <div className={styles.paymentFieldGrid}>
-            <label>Alan içi örnek<input maxLength={40} value={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountPlaceholder: event.target.value }))} /></label>
+            <label>Alan içi örnek<input maxLength={40} valu
+e={commerce.customAmountPlaceholder} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountPlaceholder: event.target.value }))} /></label>
             <label>En az<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.customAmountMinMinor)} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountMinMinor: toMinor(event.target.value) }))} /></div></label>
             <label>En fazla<div className={styles.paymentMoneyInput}><span>₺</span><input type="number" min="0" step=".01" value={fromMinor(commerce.customAmountMaxMinor)} onChange={(event) => changeCommerce((current) => ({ ...current, customAmountMaxMinor: toMinor(event.target.value) }))} /></div></label>
           </div> : null}
@@ -1813,6 +1872,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                     id={groupInfoButtonId}
                     aria-expanded={groupInfoOpen}
                     aria-controls={groupInfoPanelId}
+
                     onClick={() => toggleGroupPanel(groupInfoKey)}
                   >
                     <span><strong>Grup bilgileri</strong><small>{groupInfoSummary}</small></span><b>{groupInfoOpen ? "−" : "+"}</b>
@@ -1831,6 +1891,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                     <OptionHeaderDesignEditor
                       design={groupHeaderDesign}
                       deviceLabel={device === "desktop" ? "Web" : "Mobil"}
+                      panelId={`group-header-icon-${groupPanelScope}-${device}`.replace(/[^a-zA-Z0-9_-]/g, "-")}
                       onChange={(changes) => updateOptionGroup(group.id, {
                         [groupHeaderDesignKey]: { ...groupHeaderDesign, ...changes },
                       } as Partial<DonationOptionGroup>)}
@@ -1955,7 +2016,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                         onMove: (direction) => updateGroupOptions(group.id, (currentOptions) => moveCommerceItem(currentOptions, currentOptions.findIndex((item) => item.id === option.id), direction)),
                         onDelete: () => {
                           const fallbackOptionId = group.options[optionIndex + 1]?.id || group.options[optionIndex - 1]?.id || "";
-                          changeCommerce((current) => ({
+ 
+                         changeCommerce((current) => ({
                             ...current,
                             optionGroups: current.optionGroups.map((item) => {
                               const remaining = item.id === group.id ? item.options.filter((entry) => entry.id !== option.id) : item.options;
@@ -2111,7 +2173,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                                   optionGroups: current.optionGroups.map((item) => {
                                     if (item.id !== childGroup.id) return item;
                                     const currentOptionIds = item.visibleWhen?.groupId === group.id ? item.visibleWhen.optionIds : [];
-                                    const optionIds = shouldLink
+           
+                         const optionIds = shouldLink
                                       ? [...new Set([...currentOptionIds, selectedOption.id])]
                                       : currentOptionIds.filter((id) => id !== selectedOption.id);
                                     return { ...item, visibleWhen: optionIds.length ? { groupId: group.id, optionIds } : undefined };
@@ -2252,7 +2315,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <span>{device === "desktop" ? "Web" : "Mobil"} düğme yerleşimi</span>
             <small>Yalnız aktif cihaz görünümünü değiştirir.</small>
           </div>
-          <label>Dizilim<select value={commerce[actionLayoutKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionLayoutKey]: event.target.value as "row" | "stack" }))}><option value="row">Yan yana</option><option value="stack">Alt alta</option></select></label>
+          <label>Dizilim<select value={commerce[actionLayoutKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionLayoutKey]: event.target.value as "row" | "stack" }))}><option value="row">Yan yana</option><option value="st
+ack">Alt alta</option></select></label>
           <label>Aralık <b>{commerce[actionGapKey]} px</b><input type="range" min="0" max="32" value={commerce[actionGapKey]} onChange={(event) => changeCommerce((current) => ({ ...current, [actionGapKey]: Number(event.target.value) }))} /></label>
         </div>
         <div className={styles.paymentBuilderList}>
@@ -2379,7 +2443,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     return <div className={styles.lowerAccordion}>
       <section className={projectSelectorOpen ? styles.lowerAccordionOpen : ""}>
         <button type="button" onClick={() => setProjectSelectorOpen((current) => !current)}><span>Bağış kategorisi ve kart seçimi</span><b>{projectSelectorOpen ? "−" : "+"}</b></button>
-        {projectSelectorOpen ? <div className={`${styles.lowerAccordionContent} ${styles.visualProjectSelector}`}>
+        {projectSelectorOpen ? <div className={`${styles.lowerAccordionConten
+t} ${styles.visualProjectSelector}`}>
           <div className={styles.miniCategoryPreview}>
             {donation.categories.map(({ id, label, imageAlt }) => {
               const projects = id === donation.allCategoryId ? donation.projects : donation.projects.filter((project) => project.category === id);
@@ -2490,7 +2555,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
           </div>
         </div> : null}
       </section>
-      <section style={{ order: 3 }} className={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
+      <section style={{ order: 3 }} cl
+assName={`${styles.projectSettingsPanel} ${lowerGroup === "project-design" ? styles.lowerAccordionOpen : ""}`}>
         <button type="button" onClick={() => setLowerGroup(lowerGroup === "project-design" ? "" : "project-design")}><span>Görsel ayarları</span><b>{lowerGroup === "project-design" ? "−" : "+"}</b></button>
         {projectSelectorOpen && lowerGroup === "project-design" ? <div className={styles.lowerAccordionContent}>
           <div className={styles.projectMediaStatus}>
@@ -2612,7 +2678,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
           </> : null}
           {id === "arrows" ? <>
-            <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
+   
+         <label className={styles.headerCheck}><input type="checkbox" checked={value.arrowsVisible} onChange={(event) => change({ arrowsVisible: event.target.checked })} /> Kaydırma oklarını göster</label>
             <label className={styles.headerCheck}><input type="checkbox" checked={value.leftArrowVisible} onChange={(event) => change({ leftArrowVisible: event.target.checked })} /> Sol oku göster</label>
             <label className={styles.headerCheck}><input type="checkbox" checked={value.rightArrowVisible} onChange={(event) => change({ rightArrowVisible: event.target.checked })} /> Sağ oku göster</label>
             <label>Hazır sembol<select value={value.arrowIcon} onChange={(event) => change({ arrowIcon: event.target.value as DonationLowerDeviceSettings["arrowIcon"] })}><option value="thin">İnce ok ← →</option><option value="chevron">Sade ok ‹ ›</option><option value="bold">Kalın ok ❮ ❯</option><option value="long">Uzun ok ⟵ ⟶</option><option value="triangle">Üçgen ◀ ▶</option></select></label>
@@ -2789,7 +2856,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
               const element = event.currentTarget;
               setImageMeta((current) => current[image.url] ? current : { ...current, [image.url]: { width: element.naturalWidth, height: element.naturalHeight } });
             }} /></span>
-            <strong>{image.originalName || image.path.split("/").at(-1) || "Kategori görseli"}</strong>
+            <strong>{image.originalName || ima
+ge.path.split("/").at(-1) || "Kategori görseli"}</strong>
             <small>{meta ? `${meta.width}×${meta.height} · ${imageRatio(meta.width, meta.height)}` : image.path.startsWith("current:") ? "Mevcut görsel" : formatSize(image.size)}</small>
             {savedPercent ? <small>%{savedPercent} küçüldü</small> : null}
             <button type="button" title="Görseli sil" onClick={(event) => {
@@ -2892,7 +2960,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
     <>
       <div className={styles.pageHeading}>
         <div><p>Site bileşenleri</p><h1>Modüller</h1><span>Bugünkü ve gelecekte eklenecek site modüllerini tek merkezden yönet.</span></div>
-        <button className={styles.primaryButton} type="button" disabled={saving || !settingsReady} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
+        <button className={styles.primaryButton} type="button" disabled={sav
+ing || !settingsReady} onClick={save}>{saving ? "Kaydediliyor..." : "Kaydet ve Yayınla"}</button>
       </div>
 
       <div className={styles.demoBanner}><span>◦</span><p><strong>{settingsLoadError ? "Ayarlar yüklenemedi." : "Modül merkezi hazır."}</strong>{settingsLoadError || "Her modül kendi kartında açılır; gelecekte ekleyeceğimiz modüller burada sıralanır."}</p></div>
