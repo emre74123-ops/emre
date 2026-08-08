@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -280,6 +281,14 @@ function resolveOptionHeaderDesign(
     mode: "text",
     icon: "chevron",
     iconPosition: "end",
+    iconSize: 22,
+    iconGap: 10,
+    iconBackgroundEnabled: false,
+    iconBackground: "#ff
+ffff",
+    iconRadius: 6,
+    iconBorderWidth: 0,
+    iconBorderColor: optionDesign.titleColor || "#345b54",
     defaultOpen: true,
     lineColor: optionDesign.titleColor || "#345b54",
     lineWidth: 1,
@@ -294,6 +303,12 @@ function optionHeaderStyle(design: DonationOptionHeaderDesign): OptionHeaderCssP
     "--dm-option-header-line-width": `${design.lineWidth}px`,
     "--dm-option-header-line-style": design.lineStyle,
     "--dm-option-header-animation": `${design.animationMs}ms`,
+    "--dm-option-header-icon-size": `${design.iconSize}px`,
+    "--dm-option-header-icon-gap": `${design.iconGap}px`,
+    "--dm-option-header-icon-background": design.iconBackground,
+    "--dm-option-header-icon-radius": `${design.iconRadius}px`,
+    "--dm-option-header-icon-border-width": `${design.iconBorderWidth}px`,
+    "--dm-option-header-icon-border-color": design.iconBorderColor,
   };
 }
 
@@ -302,6 +317,7 @@ function OptionHeaderIcon({ design, open }: { design: DonationOptionHeaderDesign
     <span
       aria-hidden="true"
       className={styles.optionHeaderIcon}
+      data-background={design.iconBackgroundEnabled}
       data-icon={design.icon}
       data-open={open}
     />
@@ -346,6 +362,7 @@ function OptionGroupHeader({
         aria-expanded={open}
         aria-label={titleVisible ? undefined : title}
         className={styles.optionAccordionTrigger}
+        data-has-copy={hasCopy}
         data-icon-position={design.iconPosition}
         id={triggerId}
         onClick={onToggle}
@@ -356,6 +373,7 @@ function OptionGroupHeader({
           {titleVisible ? <strong className={styles.optionGroupTitle}>{title}</strong> : null}
           {showDescription ? <small className={styles.optionGroupDescription}>{description}</small> : null}
         </span> : null}
+        {design.iconPosition === "center" ? <OptionHeaderIcon design={design} open={open} /> : null}
         {design.iconPosition === "end" ? <OptionHeaderIcon design={design} open={open} /> : null}
       </button>
     );
@@ -523,7 +541,8 @@ function DonationCardCommerce({
         const heightModeClass = optionDesign.optionHeightMode === "fixed"
           ? styles.optionHeightFixed
           : styles.optionHeightAuto;
-        const enabledOptions = group.options.filter((option) => option.enabled);
+        c
+onst enabledOptions = group.options.filter((option) => option.enabled);
         const selectedOption = enabledOptions.find((option) => option.id === selections[group.id]);
         const selectedSelectStyle = selectedOption && !optionUsesSharedTextDesign(selectedOption, device)
           ? selectOptionStyle(resolveOptionTextDesign(selectedOption, optionDesign, device))
@@ -783,6 +802,7 @@ function CardMedia({
     >
       <div
         className={styles.cardMediaMain}
+
         onPointerDown={(event) => {
           if (!event.isPrimary) return;
           if ((event.target as HTMLElement).closest("[data-media-thumbnails='true']")) return;
@@ -1034,7 +1054,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
       animationFrame = window.requestAnimationFrame(animate);
     };
     animationFrame = window.requestAnimationFrame(animate);
-    return () => window.cancelAnimationFrame(animationFrame);
+    return () => window.can
+celAnimationFrame(animationFrame);
   }, [activeDevice, categoryListKey, settings.autoScroll, settings.autoScrollSpeed, settings.desktopEdgeScrollPadding, settings.mobileEdgeScrollPadding]);
 
   function updateCategoryProgress() {
@@ -1203,6 +1224,7 @@ export default function DonationModule({ embedded = false, settings = defaultMod
         "--dm-lower-mobile-action-color": settings.lowerMobile.actionButtonTextColor,
         "--dm-arrow-desktop-size": `${settings.lowerDesktop.arrowSize}px`,
         "--dm-arrow-mobile-size": `${settings.lowerMobile.arrowSize}px`,
+
         "--dm-arrow-desktop-icon-size": `${settings.lowerDesktop.arrowIconSize}px`,
         "--dm-arrow-mobile-icon-size": `${settings.lowerMobile.arrowIconSize}px`,
         "--dm-arrow-desktop-offset": `${settings.lowerDesktop.arrowOffset}px`,
@@ -1365,7 +1387,8 @@ export default function DonationModule({ embedded = false, settings = defaultMod
                     "--dm-lower-desktop-title-color": desktopDesign.titleColor,
                     "--dm-lower-mobile-title-color": mobileDesign.titleColor,
                     "--dm-lower-desktop-title-size": `${desktopDesign.titleSize}px`,
-                    "--dm-lower-mobile-title-size": `${mobileDesign.titleSize}px`,
+                    "--dm-lower-mobile-t
+itle-size": `${mobileDesign.titleSize}px`,
                     "--dm-lower-desktop-title-weight": desktopDesign.titleWeight,
                     "--dm-lower-mobile-title-weight": mobileDesign.titleWeight,
                     "--dm-lower-desktop-description-color": desktopDesign.descriptionColor,
