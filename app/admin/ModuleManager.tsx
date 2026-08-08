@@ -1650,7 +1650,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             const optionSelectionKey = `${currentProject.id}:${group.id}`;
             const selectedOptionId = group.options.some((option) => option.id === selectedOptionIds[optionSelectionKey])
               ? selectedOptionIds[optionSelectionKey]
-              : group.options[0]?.id || "";
+              : "";
             const selectedOption = group.options.find((option) => option.id === selectedOptionId);
             const groupUsesSharedDesign = group.useSharedDesign !== false;
             const groupOptionDesign = group[groupDesignKey] || sharedOptionDesign;
@@ -1664,6 +1664,7 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
             const optionEditorPanelId = `${optionEditorDomId}-panel`;
             const optionUsesSharedText = selectedOption?.[optionSharedTextKey] !== false;
             const selectedOptionTextDesign = selectedOption?.[optionTextDesignKey] || sharedOptionTextDesign;
+            const selectedOptionChildFlowEnabled = selectedOption?.childFlowEnabled !== false;
             const laterOptionGroups = commerce.optionGroups.slice(groupIndex + 1);
             const relatedPriceRules = selectedOption
               ? commerce.priceRules.filter((rule) => rule.optionIds.includes(selectedOption.id))
@@ -1805,8 +1806,21 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                 <div className={styles.optionCompactList} role="list" aria-label={`${group.label} seçenekleri`}>
                   {group.options.map((option, optionIndex) => {
                     const selected = option.id === selectedOptionId;
-                    return <article className={`${styles.optionCompactRow} ${selected ? styles.optionCompactRowActive : ""}`} role="listitem" key={option.id}>
-                      <button className={styles.optionCompactMain} type="button" aria-pressed={selected} onClick={() => setSelectedOptionIds((current) => ({ ...current, [optionSelectionKey]: option.id }))}>
+                    const optionRowButtonId = `option-row-${optionSelectionKey}:${option.id}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+                    return <div className={styles.optionCompactItem} role="listitem" key={option.id}>
+                      <div className={`${styles.optionCompactRow} ${selected ? styles.optionCompactRowActive : ""}`}>
+                      <button
+                        className={styles.optionCompactMain}
+                        type="button"
+                        id={optionRowButtonId}
+                        aria-pressed={selected}
+                        aria-expanded={selected}
+                        aria-controls={selected ? optionEditorDomId : undefined}
+                        onClick={() => setSelectedOptionIds((current) => ({
+                          ...current,
+                          [optionSelectionKey]: current[optionSelectionKey] === option.id ? "" : option.id,
+                        }))}
+                      >
                         <span className={styles.optionCompactIndex}>{String(optionIndex + 1).padStart(2, "0")}</span>
                         <span className={styles.optionCompactMeta}><strong>{option.label || "İsimsiz seçenek"}</strong><small>{option.description || "Açıklama yok"}</small></span>
                         <span className={styles.optionCompactPrice}>{option.priceMinor ? formatMinor(option.priceMinor) : "Temel fiyat"}</span>
@@ -1856,10 +1870,13 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                           });
                         },
                       })}
-                    </article>;
-                  })}
-                </div>
-                {selectedOption ? <div className={styles.optionCompactEditor}>
+                      </div>
+                {selected && selectedOption ? <div
+                  className={styles.optionCompactEditor}
+                  id={optionEditorDomId}
+                  role="region"
+                  aria-labelledby={optionRowButtonId}
+                >
                   <div className={styles.optionEditorHeader}><strong>Seçeneği düzenle</strong><small>{group.label} · {group.options.findIndex((option) => option.id === selectedOption.id) + 1}. sıra</small></div>
                   <div className={styles.optionEditorTabs} role="tablist" aria-label="Seçenek düzenleme bölümleri">
                     {OPTION_EDITOR_TABS.map(([tabId, label], tabIndex) => <button
@@ -1922,6 +1939,19 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                       <p>Görünüm kapatılırsa seçenek yönetimde korunur fakat ziyaretçilere gösterilmez.</p>
                     </div> : null}
                     {optionEditorTab === "flow" ? <div className={styles.optionEditorFlow}>
+                      <label className={styles.optionFlowMasterToggle} data-active={selectedOptionChildFlowEnabled}>
+                        <input
+                          type="checkbox"
+                          checked={selectedOptionChildFlowEnabled}
+                          onChange={(event) => updateOption(group.id, selectedOption.id, { childFlowEnabled: event.target.checked })}
+                        />
+                        <span>
+                          <strong>Bu seçeneğe tıklanınca bağlı alt grupları aç</strong>
+                          <small>{selectedOptionChildFlowEnabled
+                            ? "Aktif: bağlı alt gruplar bu seçimden sonra açılır."
+                            : "Pasif: bağlantılar korunur, ancak alt gruplar açılmaz."}</small>
+                        </span>
+                      </label>
                       <section className={styles.optionFlowSection}>
                         <div className={styles.optionFlowHeader}>
                           <span><strong>Alt gruplar</strong><small>Bu seçenek seçilince açılacak sonraki gruplar.</small></span>
@@ -1977,8 +2007,8 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                                   }),
                                 }));
                               }} />
-                              <span><strong>{childGroup.label || "İsimsiz grup"}</strong><small>{linkedToAnotherParent ? `${otherParent?.label || "Başka grup"} grubuna bağlı` : linkedToThisParent && !linkedToSelectedOption ? "Aynı üst grubun başka seçeneğine bağlı" : linkedToSelectedOption ? "Bu seçenekle açılır" : "Bağlı değil"}</small></span>
-                              <b>{linkedToAnotherParent ? "Kilitli" : linkedToSelectedOption ? "Bağlı" : "Bağla"}</b>
+                              <span><strong>{childGroup.label || "İsimsiz grup"}</strong><small>{linkedToAnotherParent ? `${otherParent?.label || "Başka grup"} grubuna bağlı` : linkedToThisParent && !linkedToSelectedOption ? "Aynı üst grubun başka seçeneğine bağlı" : linkedToSelectedOption ? selectedOptionChildFlowEnabled ? "Bu seçenekle açılır" : "Bağlı, akış şu anda pasif" : "Bağlı değil"}</small></span>
+                              <b>{linkedToAnotherParent ? "Kilitli" : linkedToSelectedOption ? selectedOptionChildFlowEnabled ? "Bağlı" : "Pasif" : "Bağla"}</b>
                             </label>;
                           })}
                         </div> : <p className={styles.optionFlowEmpty}>Bağlanabilecek sonraki grup yok. Yeni bir alt grup oluşturabilirsiniz.</p>}
@@ -2021,6 +2051,9 @@ export default function ModuleManager({ showToast }: { showToast: (message: stri
                     </div> : null}
                   </div>
                 </div> : null}
+                    </div>;
+                  })}
+                </div>
               </div> : null}
             </article>;
           }) : <div className={styles.paymentEmpty}><b>Henüz seçenek grubu yok</b><span>Ülke, bağış türü veya paket gibi ilk grubu ekleyin.</span><button type="button" onClick={addOptionGroup}>＋ İlk grubu ekle</button></div>}
