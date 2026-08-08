@@ -157,6 +157,17 @@ export type DonationOptionDesign = {
   shadow: "none" | "soft" | "medium";
 };
 
+export type DonationOptionHeaderDesign = {
+  mode: "text" | "divider" | "line" | "accordion" | "symbol";
+  icon: "chevron" | "plus-minus" | "dash" | "dot" | "diamond";
+  iconPosition: "start" | "end";
+  defaultOpen: boolean;
+  lineColor: string;
+  lineWidth: number;
+  lineStyle: "solid" | "dashed" | "dotted";
+  animationMs: number;
+};
+
 export type DonationOptionGroup = {
   id: string;
   label: string;
@@ -170,6 +181,8 @@ export type DonationOptionGroup = {
   useSharedDesign?: boolean;
   desktopDesign?: DonationOptionDesign;
   mobileDesign?: DonationOptionDesign;
+  headerDesktop?: DonationOptionHeaderDesign;
+  headerMobile?: DonationOptionHeaderDesign;
   titleVisibleDesktop?: boolean;
   titleVisibleMobile?: boolean;
   descriptionVisibleDesktop?: boolean;
@@ -745,6 +758,31 @@ function normalizeDonationOptionDesign(
   };
 }
 
+function normalizeDonationOptionHeaderDesign(
+  value: unknown,
+  titleColor: string,
+): DonationOptionHeaderDesign {
+  const source = value && typeof value === "object"
+    ? value as Partial<DonationOptionHeaderDesign>
+    : {};
+  const fallbackColor = commerceColor(titleColor, "#345b54");
+  const mode = commerceChoice(source.mode, ["text", "divider", "line", "accordion", "symbol"] as const, "text");
+  const requestedIcon = commerceChoice(source.icon, ["chevron", "plus-minus", "dash", "dot", "diamond"] as const, "chevron");
+  const icon = mode === "accordion" && requestedIcon !== "chevron" && requestedIcon !== "plus-minus"
+    ? "chevron"
+    : requestedIcon;
+  return {
+    mode,
+    icon,
+    iconPosition: commerceChoice(source.iconPosition, ["start", "end"] as const, "end"),
+    defaultOpen: commerceBoolean(source.defaultOpen, true),
+    lineColor: commerceColor(source.lineColor, fallbackColor),
+    lineWidth: commerceNumber(source.lineWidth, 1, 8, 1),
+    lineStyle: commerceChoice(source.lineStyle, ["solid", "dashed", "dotted"] as const, "solid"),
+    animationMs: commerceInteger(source.animationMs, 0, 1000, 220),
+  };
+}
+
 function migrateLegacyProjectCommerce(
   project: Partial<DonationProject> | null | undefined,
 ): DonationProjectCommerce {
@@ -896,6 +934,8 @@ export function resolveDonationProjectCommerce(
     const useSharedDesign = commerceBoolean(group.useSharedDesign, true);
     const desktopDesign = normalizeDonationOptionDesign(group.desktopDesign, optionDesignDesktop);
     const mobileDesign = normalizeDonationOptionDesign(group.mobileDesign, optionDesignMobile);
+    const headerDesktop = normalizeDonationOptionHeaderDesign(group.headerDesktop, desktopDesign.titleColor);
+    const headerMobile = normalizeDonationOptionHeaderDesign(group.headerMobile, mobileDesign.titleColor);
     const desktopTextFallback = textDesignFromOptionDesign(useSharedDesign ? optionDesignDesktop : desktopDesign);
     const mobileTextFallback = textDesignFromOptionDesign(useSharedDesign ? optionDesignMobile : mobileDesign);
     const localOptionIds = new Set<string>();
@@ -955,6 +995,8 @@ export function resolveDonationProjectCommerce(
       useSharedDesign,
       desktopDesign,
       mobileDesign,
+      headerDesktop,
+      headerMobile,
       ...(typeof group.titleVisibleDesktop === "boolean"
         ? { titleVisibleDesktop: group.titleVisibleDesktop }
         : {}),
