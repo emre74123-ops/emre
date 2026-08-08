@@ -147,32 +147,38 @@
 
 /* Kart içi seçenek, fiyat ve çoklu eylem sistemi */
 .commerce{display:grid;gap:14px}
-.optionGroup{min-width:0;margin:0;padding:0;display:grid;gap:var(--dm-option-header-gap,9px);border:0}
+.optionGroup{min-width:0;margin:var(--dm-option-group-top-gap,0) 0 0;padding:0;display:grid;gap:var(--dm-option-header-gap,9px);border:0}
 .optionGroupHeader{min-width:0;display:grid;gap:var(--dm-option-title-description-gap,4px);text-align:var(--dm-option-title-align,start)}
 .optionGroupTitle{color:var(--dm-option-title-color,#345b54);font-size:var(--dm-option-title-size,10px);font-weight:var(--dm-option-title-weight,900);line-height:1.3;letter-spacing:.7px;text-transform:uppercase}
-.optionGroupTitle sup{margin-left:3px;color:#e86942;font-size:.9em}
 .optionGroupDescription{min-height:0!important;margin:0!important;color:var(--dm-option-description-color,#81918d)!important;font-size:var(--dm-option-description-size,10px)!important;line-height:1.5!important}
 .amountArea>small{display:block;margin:0 0 8px;color:#345b54;font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
-.optionGroup select{width:100%;height:var(--dm-option-height,38px);min-height:var(--dm-option-height,38px);padding:0 38px 0 var(--dm-option-padding-x,12px);border:var(--dm-option-border-width,1px) solid var(--dm-option-border-color,#d6e2de);border-radius:var(--dm-option-radius,8px);background:var(--dm-option-background,#fff);color:var(--dm-option-text-color,#365f57);font-family:inherit;font-size:var(--dm-option-label-size,10px);font-weight:var(--dm-option-label-weight,800);box-shadow:var(--dm-option-shadow,none);outline:none}
+.optionGroup select{box-sizing:border-box;width:100%;height:auto;min-height:var(--dm-option-height,38px);padding:6px 38px 6px var(--dm-option-padding-x,12px);border:var(--dm-option-border-width,1px) solid var(--dm-option-border-color,#d6e2de);border-radius:var(--dm-option-radius,8px);background:var(--dm-option-background,#fff);color:var(--dm-option-text-color,#365f57);font-family:var(--dm-option-label-family,inherit);font-size:var(--dm-option-label-size,10px);font-weight:var(--dm-option-label-weight,800);letter-spacing:var(--dm-option-label-spacing,0);text-align:var(--dm-option-label-align,center);text-transform:var(--dm-option-label-transform,none);box-shadow:var(--dm-option-shadow,none);outline:none}
+.optionWidthFixed select{width:var(--dm-option-width,120px)}
+.optionHeightFixed select{height:var(--dm-option-height,38px);min-height:var(--dm-option-height,38px);max-height:var(--dm-option-height,38px);padding-top:0;padding-bottom:0}
+.optionHeightAuto select{height:auto;min-height:24px}
 .optionGroup select:focus{border-color:var(--dm-option-selected-border-color,#128465);box-shadow:0 0 0 3px color-mix(in srgb,var(--dm-option-selected-border-color,#128465) 14%,transparent)}
 .optionChoices{min-width:0;display:flex;flex-wrap:wrap;justify-content:var(--dm-option-justify,flex-start);column-gap:var(--dm-option-column-gap,7px);row-gap:var(--dm-option-row-gap,7px)}
-.optionChoices button{position:relative;flex:0 1 auto;min-width:var(--dm-option-min-width,64px);min-height:var(--dm-option-height,38px);padding:6px var(--dm-option-padding-x,12px);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:var(--dm-option-border-width,1px) solid var(--dm-option-border-color,#d6e2de);border-radius:var(--dm-option-radius,8px);background:var(--dm-option-background,#fff);color:var(--dm-option-text-color,#365f57);box-shadow:var(--dm-option-shadow,none);font-family:inherit;white-space:var(--dm-option-white-space,normal);cursor:pointer;transition:border-color .16s,background .16s,color .16s,box-shadow .16s,transform .16s}
+.optionChoices button{box-sizing:border-box;position:relative;flex:0 1 auto;width:auto;min-width:var(--dm-option-min-width,64px);height:auto;min-height:var(--dm-option-height,38px);padding:6px var(--dm-option-padding-x,12px);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:var(--dm-option-border-width,1px) solid var(--dm-option-border-color,#d6e2de);border-radius:var(--dm-option-radius,8px);background:var(--dm-option-background,#fff);color:var(--dm-option-text-color,#365f57);box-shadow:var(--dm-option-shadow,none);font-family:inherit;white-space:var(--dm-option-white-space,normal);cursor:pointer;transition:border-color .16s,background .16s,color .16s,box-shadow .16s,transform .16s}
+.optionHeightFixed button{height:var(--dm-option-height,38px);min-height:var(--dm-option-height,38px);max-height:var(--dm-option-height,38px)}
+.optionHeightAuto button{height:auto;min-height:24px}
 .optionChoices button:hover{transform:translateY(-1px)}
 .optionChoices button:focus-visible{outline:3px solid color-mix(in srgb,var(--dm-option-selected-border-color,#128465) 20%,transparent);outline-offset:2px}
-.optionLabel{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;color:inherit;font-size:var(--dm-option-label-size,10px);font-weight:var(--dm-option-label-weight,800);line-height:1.25;white-space:inherit}
-.optionLabel span{min-width:0;overflow-wrap:anywhere}
+.optionLabel{width:100%;display:flex;align-items:center;justify-content:var(--dm-option-item-label-justify,var(--dm-option-label-justify,center));gap:6px;color:inherit;font-family:var(--dm-option-label-family,inherit);font-size:var(--dm-option-label-size,10px);font-weight:var(--dm-option-label-weight,800);line-height:1.25;text-align:var(--dm-option-item-label-align,var(--dm-option-label-align,center));white-space:inherit}
+.optionLabel span{min-width:0;color:var(--dm-option-item-label-color,currentColor);font-family:var(--dm-option-item-label-family,var(--dm-option-label-family,inherit));font-size:var(--dm-option-item-label-size,var(--dm-option-label-size,10px));font-weight:var(--dm-option-item-label-weight,var(--dm-option-label-weight,800));letter-spacing:var(--dm-option-item-label-spacing,var(--dm-option-label-spacing,0));text-align:var(--dm-option-item-label-align,var(--dm-option-label-align,center));text-transform:var(--dm-option-item-label-transform,var(--dm-option-label-transform,none));overflow-wrap:anywhere}
 .optionDescription{margin-top:3px;color:var(--dm-option-item-description-color,#6e827d);font-size:var(--dm-option-item-description-size,8px);font-weight:600;line-height:1.35;white-space:inherit;opacity:1}
 .optionPriceInline,.optionPriceBelow,.optionPriceBadge{color:inherit;font-style:normal;font-weight:800;line-height:1.15}
 .optionPriceInline{flex:0 0 auto;font-size:.85em}
 .optionPriceBelow{margin-top:4px;font-size:.86em}
 .optionPriceBadge{position:absolute;top:4px;right:4px;padding:3px 5px;border-radius:var(--dm-option-radius,8px);background:color-mix(in srgb,var(--dm-option-selected-background,#e7f4ef) 84%,white);color:var(--dm-option-selected-text-color,#0d7258);font-size:.72em;box-shadow:0 2px 7px rgba(18,60,53,.1)}
 .optionChoices .selectedChoice{border-color:var(--dm-option-selected-border-color,#128465);background:var(--dm-option-selected-background,#e7f4ef);color:var(--dm-option-selected-text-color,#0d7258);box-shadow:var(--dm-option-shadow,0 0 0 transparent),0 0 0 1px color-mix(in srgb,var(--dm-option-selected-border-color,#128465) 10%,transparent)}
-.optionChoicesEqual button,.optionChoicesStretch button{flex:1 1 var(--dm-option-min-width,64px)}
-.optionChoicesColumns{display:grid;grid-template-columns:repeat(var(--dm-option-columns,1),minmax(0,1fr));justify-content:stretch}
-.optionChoicesColumns button{width:100%;min-width:0}
+.optionWidthAuto button{flex:0 1 auto;min-width:var(--dm-option-min-width,64px)}
+.optionWidthFixed button{flex:0 0 var(--dm-option-width,120px);width:var(--dm-option-width,120px);min-width:var(--dm-option-width,120px);max-width:var(--dm-option-width,120px)}
+.optionWidthEqual button{flex:1 1 0;min-width:0}
+.optionChoices.optionWidthColumns{display:grid;grid-template-columns:repeat(var(--dm-option-columns,1),minmax(0,1fr));justify-content:stretch}
+.optionChoices.optionWidthColumns button{width:100%;min-width:0;max-width:none}
+.optionChoicesStretch button{flex-grow:1}
 .optionChoicesScroll{padding:2px 1px 5px;display:flex;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;touch-action:pan-x pan-y}
-.optionChoicesScroll button{flex:0 0 var(--dm-option-min-width,64px)}
-.optionCards button{min-height:var(--dm-option-height,38px)}
+.optionChoicesScroll.optionWidthAuto button{flex:0 0 auto}
 .amountArea{display:grid;gap:9px}
 .amountArea>small{margin:0}
 .amountArea .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr))}
