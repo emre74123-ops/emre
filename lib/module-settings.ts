@@ -159,8 +159,15 @@ export type DonationOptionDesign = {
 
 export type DonationOptionHeaderDesign = {
   mode: "text" | "divider" | "line" | "accordion" | "symbol";
-  icon: "chevron" | "plus-minus" | "dash" | "dot" | "diamond";
-  iconPosition: "start" | "end";
+  icon: "chevron" | "double-chevron" | "arrow" | "plus-minus" | "dash" | "dot" | "circle" | "square" | "diamond" | "star" | "heart" | "info" | "details";
+  iconPosition: "start" | "center" | "end";
+  iconSize: number;
+  iconGap: number;
+  iconBackgroundEnabled: boolean;
+  iconBackground: string;
+  iconRadius: number;
+  iconBorderWidth: number;
+  iconBorderColor: string;
   defaultOpen: boolean;
   lineColor: string;
   lineWidth: number;
@@ -712,7 +719,7 @@ function normalizeDonationOptionDesign(
     descriptionColor: commerceColor(source.descriptionColor, fallback.descriptionColor),
     titleDescriptionGap: commerceInteger(source.titleDescriptionGap, 0, 20, fallback.titleDescriptionGap),
     headerGap: commerceInteger(source.headerGap, 0, 40, fallback.headerGap),
-    groupTopGap: commerceInteger(source.groupTopGap, 0, 80, fallback.groupTopGap),
+    groupTopGap: commerceInteger(source.groupTopGap, -80, 80, fallback.groupTopGap),
     optionHeightMode: commerceChoice(source.optionHeightMode, ["auto", "fixed"] as const, legacyHeightMode),
     optionHeight: commerceInteger(source.optionHeight, 24, 120, fallback.optionHeight),
     optionWidthMode,
@@ -767,14 +774,24 @@ function normalizeDonationOptionHeaderDesign(
     : {};
   const fallbackColor = commerceColor(titleColor, "#345b54");
   const mode = commerceChoice(source.mode, ["text", "divider", "line", "accordion", "symbol"] as const, "text");
-  const requestedIcon = commerceChoice(source.icon, ["chevron", "plus-minus", "dash", "dot", "diamond"] as const, "chevron");
-  const icon = mode === "accordion" && requestedIcon !== "chevron" && requestedIcon !== "plus-minus"
-    ? "chevron"
-    : requestedIcon;
+  const requestedIcon = commerceChoice(
+    source.icon,
+    ["chevron", "double-chevron", "arrow", "plus-minus", "dash", "dot", "circle", "square", "diamond", "star", "heart", "info", "details"] as const,
+    "chevron",
+  );
+  const accordionIcons: DonationOptionHeaderDesign["icon"][] = ["chevron", "double-chevron", "arrow", "plus-minus"];
+  const icon = mode === "accordion" && !accordionIcons.includes(requestedIcon) ? "chevron" : requestedIcon;
   return {
     mode,
     icon,
-    iconPosition: commerceChoice(source.iconPosition, ["start", "end"] as const, "end"),
+    iconPosition: commerceChoice(source.iconPosition, ["start", "center", "end"] as const, "end"),
+    iconSize: commerceInteger(source.iconSize, 10, 64, 22),
+    iconGap: commerceInteger(source.iconGap, 0, 32, 10),
+    iconBackgroundEnabled: commerceBoolean(source.iconBackgroundEnabled, false),
+    iconBackground: commerceColor(source.iconBackground, "#ffffff"),
+    iconRadius: commerceInteger(source.iconRadius, 0, 50, 6),
+    iconBorderWidth: commerceInteger(source.iconBorderWidth, 0, 4, 0),
+    iconBorderColor: commerceColor(source.iconBorderColor, fallbackColor),
     defaultOpen: commerceBoolean(source.defaultOpen, true),
     lineColor: commerceColor(source.lineColor, fallbackColor),
     lineWidth: commerceNumber(source.lineWidth, 1, 8, 1),
