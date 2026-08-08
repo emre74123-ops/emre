@@ -954,3 +954,225 @@
   .paymentNotice>button{grid-column:1/-1}
   .paymentPanelFooter{align-items:flex-start;flex-direction:column}
 }
+
+/* Compact option rows and per-device option design */
+.optionSharedDesign{
+  overflow:hidden;
+  border:1px solid #dce7e3;
+  border-radius:10px;
+  background:#fff;
+}
+.optionSharedDesign>button{
+  display:flex;
+  width:100%;
+  min-height:46px;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 11px;
+  border:0;
+  background:#fff;
+  color:#234d43;
+  text-align:left;
+  cursor:pointer;
+}
+.optionSharedDesign>button:hover{background:#f5faf8}
+.optionSharedDesign>button>span{display:flex;min-width:0;flex-direction:column;gap:3px}
+.optionSharedDesign>button strong{font-size:9px}
+.optionSharedDesign>button small{color:#7c9089;font-size:6px}
+.optionSharedDesign>button b{color:#128465;font-size:13px}
+.optionSharedDesignOpen>button{border-bottom:1px solid #e2ebe7;background:#f5faf8}
+.optionGroupDesign{
+  overflow:hidden;
+  border:1px solid #dfe9e5;
+  border-radius:9px;
+  background:#fff;
+}
+.optionGroupDesign>div:first-child{
+  display:flex;
+  min-height:42px;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+}
+.optionGroupDesign>div:first-child>span{display:flex;min-width:0;flex-direction:column;gap:2px}
+.optionGroupDesign>div:first-child strong{color:#244e43;font-size:8px}
+.optionGroupDesign>div:first-child small{color:#81938d;font-size:6px}
+.optionDesignEditor{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  border-top:1px solid #e2ebe7;
+  background:#fbfdfc;
+}
+.optionDesignSegment{border-bottom:1px solid #e5ece9}
+.optionDesignSegment:last-child{border-bottom:0}
+.optionDesignSegmentHeader{
+  display:flex;
+  width:100%;
+  min-height:39px;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  padding:7px 10px;
+  border:0;
+  background:transparent;
+  color:#31574e;
+  text-align:left;
+  cursor:pointer;
+}
+.optionDesignSegmentHeader:hover{background:#f1f8f5}
+.optionDesignSegmentHeader>span{display:flex;min-width:0;flex-direction:column;gap:2px}
+.optionDesignSegmentHeader strong{font-size:8px}
+.optionDesignSegmentHeader small{color:#82938e;font-size:6px}
+.optionDesignSegmentHeader>b{color:#128465;font-size:12px}
+.optionDesignSegmentOpen>.optionDesignSegmentHeader{background:#f2f8f5;color:#0d7059}
+.optionDesignGrid{
+  display:grid;
+  min-width:0;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  padding:9px 10px 11px;
+  border-top:1px solid #e5ece9;
+  background:#fff;
+}
+.optionDesignGrid>label:not(.optionDesignToggle){
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+  color:#506b63;
+  font-size:6px;
+  font-weight:900;
+}
+.optionDesignGrid select{
+  width:100%;
+  height:30px;
+  min-width:0;
+  padding:0 7px;
+  border:1px solid #d8e4df;
+  border-radius:7px;
+  outline:0;
+  background:#fff;
+  color:#294f46;
+  font-size:7px;
+}
+.optionDesignGrid select:focus{border-color:#128465;box-shadow:0 0 0 2px rgba(18,132,101,.08)}
+.optionDesignToggle{
+  display:inline-flex!important;
+  min-width:0;
+  min-height:30px;
+  flex-direction:row!important;
+  align-items:center;
+  gap:6px;
+  padding:0 8px;
+  border:1px solid #dce7e3;
+  border-radius:7px;
+  background:#f8fbfa;
+  color:#48665e;
+  font-size:6px!important;
+  font-weight:900;
+  cursor:pointer;
+}
+.optionDesignToggle input{width:13px;height:13px;margin:0;accent-color:#128465}
+.optionDesignRange{
+  padding:6px 7px;
+  border:1px solid #e1e9e6;
+  border-radius:7px;
+  background:#fafcfb;
+}
+.optionDesignRange>span{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.optionDesignRange b{color:#128465;font-size:6px}
+.optionDesignRange input[type=range]{width:100%;margin:2px 0 0;accent-color:#128465}
+.optionDesignColor>span:last-child{
+  display:grid;
+  height:30px;
+  grid-template-columns:30px minmax(0,1fr);
+  overflow:hidden;
+  border:1px solid #d8e4df;
+  border-radius:7px;
+  background:#fff;
+}
+.optionDesignColor input[type=color]{width:30px;height:30px;padding:2px;border:0;border-right:1px solid #d8e4df;background:#fff}
+.optionDesignColor code{display:flex;min-width:0;align-items:center;padding:0 6px;overflow:hidden;color:#627870;font:700 6px monospace;text-overflow:ellipsis}
+.optionCompactList{
+  display:flex;
+  max-height:280px;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+  padding:2px 3px 2px 1px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#bfd0ca transparent;
+}
+.optionCompactList::-webkit-scrollbar{width:5px}
+.optionCompactList::-webkit-scrollbar-thumb{border-radius:99px;background:#bfd0ca}
+.optionCompactRow{
+  display:grid;
+  min-width:0;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:5px;
+  padding:4px;
+  border:1px solid #e0e8e5;
+  border-radius:8px;
+  background:#fff;
+  content-visibility:auto;
+  contain-intrinsic-size:auto 44px;
+}
+.optionCompactRowActive{border-color:#128465;background:#f2faf7;box-shadow:0 0 0 1px rgba(18,132,101,.08)}
+.optionCompactMain{
+  display:grid;
+  min-width:0;
+  min-height:36px;
+  grid-template-columns:24px minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:7px;
+  padding:3px 5px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:#294f46;
+  text-align:left;
+  cursor:pointer;
+}
+.optionCompactMain:hover{background:#f1f7f4}
+.optionCompactIndex{display:grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#edf5f2;color:#128465;font-size:6px;font-weight:950}
+.optionCompactMeta{display:flex;min-width:0;flex-direction:column;gap:2px}
+.optionCompactMeta strong,.optionCompactMeta small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.optionCompactMeta strong{color:#234b41;font-size:7px}
+.optionCompactMeta small{color:#899892;font-size:5px}
+.optionCompactPrice{color:#315e53;font-size:6px;font-weight:900;white-space:nowrap}
+.optionCompactStatus{display:inline-flex;min-height:19px;align-items:center;padding:0 5px;border-radius:99px;background:#f1e7e3;color:#9b5847;font-size:5px;font-weight:950;white-space:nowrap}
+.optionCompactStatus[data-active=true]{background:#e2f2eb;color:#0d765b}
+.optionCompactRow>.paymentRowActions{grid-column:auto;gap:3px}
+.optionCompactRow>.paymentRowActions button{width:22px;height:22px;border-radius:6px;font-size:8px}
+.optionCompactEditor{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:9px;
+  padding:10px;
+  border:1px solid #a9cec2;
+  border-radius:9px;
+  background:linear-gradient(145deg,#fff,#f3faf7);
+  box-shadow:0 6px 18px rgba(18,85,70,.05);
+}
+.optionCompactEditor>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.optionCompactEditor>div:first-child strong{color:#17483d;font-size:8px}
+.optionCompactEditor>div:first-child small{color:#7d918a;font-size:6px}
+
+@media(max-width:640px){
+  .optionDesignGrid{grid-template-columns:1fr}
+  .optionCompactMain{grid-template-columns:24px minmax(0,1fr) auto}
+  .optionCompactStatus{display:none}
+  .optionCompactMeta small{display:none}
+  .optionCompactPrice{font-size:5px}
+  .optionCompactRow{grid-template-columns:minmax(0,1fr)}
+  .optionCompactRow>.paymentRowActions{justify-content:flex-end}
+  .optionCompactEditor>div:first-child{align-items:flex-start;flex-direction:column}
+  .optionGroupDesign>div:first-child{align-items:flex-start;flex-direction:column}
+}
