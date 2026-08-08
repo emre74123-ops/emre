@@ -83,15 +83,29 @@ export type DonationOptionVisibility = {
   optionIds: string[];
 };
 
+export type DonationOptionFontWeight = 400 | 500 | 600 | 700 | 800 | 900;
+
+export type DonationOptionTextDesign = {
+  fontSize: number;
+  fontWeight: DonationOptionFontWeight;
+  fontFamily: "inherit" | "sans" | "serif";
+  color: string;
+  align: "start" | "center" | "end";
+  letterSpacing: number;
+  textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+};
+
 export type DonationOption = {
   id: string;
   label: string;
   description: string;
   enabled: boolean;
   priceMinor: number;
+  useSharedTextDesignDesktop?: boolean;
+  useSharedTextDesignMobile?: boolean;
+  desktopTextDesign?: DonationOptionTextDesign;
+  mobileTextDesign?: DonationOptionTextDesign;
 };
-
-export type DonationOptionFontWeight = 400 | 500 | 600 | 700 | 800 | 900;
 
 export type DonationOptionDesign = {
   titleVisible: boolean;
@@ -104,9 +118,15 @@ export type DonationOptionDesign = {
   descriptionColor: string;
   titleDescriptionGap: number;
   headerGap: number;
+  groupTopGap: number;
+  optionHeightMode: "auto" | "fixed";
   optionHeight: number;
+  optionWidthMode: "auto" | "fixed" | "equal" | "columns";
+  optionWidth: number;
   optionMinWidth: number;
+  /** @deprecated Kept for migration from the legacy width controls. */
   equalWidth: boolean;
+  /** @deprecated Kept for migration from the legacy width controls. */
   columns: 0 | 1 | 2 | 3 | 4;
   horizontalScroll: boolean;
   justify: "start" | "center" | "end" | "stretch";
@@ -116,6 +136,10 @@ export type DonationOptionDesign = {
   textWrap: boolean;
   labelSize: number;
   labelWeight: DonationOptionFontWeight;
+  optionFontFamily: "inherit" | "sans" | "serif";
+  optionTextAlign: "start" | "center" | "end";
+  optionLetterSpacing: number;
+  optionTextTransform: "none" | "uppercase" | "lowercase" | "capitalize";
   optionDescriptionVisible: boolean;
   optionDescriptionSize: number;
   optionDescriptionColor: string;
@@ -537,7 +561,11 @@ export const defaultDonationOptionDesignDesktop: DonationOptionDesign = {
   descriptionColor: "#81918d",
   titleDescriptionGap: 4,
   headerGap: 9,
+  groupTopGap: 0,
+  optionHeightMode: "auto",
   optionHeight: 38,
+  optionWidthMode: "auto",
+  optionWidth: 120,
   optionMinWidth: 64,
   equalWidth: false,
   columns: 0,
@@ -549,6 +577,10 @@ export const defaultDonationOptionDesignDesktop: DonationOptionDesign = {
   textWrap: true,
   labelSize: 10,
   labelWeight: 800,
+  optionFontFamily: "inherit",
+  optionTextAlign: "center",
+  optionLetterSpacing: 0,
+  optionTextTransform: "none",
   optionDescriptionVisible: true,
   optionDescriptionSize: 8,
   optionDescriptionColor: "#6e827d",
@@ -588,6 +620,44 @@ function normalizeOptionColumns(value: unknown, fallback: DonationOptionDesign["
     : fallback;
 }
 
+function normalizeOptionLetterSpacing(value: unknown, fallback: number) {
+  return Math.round(commerceNumber(value, -1, 4, fallback) * 10) / 10;
+}
+
+function textDesignFromOptionDesign(design: DonationOptionDesign): DonationOptionTextDesign {
+  return {
+    fontSize: design.labelSize,
+    fontWeight: design.labelWeight,
+    fontFamily: design.optionFontFamily,
+    color: design.textColor,
+    align: design.optionTextAlign,
+    letterSpacing: design.optionLetterSpacing,
+    textTransform: design.optionTextTransform,
+  };
+}
+
+function normalizeDonationOptionTextDesign(
+  value: unknown,
+  fallback: DonationOptionTextDesign,
+): DonationOptionTextDesign {
+  const source = value && typeof value === "object"
+    ? value as Partial<DonationOptionTextDesign>
+    : {};
+  return {
+    fontSize: commerceInteger(source.fontSize, 9, 22, fallback.fontSize),
+    fontWeight: normalizeOptionFontWeight(source.fontWeight, fallback.fontWeight),
+    fontFamily: commerceChoice(source.fontFamily, ["inherit", "sans", "serif"] as const, fallback.fontFamily),
+    color: commerceColor(source.color, fallback.color),
+    align: commerceChoice(source.align, ["start", "center", "end"] as const, fallback.align),
+    letterSpacing: normalizeOptionLetterSpacing(source.letterSpacing, fallback.letterSpacing),
+    textTransform: commerceChoice(
+      source.textTransform,
+      ["none", "uppercase", "lowercase", "capitalize"] as const,
+      fallback.textTransform,
+    ),
+  };
+}
+
 function normalizeDonationOptionDesign(
   value: unknown,
   fallback: DonationOptionDesign,
@@ -595,6 +665,24 @@ function normalizeDonationOptionDesign(
   const source = value && typeof value === "object"
     ? value as Partial<DonationOptionDesign>
     : {};
+  const equalWidth = commerceBoolean(source.equalWidth, fallback.equalWidth);
+  const columns = normalizeOptionColumns(source.columns, fallback.columns);
+  const hasLegacyWidthFields = source.equalWidth !== undefined || source.columns !== undefined;
+  const legacyWidthMode: DonationOptionDesign["optionWidthMode"] = columns > 0
+    ? "columns"
+    : equalWidth
+      ? "equal"
+      : hasLegacyWidthFields
+        ? "auto"
+        : fallback.optionWidthMode;
+  const legacyHeightMode: DonationOptionDesign["optionHeightMode"] = source.optionHeight !== undefined
+    ? "auto"
+    : fallback.optionHeightMode;
+  const optionWidthMode = commerceChoice(
+    source.optionWidthMode,
+    ["auto", "fixed", "equal", "columns"] as const,
+    legacyWidthMode,
+  );
   return {
     titleVisible: commerceBoolean(source.titleVisible, fallback.titleVisible),
     titleAlign: commerceChoice(source.titleAlign, ["start", "center", "end"] as const, fallback.titleAlign),
@@ -606,10 +694,14 @@ function normalizeDonationOptionDesign(
     descriptionColor: commerceColor(source.descriptionColor, fallback.descriptionColor),
     titleDescriptionGap: commerceInteger(source.titleDescriptionGap, 0, 20, fallback.titleDescriptionGap),
     headerGap: commerceInteger(source.headerGap, 0, 40, fallback.headerGap),
-    optionHeight: commerceInteger(source.optionHeight, 32, 100, fallback.optionHeight),
-    optionMinWidth: commerceInteger(source.optionMinWidth, 64, 260, fallback.optionMinWidth),
-    equalWidth: commerceBoolean(source.equalWidth, fallback.equalWidth),
-    columns: normalizeOptionColumns(source.columns, fallback.columns),
+    groupTopGap: commerceInteger(source.groupTopGap, 0, 80, fallback.groupTopGap),
+    optionHeightMode: commerceChoice(source.optionHeightMode, ["auto", "fixed"] as const, legacyHeightMode),
+    optionHeight: commerceInteger(source.optionHeight, 24, 120, fallback.optionHeight),
+    optionWidthMode,
+    optionWidth: commerceInteger(source.optionWidth, 40, 320, fallback.optionWidth),
+    optionMinWidth: commerceInteger(source.optionMinWidth, 40, 260, fallback.optionMinWidth),
+    equalWidth,
+    columns: optionWidthMode === "columns" && columns === 0 ? 1 : columns,
     horizontalScroll: commerceBoolean(source.horizontalScroll, fallback.horizontalScroll),
     justify: commerceChoice(source.justify, ["start", "center", "end", "stretch"] as const, fallback.justify),
     columnGap: commerceInteger(source.columnGap, 0, 32, fallback.columnGap),
@@ -618,6 +710,14 @@ function normalizeDonationOptionDesign(
     textWrap: commerceBoolean(source.textWrap, fallback.textWrap),
     labelSize: commerceInteger(source.labelSize, 9, 22, fallback.labelSize),
     labelWeight: normalizeOptionFontWeight(source.labelWeight, fallback.labelWeight),
+    optionFontFamily: commerceChoice(source.optionFontFamily, ["inherit", "sans", "serif"] as const, fallback.optionFontFamily),
+    optionTextAlign: commerceChoice(source.optionTextAlign, ["start", "center", "end"] as const, fallback.optionTextAlign),
+    optionLetterSpacing: normalizeOptionLetterSpacing(source.optionLetterSpacing, fallback.optionLetterSpacing),
+    optionTextTransform: commerceChoice(
+      source.optionTextTransform,
+      ["none", "uppercase", "lowercase", "capitalize"] as const,
+      fallback.optionTextTransform,
+    ),
     optionDescriptionVisible: commerceBoolean(source.optionDescriptionVisible, fallback.optionDescriptionVisible),
     optionDescriptionSize: commerceInteger(
       source.optionDescriptionSize,
@@ -788,6 +888,11 @@ export function resolveDonationProjectCommerce(
     if (!value || typeof value !== "object") return [];
     const group = value as Partial<DonationOptionGroup>;
     const id = uniqueCommerceId(group.id, `secenek-grubu-${groupIndex + 1}`, groupIds);
+    const useSharedDesign = commerceBoolean(group.useSharedDesign, true);
+    const desktopDesign = normalizeDonationOptionDesign(group.desktopDesign, optionDesignDesktop);
+    const mobileDesign = normalizeDonationOptionDesign(group.mobileDesign, optionDesignMobile);
+    const desktopTextFallback = textDesignFromOptionDesign(useSharedDesign ? optionDesignDesktop : desktopDesign);
+    const mobileTextFallback = textDesignFromOptionDesign(useSharedDesign ? optionDesignMobile : mobileDesign);
     const localOptionIds = new Set<string>();
     const groupOptions = Array.isArray(group.options) ? group.options : [];
     const options = groupOptions.slice(0, 30).flatMap((optionValue, optionIndex): DonationOption[] => {
@@ -805,6 +910,10 @@ export function resolveDonationProjectCommerce(
         description: commerceText(option.description, "", 300),
         enabled: commerceBoolean(option.enabled, true),
         priceMinor: commerceInteger(option.priceMinor, 0, COMMERCE_MAX_MONEY_MINOR, 0),
+        useSharedTextDesignDesktop: commerceBoolean(option.useSharedTextDesignDesktop, true),
+        useSharedTextDesignMobile: commerceBoolean(option.useSharedTextDesignMobile, true),
+        desktopTextDesign: normalizeDonationOptionTextDesign(option.desktopTextDesign, desktopTextFallback),
+        mobileTextDesign: normalizeDonationOptionTextDesign(option.mobileTextDesign, mobileTextFallback),
       }];
     });
     optionsByGroup.set(id, localOptionIds);
@@ -837,9 +946,9 @@ export function resolveDonationProjectCommerce(
         ? { visibleWhen: { groupId: visibilityGroupId, optionIds: visibilityOptionIds } }
         : {}),
       options,
-      useSharedDesign: commerceBoolean(group.useSharedDesign, true),
-      desktopDesign: normalizeDonationOptionDesign(group.desktopDesign, optionDesignDesktop),
-      mobileDesign: normalizeDonationOptionDesign(group.mobileDesign, optionDesignMobile),
+      useSharedDesign,
+      desktopDesign,
+      mobileDesign,
     }];
   });
 
