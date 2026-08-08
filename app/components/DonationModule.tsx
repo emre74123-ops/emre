@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { CART_MAX_QUANTITY, readCart, writeCart, type CartItem } from "../../lib/cart";
-import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationOptionDesign, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
+import { defaultModuleSettings, resolveDonationProjectCommerce, type DonationCategory, type DonationModuleSettings, type DonationOption, type DonationOptionDesign, type DonationOptionTextDesign, type DonationProject, type DonationProjectMedia } from "../../lib/module-settings";
 import styles from "./donation-module.module.css";
 
 type Device = "desktop" | "mobile";
@@ -39,6 +39,7 @@ type ProjectCommerce = ReturnType<typeof resolveDonationProjectCommerce>;
 type ProjectAction = ProjectCommerce["actions"][number];
 type ProjectActionDevice = ProjectAction["desktop"];
 type OptionCssProperties = CSSProperties & Record<`--dm-option-${string}`, string | number>;
+type OptionItemCssProperties = CSSProperties & Record<`--dm-option-item-${string}`, string | number>;
 
 const numberSetting = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
@@ -148,6 +149,77 @@ function optionShadow(shadow: DonationOptionDesign["shadow"]) {
   return "0 0 0 transparent";
 }
 
+function optionFontFamily(fontFamily: DonationOptionTextDesign["fontFamily"]) {
+  if (fontFamily === "sans") return "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  if (fontFamily === "serif") return "Georgia, 'Times New Roman', serif";
+  return "inherit";
+}
+
+function optionTextAlign(align: DonationOptionTextDesign["align"]) {
+  if (align === "start") return "flex-start";
+  if (align === "end") return "flex-end";
+  return "center";
+}
+
+function sharedOptionTextDesign(design: DonationOptionDesign): DonationOptionTextDesign {
+  return {
+    fontSize: design.labelSize,
+    fontWeight: design.labelWeight,
+    fontFamily: design.optionFontFamily,
+    color: design.textColor,
+    align: design.optionTextAlign,
+    letterSpacing: design.optionLetterSpacing,
+    textTransform: design.optionTextTransform,
+  };
+}
+
+function optionUsesSharedTextDesign(option: DonationOption, device: Device) {
+  return device === "mobile"
+    ? option.useSharedTextDesignMobile !== false
+    : option.useSharedTextDesignDesktop !== false;
+}
+
+function resolveOptionTextDesign(
+  option: DonationOption,
+  design: DonationOptionDesign,
+  device: Device,
+) {
+  const shared = sharedOptionTextDesign(design);
+  if (optionUsesSharedTextDesign(option, device)) return shared;
+  return (device === "mobile" ? option.mobileTextDesign : option.desktopTextDesign) || shared;
+}
+
+function optionItemStyle(
+  option: DonationOption,
+  design: DonationOptionDesign,
+  device: Device,
+): OptionItemCssProperties | undefined {
+  if (optionUsesSharedTextDesign(option, device)) return undefined;
+  const textDesign = resolveOptionTextDesign(option, design, device);
+  return {
+    "--dm-option-item-label-size": `${textDesign.fontSize}px`,
+    "--dm-option-item-label-weight": textDesign.fontWeight,
+    "--dm-option-item-label-family": optionFontFamily(textDesign.fontFamily),
+    "--dm-option-item-label-color": textDesign.color,
+    "--dm-option-item-label-align": textDesign.align,
+    "--dm-option-item-label-justify": optionTextAlign(textDesign.align),
+    "--dm-option-item-label-spacing": `${textDesign.letterSpacing}px`,
+    "--dm-option-item-label-transform": textDesign.textTransform,
+  };
+}
+
+function selectOptionStyle(textDesign: DonationOptionTextDesign): CSSProperties {
+  return {
+    color: textDesign.color,
+    fontFamily: optionFontFamily(textDesign.fontFamily),
+    fontSize: textDesign.fontSize,
+    fontWeight: textDesign.fontWeight,
+    letterSpacing: `${textDesign.letterSpacing}px`,
+    textAlign: textDesign.align,
+    textTransform: textDesign.textTransform,
+  };
+}
+
 function optionGroupStyle(design: DonationOptionDesign): OptionCssProperties {
   const justify = design.justify === "start"
     ? "flex-start"
@@ -163,7 +235,9 @@ function optionGroupStyle(design: DonationOptionDesign): OptionCssProperties {
     "--dm-option-description-color": design.descriptionColor,
     "--dm-option-title-description-gap": `${design.titleDescriptionGap}px`,
     "--dm-option-header-gap": `${design.headerGap}px`,
+    "--dm-option-group-top-gap": `${design.groupTopGap}px`,
     "--dm-option-height": `${design.optionHeight}px`,
+    "--dm-option-width": `${design.optionWidth}px`,
     "--dm-option-min-width": `${design.optionMinWidth}px`,
     "--dm-option-columns": design.columns || 1,
     "--dm-option-justify": justify,
@@ -173,6 +247,11 @@ function optionGroupStyle(design: DonationOptionDesign): OptionCssProperties {
     "--dm-option-white-space": design.textWrap ? "normal" : "nowrap",
     "--dm-option-label-size": `${design.labelSize}px`,
     "--dm-option-label-weight": design.labelWeight,
+    "--dm-option-label-family": optionFontFamily(design.optionFontFamily),
+    "--dm-option-label-align": design.optionTextAlign,
+    "--dm-option-label-justify": optionTextAlign(design.optionTextAlign),
+    "--dm-option-label-spacing": `${design.optionLetterSpacing}px`,
+    "--dm-option-label-transform": design.optionTextTransform,
     "--dm-option-item-description-size": `${design.optionDescriptionSize}px`,
     "--dm-option-item-description-color": design.optionDescriptionColor,
     "--dm-option-background": design.background,
@@ -285,51 +364,77 @@ function DonationCardCommerce({
         const sharedDesign = device === "mobile" ? commerce.optionDesignMobile : commerce.optionDesignDesktop;
         const ownDesign = device === "mobile" ? group.mobileDesign : group.desktopDesign;
         const optionDesign = group.useSharedDesign !== false ? sharedDesign : ownDesign || sharedDesign;
+        const optionWidthMode = optionDesign.optionWidthMode;
+        const horizontalScroll = optionDesign.horizontalScroll
+          && (optionWidthMode === "auto" || optionWidthMode === "fixed");
+        const widthModeClass = optionWidthMode === "fixed"
+          ? styles.optionWidthFixed
+          : optionWidthMode === "equal"
+            ? styles.optionWidthEqual
+            : optionWidthMode === "columns"
+              ? styles.optionWidthColumns
+              : styles.optionWidthAuto;
+        const heightModeClass = optionDesign.optionHeightMode === "fixed"
+          ? styles.optionHeightFixed
+          : styles.optionHeightAuto;
         const hasHeader = optionDesign.titleVisible
           || (optionDesign.descriptionVisible && Boolean(group.description));
+        const enabledOptions = group.options.filter((option) => option.enabled);
+        const selectedOption = enabledOptions.find((option) => option.id === selections[group.id]);
+        const selectedSelectStyle = selectedOption && !optionUsesSharedTextDesign(selectedOption, device)
+          ? selectOptionStyle(resolveOptionTextDesign(selectedOption, optionDesign, device))
+          : undefined;
         const choicesClassName = [
           styles.optionChoices,
-          group.display === "cards" ? styles.optionCards : "",
-          optionDesign.horizontalScroll ? styles.optionChoicesScroll : "",
-          !optionDesign.horizontalScroll && optionDesign.columns > 0 ? styles.optionChoicesColumns : "",
-          optionDesign.equalWidth ? styles.optionChoicesEqual : "",
-          optionDesign.justify === "stretch" ? styles.optionChoicesStretch : "",
+          widthModeClass,
+          heightModeClass,
+          horizontalScroll ? styles.optionChoicesScroll : "",
+          optionDesign.justify === "stretch" && optionWidthMode === "auto"
+            ? styles.optionChoicesStretch
+            : "",
         ].filter(Boolean).join(" ");
         const optionPrice = (priceMinor: number) => `+${money.format(priceMinor / 100)}`;
         return (
           <fieldset
             aria-label={group.label}
             aria-required={group.required}
-            className={styles.optionGroup}
+            className={`${styles.optionGroup} ${widthModeClass} ${heightModeClass}`}
             key={group.id}
             style={optionGroupStyle(optionDesign)}
           >
             {hasHeader ? <div className={styles.optionGroupHeader}>
               {optionDesign.titleVisible ? <div className={styles.optionGroupTitle}>
-                {group.label}{group.required ? <sup>*</sup> : null}
+                {group.label}
               </div> : null}
               {optionDesign.descriptionVisible && group.description
                 ? <p className={styles.optionGroupDescription}>{group.description}</p>
                 : null}
             </div> : null}
             {group.display === "select" ? (
-              <select required={group.required} value={selections[group.id] || ""} onChange={(event) => chooseOption(group.id, event.target.value)}>
+              <select required={group.required} style={selectedSelectStyle} value={selections[group.id] || ""} onChange={(event) => chooseOption(group.id, event.target.value)}>
                 <option value="">Seçiniz</option>
-                {group.options.filter((option) => option.enabled).map((option) => (
-                  <option key={option.id} value={option.id}>
+                {enabledOptions.map((option) => (
+                  <option
+                    key={option.id}
+                    style={!optionUsesSharedTextDesign(option, device)
+                      ? selectOptionStyle(resolveOptionTextDesign(option, optionDesign, device))
+                      : undefined}
+                    value={option.id}
+                  >
                     {option.label}{optionDesign.priceVisible && option.priceMinor > 0 ? ` · ${optionPrice(option.priceMinor)}` : ""}
                   </option>
                 ))}
               </select>
             ) : (
               <div aria-label={group.label} aria-required={group.required} className={choicesClassName} role="radiogroup">
-                {group.options.filter((option) => option.enabled).map((option) => {
+                {enabledOptions.map((option) => {
                   const showPrice = optionDesign.priceVisible && option.priceMinor > 0;
                   return (
                     <button
                       aria-checked={selections[group.id] === option.id}
                       className={selections[group.id] === option.id ? styles.selectedChoice : ""}
                       role="radio"
+                      style={optionItemStyle(option, optionDesign, device)}
                       type="button"
                       key={option.id}
                       onClick={() => chooseOption(group.id, option.id)}
