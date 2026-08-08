@@ -142,7 +142,7 @@
   .cardMediaPlay span{width:48px;height:48px}
 }
 @media(prefers-reduced-motion:reduce){
-  .cardMediaPlay span,.optionGroupMotion{transition:none!important}
+  .cardMediaPlay span,.optionGroupMotion,.optionContentMotion,.optionHeaderIcon::before{transition:none!important}
   .optionGroupMotion{transform:none!important}
 }
 
@@ -152,10 +152,35 @@
 .optionGroupMotion{min-width:0;margin-bottom:0;display:grid;grid-template-rows:0fr;opacity:0;transform:translateY(-8px);visibility:hidden;pointer-events:none;transition:grid-template-rows .32s cubic-bezier(.22,1,.36,1),margin-bottom .32s cubic-bezier(.22,1,.36,1),opacity .2s ease,transform .32s cubic-bezier(.22,1,.36,1),visibility 0s linear .32s}
 .optionGroupMotion[data-visible="true"]{margin-bottom:14px;grid-template-rows:1fr;opacity:1;transform:translateY(0);visibility:visible;pointer-events:auto;transition-delay:0s}
 .optionGroupMotionInner{min-width:0;min-height:0;overflow:hidden}
-.optionGroup{min-width:0;margin:var(--dm-option-group-top-gap,0) 0 0;padding:0;display:grid;gap:var(--dm-option-header-gap,9px);border:0}
+.optionGroup{min-width:0;margin:var(--dm-option-group-top-gap,0) 0 0;padding:0;display:grid;gap:0;border:0}
 .optionGroupHeader{min-width:0;display:grid;gap:var(--dm-option-title-description-gap,4px);text-align:var(--dm-option-title-align,start)}
 .optionGroupTitle{color:var(--dm-option-title-color,#345b54);font-size:var(--dm-option-title-size,10px);font-weight:var(--dm-option-title-weight,900);line-height:1.3;letter-spacing:.7px;text-transform:uppercase}
 .optionGroupDescription{min-height:0!important;margin:0!important;color:var(--dm-option-description-color,#81918d)!important;font-size:var(--dm-option-description-size,10px)!important;line-height:1.5!important}
+.optionHeaderLine{width:100%;border-top:var(--dm-option-header-line-width,1px) var(--dm-option-header-line-style,solid) var(--dm-option-header-line-color,#345b54)}
+.optionHeaderDivider{gap:var(--dm-option-title-description-gap,4px)}
+.optionHeaderDividerRow{min-width:0;display:flex;align-items:center;gap:10px}
+.optionHeaderDividerRow>span{min-width:12px;flex:1 1 auto;border-top:var(--dm-option-header-line-width,1px) var(--dm-option-header-line-style,solid) var(--dm-option-header-line-color,#345b54)}
+.optionHeaderDividerRow .optionGroupTitle{flex:0 1 auto;text-align:center}
+.optionHeaderSymbol{min-height:18px;display:flex;align-items:center}
+.optionHeaderSymbol[data-position="start"]{justify-content:flex-start}
+.optionHeaderSymbol[data-position="end"]{justify-content:flex-end}
+.optionAccordionTrigger{box-sizing:border-box;width:100%;min-width:0;min-height:32px;padding:4px 2px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;border-radius:6px;background:transparent;color:var(--dm-option-title-color,#345b54);font:inherit;text-align:var(--dm-option-title-align,start);cursor:pointer}
+.optionAccordionTrigger:focus-visible{outline:2px solid color-mix(in srgb,var(--dm-option-header-line-color,#345b54) 45%,transparent);outline-offset:-2px}
+.optionAccordionCopy{min-width:0;flex:1 1 auto;display:grid;gap:var(--dm-option-title-description-gap,4px);text-align:var(--dm-option-title-align,start)}
+.optionAccordionCopy .optionGroupTitle,.optionAccordionCopy .optionGroupDescription{display:block;text-align:inherit}
+.optionHeaderIcon{width:22px;height:22px;flex:0 0 22px;display:grid;place-items:center;color:var(--dm-option-header-line-color,var(--dm-option-title-color,#345b54));font-size:18px;font-weight:800;line-height:1}
+.optionHeaderIcon::before{display:block}
+.optionHeaderIcon[data-icon="chevron"]::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform var(--dm-option-header-animation,220ms) cubic-bezier(.22,1,.36,1)}
+.optionHeaderIcon[data-icon="chevron"][data-open="true"]::before{transform:translateY(2px) rotate(225deg)}
+.optionHeaderIcon[data-icon="plus-minus"]::before{content:"+"}
+.optionHeaderIcon[data-icon="plus-minus"][data-open="true"]::before{content:"\2212"}
+.optionHeaderIcon[data-icon="dash"]::before{content:"\2014"}
+.optionHeaderIcon[data-icon="dot"]::before{content:"\2022"}
+.optionHeaderIcon[data-icon="diamond"]::before{content:"\25C6";font-size:11px}
+.optionContentMotion{min-width:0;margin-top:0;display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;pointer-events:none;transition:grid-template-rows var(--dm-option-header-animation,220ms) cubic-bezier(.22,1,.36,1),margin-top var(--dm-option-header-animation,220ms) cubic-bezier(.22,1,.36,1),opacity var(--dm-option-header-animation,220ms) ease,visibility 0s linear var(--dm-option-header-animation,220ms)}
+.optionContentMotion[data-open="true"]{grid-template-rows:1fr;opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+.optionContentMotion[data-open="true"][data-has-header="true"]{margin-top:var(--dm-option-header-gap,9px)}
+.optionContentMotionInner{min-width:0;min-height:0;overflow:hidden}
 .amountArea>small{display:block;margin:0 0 8px;color:#345b54;font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .optionGroup select{box-sizing:border-box;width:100%;height:auto;min-height:var(--dm-option-height,38px);padding:6px 38px 6px var(--dm-option-padding-x,12px);border:var(--dm-option-border-width,1px) solid var(--dm-option-border-color,#d6e2de);border-radius:var(--dm-option-radius,8px);background:var(--dm-option-background,#fff);color:var(--dm-option-text-color,#365f57);font-family:var(--dm-option-label-family,inherit);font-size:var(--dm-option-label-size,10px);font-weight:var(--dm-option-label-weight,800);letter-spacing:var(--dm-option-label-spacing,0);text-align:var(--dm-option-label-align,center);text-transform:var(--dm-option-label-transform,none);box-shadow:var(--dm-option-shadow,none);outline:none}
 .optionWidthFixed select{width:var(--dm-option-width,120px)}
@@ -207,5 +232,6 @@
 .commerceButtonGradient{border-color:transparent!important}
 
 @media(max-width:640px){
+  .optionAccordionTrigger{min-height:44px;padding:7px 2px}
   .commerceButton{min-width:96px}
 }
