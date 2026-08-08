@@ -433,7 +433,591 @@ function DonationCardCommerce({
                 {enabledOptions.map((option) => {
                   const showPrice = optionDesign.priceVisible && option.priceMinor > 0;
                   return (
- …7690 tokens truncated…Desktop.priceTextColor,
+                    <button
+                      aria-checked={selections[group.id] === option.id}
+                      className={selections[group.id] === option.id ? styles.selectedChoice : ""}
+                      role="radio"
+                      style={optionItemStyle(option, optionDesign, device)}
+                      type="button"
+                      key={option.id}
+                      onClick={() => chooseOption(group.id, option.id)}
+                    >
+                      <strong className={styles.optionLabel}>
+                        <span>{option.label}</span>
+                        {showPrice && optionDesign.pricePosition === "inline"
+                          ? <em className={styles.optionPriceInline}>{optionPrice(option.priceMinor)}</em>
+                          : null}
+                      </strong>
+                      {optionDesign.optionDescriptionVisible && option.description
+                        ? <small className={styles.optionDescription}>{option.description}</small>
+                        : null}
+                      {showPrice && optionDesign.pricePosition === "below"
+                        ? <em className={styles.optionPriceBelow}>{optionPrice(option.priceMinor)}</em>
+                        : null}
+                      {showPrice && optionDesign.pricePosition === "badge"
+                        ? <em className={styles.optionPriceBadge}>{optionPrice(option.priceMinor)}</em>
+                        : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+        );
+      })}
+
+      {commerce.mode === "amount" ? (
+        <div className={styles.amountArea}>
+          <small>{commerce.sectionLabel}</small>
+          {enabledPresets.length ? <div className={styles.choices}>
+            {enabledPresets.map((preset) => (
+              <button className={(activePreset?.id === preset.id && !typedMinor) ? styles.selectedChoice : ""} type="button" key={preset.id} onClick={() => { setPresetId(preset.id); setCustomAmount(""); }}>
+                {preset.label || money.format(preset.amountMinor / 100)}
+                {preset.featured ? <i>Popüler</i> : null}
+              </button>
+            ))}
+          </div> : null}
+          {commerce.customAmountEnabled ? <label className={styles.customAmount}>
+            <span>₺</span>
+            <input inputMode="decimal" value={customAmount} onChange={(event) => setCustomAmount(event.target.value.replace(/[^\d,.]/g, ""))} placeholder={commerce.customAmountPlaceholder} />
+          </label> : null}
+        </div>
+      ) : null}
+
+      {commerce.mode === "quantity" ? (
+        <div className={styles.amountArea}>
+          <small>{commerce.sectionLabel}</small>
+          <div className={styles.choices}>
+            {commerce.quantityPresets.map((value) => <button className={activeQuantity === value ? styles.selectedChoice : ""} type="button" key={value} onClick={() => setQuantity(value)}>{value}</button>)}
+          </div>
+        </div>
+      ) : null}
+
+      {commerce.mode === "configured" && commerce.customAmountEnabled ? (
+        <div className={styles.amountArea}>
+          <small>{commerce.sectionLabel}</small>
+          <label className={styles.customAmount}>
+            <span>₺</span>
+            <input inputMode="decimal" value={customAmount} onChange={(event) => setCustomAmount(event.target.value.replace(/[^\d,.]/g, ""))} placeholder={commerce.customAmountPlaceholder} />
+          </label>
+        </div>
+      ) : null}
+
+      {commerce.mode !== "amount" || !commerce.customAmountEnabled ? (
+        <div className={styles.resolvedPrice}><span>Toplam</span><strong>{money.format(totalMinor / 100)}</strong></div>
+      ) : null}
+
+      {!validSelection ? <p className={styles.commerceValidation}>{invalidCustomAmount ? commerce.validationMessage : commerce.validationMessage}</p> : null}
+      <div className={`${styles.commerceActions} ${actionLayout === "stack" ? styles.commerceActionsStack : ""}`} style={{ gap: actionGap }}>
+        {commerce.actions
+          .filter((action) => action.enabled && action[deviceKey].visible)
+          .sort((a, b) => a[deviceKey].order - b[deviceKey].order)
+          .map((action) => {
+            const deviceSettings = action[deviceKey];
+            const variantClass = action.variant === "outline"
+              ? styles.commerceButtonOutline
+              : action.variant === "soft"
+                ? styles.commerceButtonSoft
+                : action.variant === "gradient"
+                  ? styles.commerceButtonGradient
+                  : "";
+            return (
+              <button
+                className={`${styles.commerceButton}${variantClass ? ` ${variantClass}` : ""}`}
+                type="button"
+                key={action.id}
+                style={actionButtonStyle(action, deviceSettings)}
+                onClick={() => runAction(action)}
+              >
+                {action.icon !== "none" ? <i aria-hidden="true">{actionIcons[action.icon]}</i> : null}
+                <span>{deviceSettings.label}</span>
+              </button>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
+function CategoryImage({ category, src, className, sizes }: { category: DonationCategory; src: string; className: string; sizes: string }) {
+  const alt = category.imageAlt;
+  const title = category.imageTitle || category.label;
+  if (!src) {
+    return (
+      // A native image intentionally preserves the browser's broken-image marker for an empty category image.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        className={className}
+        src="/__missing-donation-category-image__.png"
+        alt=""
+        aria-hidden="true"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      />
+    );
+  }
+  return <Image className={className} src={src} alt={alt} title={title} fill sizes={sizes} />;
+}
+
+function BrokenMediaMarker({ className = "" }: { className?: string }) {
+  return (
+    // A native image intentionally preserves the browser's broken-image marker.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className={`${styles.cardMediaBroken}${className ? ` ${className}` : ""}`} src="/__missing-donation-project-media__.png" alt="" aria-hidden="true" />
+  );
+}
+
+function CardMedia({
+  media,
+  title,
+  preferences,
+  imageHeight,
+  imageRadius,
+  imageFit,
+  visible,
+  onOpenVideo,
+}: {
+  media: DonationProjectMedia[];
+  title: string;
+  preferences: ResolvedCardMediaPreferences;
+  imageHeight: number;
+  imageRadius: number;
+  imageFit: "cover" | "contain";
+  visible: boolean;
+  onOpenVideo: (media: DonationProjectMedia, trigger: HTMLButtonElement) => void;
+}) {
+  const [active, setActive] = useState(0);
+  const pointerStart = useRef<{ x: number; y: number; id: number; captured: boolean } | null>(null);
+  const swiped = useRef(false);
+  const currentIndex = media.length ? Math.min(active, media.length - 1) : 0;
+  const current = media[currentIndex];
+  const select = (index: number) => setActive(Math.max(0, Math.min(media.length - 1, index)));
+  const thumbnailSize = Math.min(preferences.thumbnailSize, Math.max(32, imageHeight - 30));
+  const thumbnailHeight = Math.min(Math.max(24, Math.round(thumbnailSize * .72)), Math.max(24, imageHeight - 20));
+
+  if (!visible) return null;
+
+  return (
+    <div
+      className={styles.cardMedia}
+      style={{
+        "--dm-card-media-display": "block",
+        "--dm-card-media-height": `${imageHeight}px`,
+        "--dm-card-media-radius": `${imageRadius}px`,
+        "--dm-card-media-fit": imageFit,
+        "--dm-media-thumb-size": `${thumbnailSize}px`,
+        "--dm-media-thumb-height": `${thumbnailHeight}px`,
+        "--dm-media-thumb-gap": `${preferences.thumbnailGap}px`,
+        "--dm-media-thumb-radius": `${preferences.thumbnailRadius}px`,
+        "--dm-media-thumb-bottom": `${preferences.thumbnailBottom}px`,
+      } as CSSProperties}
+    >
+      <div
+        className={styles.cardMediaMain}
+        onPointerDown={(event) => {
+          if (!event.isPrimary) return;
+          if ((event.target as HTMLElement).closest("[data-media-thumbnails='true']")) return;
+          pointerStart.current = { x: event.clientX, y: event.clientY, id: event.pointerId, captured: false };
+          swiped.current = false;
+        }}
+        onPointerMove={(event) => {
+          const start = pointerStart.current;
+          if (!start || start.id !== event.pointerId || start.captured) return;
+          const distanceX = event.clientX - start.x;
+          const distanceY = event.clientY - start.y;
+          if (Math.abs(distanceX) < 8 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+          start.captured = true;
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+        }}
+        onPointerUp={(event) => {
+          const start = pointerStart.current;
+          pointerStart.current = null;
+          if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          if (!start || start.id !== event.pointerId || media.length < 2) return;
+          const distanceX = event.clientX - start.x;
+          const distanceY = event.clientY - start.y;
+          if (Math.abs(distanceX) < 35 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+          swiped.current = true;
+          select(currentIndex + (distanceX < 0 ? 1 : -1));
+          window.requestAnimationFrame(() => { swiped.current = false; });
+        }}
+        onPointerCancel={() => {
+          pointerStart.current = null;
+          swiped.current = false;
+        }}
+      >
+        {!current || !current.url ? <BrokenMediaMarker /> : current.type === "image" ? (
+          <Image className={styles.cardMediaImage} src={current.url} alt={current.alt || title} fill sizes="(max-width: 640px) 92vw, (max-width: 1200px) 50vw, 700px" draggable={false} />
+        ) : (
+          <>
+            {current.poster ? <Image className={styles.cardMediaImage} src={current.poster} alt="" fill sizes="(max-width: 640px) 92vw, (max-width: 1200px) 50vw, 700px" draggable={false} /> : <BrokenMediaMarker />}
+            <button
+              className={styles.cardMediaPlay}
+              type="button"
+              aria-label={`${title} videosunu oynat`}
+              onClick={(event) => {
+                if (swiped.current) return;
+                onOpenVideo(current, event.currentTarget);
+              }}
+            >
+              <span aria-hidden="true">▶</span>
+            </button>
+          </>
+        )}
+        {preferences.thumbnailsVisible && media.length > 1 ? (
+          <div className={styles.cardMediaThumbs} role="group" data-media-thumbnails="true" aria-label={`${title} medya galerisi`}>
+            {media.map((item, index) => {
+              const thumbnail = item.type === "video" ? item.poster : item.url;
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={index === currentIndex ? styles.activeMediaThumb : ""}
+                  onClick={() => select(index)}
+                  aria-label={`${index + 1}. medyayı göster${item.type === "video" ? " (video)" : ""}`}
+                  aria-current={index === currentIndex ? "true" : undefined}
+                >
+                  {thumbnail ? <Image src={thumbnail} alt="" fill sizes={`${preferences.thumbnailSize}px`} draggable={false} /> : <BrokenMediaMarker />}
+                  {item.type === "video" ? <i aria-hidden="true">▶</i> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+const money = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
+const shadowValue = {
+  none: "none",
+  soft: "0 7px 18px rgba(18,60,53,.08)",
+  medium: "0 12px 28px rgba(18,60,53,.16)",
+  strong: "0 18px 38px rgba(18,60,53,.26)",
+} as const;
+const arrowSymbols = {
+  thin: ["←", "→"],
+  chevron: ["‹", "›"],
+  bold: ["❮", "❯"],
+  long: ["⟵", "⟶"],
+  triangle: ["◀", "▶"],
+} as const;
+
+function subscribeToMobileViewport(callback: () => void) {
+  const query = window.matchMedia("(max-width: 640px)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+
+const getMobileViewportSnapshot = () => window.matchMedia("(max-width: 640px)").matches;
+const getDesktopServerSnapshot = () => false;
+
+export default function DonationModule({ embedded = false, settings = defaultModuleSettings.donation, previewDevice, previewCategory, onCategoryChange }: { embedded?: boolean; settings?: DonationModuleSettings; previewDevice?: "desktop" | "mobile"; previewCategory?: string; onCategoryChange?: (category: string) => void }) {
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  const categoryDirectionRef = useRef<1 | -1>(1);
+  const categoryPausedRef = useRef(false);
+  const categoryPositionRef = useRef(0);
+  const categoryInitializedRef = useRef(false);
+  const categoryPointerActiveRef = useRef(false);
+  const categoryResumeAtRef = useRef(0);
+  const categoryMouseDragRef = useRef({ active: false, moved: false, pointerId: -1, startX: 0, startScroll: 0 });
+  const categoryLastDragAtRef = useRef(0);
+  const [categoryProgress, setCategoryProgress] = useState(0);
+  const [category, setCategory] = useState(previewCategory || settings.allCategoryId || settings.categories[0]?.id || "");
+  const [notice, setNotice] = useState("");
+  const [videoModal, setVideoModal] = useState<VideoModalState | null>(null);
+  const videoModalPanelRef = useRef<HTMLDivElement>(null);
+  const videoModalCloseRef = useRef<HTMLButtonElement>(null);
+  const videoModalTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const isMobileViewport = useSyncExternalStore(
+    subscribeToMobileViewport,
+    getMobileViewportSnapshot,
+    getDesktopServerSnapshot,
+  );
+  useEffect(() => {
+    if (!previewCategory) return;
+    const frame = window.requestAnimationFrame(() => setCategory(previewCategory));
+    return () => window.cancelAnimationFrame(frame);
+  }, [previewCategory]);
+  useEffect(() => {
+    if (!videoModal) return;
+
+    const body = document.body;
+    const root = document.documentElement;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const originalBody = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+      paddingRight: body.style.paddingRight,
+    };
+    const originalRootOverflow = root.style.overflow;
+    const scrollbarWidth = Math.max(0, window.innerWidth - root.clientWidth);
+    const bodyPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setVideoModal(null);
+    };
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = `-${scrollX}px`;
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    if (scrollbarWidth) body.style.paddingRight = `${bodyPaddingRight + scrollbarWidth}px`;
+    root.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    window.requestAnimationFrame(() => videoModalCloseRef.current?.focus({ preventScroll: true }));
+
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      body.style.position = originalBody.position;
+      body.style.top = originalBody.top;
+      body.style.left = originalBody.left;
+      body.style.right = originalBody.right;
+      body.style.width = originalBody.width;
+      body.style.overflow = originalBody.overflow;
+      body.style.paddingRight = originalBody.paddingRight;
+      root.style.overflow = originalRootOverflow;
+      const originalScrollBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      window.scrollTo(scrollX, scrollY);
+      root.style.scrollBehavior = originalScrollBehavior;
+      window.requestAnimationFrame(() => {
+        if (videoModalTriggerRef.current?.isConnected) videoModalTriggerRef.current.focus({ preventScroll: true });
+      });
+    };
+  }, [videoModal]);
+  const activeDevice: Device = previewDevice || (isMobileViewport ? "mobile" : "desktop");
+  const categories = settings.categories;
+  const legacyVisibleCategories = settings.visibleCategories || categories.map((item) => item.id);
+  const deviceVisibleCategories = activeDevice === "mobile"
+    ? settings.mobileVisibleCategories || legacyVisibleCategories
+    : settings.desktopVisibleCategories || legacyVisibleCategories;
+  const deviceCategoryOrder = activeDevice === "mobile"
+    ? settings.mobileCategoryOrder || categories.map((item) => item.id)
+    : settings.desktopCategoryOrder || categories.map((item) => item.id);
+  const visibleIds = new Set(deviceVisibleCategories);
+  const orderedIds = [
+    ...deviceCategoryOrder,
+    ...categories.map((item) => item.id).filter((id) => !deviceCategoryOrder.includes(id)),
+  ];
+  const visibleCategories = orderedIds
+    .filter((id, index) => visibleIds.has(id) && orderedIds.indexOf(id) === index)
+    .map((id) => categories.find((item) => item.id === id))
+    .filter((item): item is (typeof categories)[number] => Boolean(item));
+  const effectiveCategory = visibleIds.has(category)
+    ? category
+    : visibleCategories.find((item) => item.id === settings.allCategoryId)?.id || visibleCategories[0]?.id || "";
+  const isAllCategory = Boolean(settings.allCategoryId) && effectiveCategory === settings.allCategoryId;
+  const categoryListKey = `${activeDevice}:${visibleCategories.map((item) => item.id).join(",")}`;
+  const filtered = settings.projects
+    .filter((project) => project.enabled && (isAllCategory || project.category === effectiveCategory))
+    .sort((a, b) => isAllCategory
+      ? (activeDevice === "mobile" ? (a.allOrderMobile ?? 0) - (b.allOrderMobile ?? 0) : (a.allOrderDesktop ?? 0) - (b.allOrderDesktop ?? 0))
+      : 0);
+
+  useEffect(() => {
+    const rail = categoriesRef.current;
+    categoryInitializedRef.current = false;
+    categoryDirectionRef.current = 1;
+    categoryPositionRef.current = 0;
+    if (rail) rail.scrollLeft = 0;
+  }, [categoryListKey]);
+
+  useEffect(() => {
+    const rail = categoriesRef.current;
+    if (!rail) return;
+    let animationFrame = 0;
+    let previousTime = performance.now();
+    const maxAtStart = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    if (!categoryInitializedRef.current && maxAtStart > 0) {
+      categoryPositionRef.current = Math.min(maxAtStart, activeDevice === "mobile" ? settings.mobileEdgeScrollPadding : settings.desktopEdgeScrollPadding);
+      rail.scrollLeft = categoryPositionRef.current;
+      categoryInitializedRef.current = true;
+    } else {
+      categoryPositionRef.current = rail.scrollLeft;
+    }
+    const animate = (time: number) => {
+      const elapsed = Math.min(68, Math.max(0, time - previousTime));
+      previousTime = time;
+      if (!settings.autoScroll || categoryPausedRef.current || time < categoryResumeAtRef.current || rail.scrollWidth <= rail.clientWidth) {
+        animationFrame = window.requestAnimationFrame(animate);
+        return;
+      }
+      const max = rail.scrollWidth - rail.clientWidth;
+      let next = categoryPositionRef.current + categoryDirectionRef.current * settings.autoScrollSpeed * (elapsed / 34);
+      if (next >= max) {
+        next = max;
+        categoryDirectionRef.current = -1;
+      } else if (next <= 0) {
+        next = 0;
+        categoryDirectionRef.current = 1;
+      }
+      categoryPositionRef.current = next;
+      rail.scrollLeft = next;
+      animationFrame = window.requestAnimationFrame(animate);
+    };
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeDevice, categoryListKey, settings.autoScroll, settings.autoScrollSpeed, settings.desktopEdgeScrollPadding, settings.mobileEdgeScrollPadding]);
+
+  function updateCategoryProgress() {
+    const rail = categoriesRef.current;
+    if (!rail) return;
+    const time = performance.now();
+    if (categoryPointerActiveRef.current || time < categoryResumeAtRef.current) {
+      const nextPosition = rail.scrollLeft;
+      if (nextPosition > categoryPositionRef.current + .25) categoryDirectionRef.current = 1;
+      if (nextPosition < categoryPositionRef.current - .25) categoryDirectionRef.current = -1;
+      categoryPositionRef.current = nextPosition;
+      if (!categoryPointerActiveRef.current) categoryResumeAtRef.current = time + 900;
+    }
+    const max = rail.scrollWidth - rail.clientWidth;
+    setCategoryProgress(max > 0 ? Math.min(100, Math.max(0, (rail.scrollLeft / max) * 100)) : 100);
+  }
+
+  function startCategoryInteraction() {
+    categoryPointerActiveRef.current = true;
+    categoryPausedRef.current = true;
+    categoryResumeAtRef.current = Number.POSITIVE_INFINITY;
+    categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0;
+  }
+
+  function finishCategoryInteraction() {
+    categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0;
+    categoryPointerActiveRef.current = false;
+    categoryPausedRef.current = false;
+    categoryResumeAtRef.current = performance.now() + 900;
+  }
+
+  function pauseCategoryForWheel() {
+    categoryPositionRef.current = categoriesRef.current?.scrollLeft || 0;
+    categoryResumeAtRef.current = performance.now() + 900;
+  }
+
+  function showNotice(message: string) {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2200);
+  }
+
+  function moveCards(direction: -1 | 1) {
+    cardsRef.current?.scrollBy({ left: direction * Math.min(760, cardsRef.current.clientWidth * .82), behavior: "smooth" });
+  }
+
+  const desktopExtraSide = settings.desktopProgressPosition === "both" ? settings.desktopProgressExtraSpace / 2 : 0;
+  const mobileExtraSide = settings.mobileProgressPosition === "both" ? settings.mobileProgressExtraSpace / 2 : 0;
+  const desktopTopSpace = settings.desktopProgressPosition === "bottom" ? 0 : settings.desktopProgressGap + settings.desktopProgressThickness + desktopExtraSide;
+  const desktopBottomSpace = settings.desktopProgressPosition === "top" ? 0 : settings.desktopProgressGap + settings.desktopProgressThickness + desktopExtraSide;
+  const mobileTopSpace = settings.mobileProgressPosition === "bottom" ? 0 : settings.mobileProgressGap + settings.mobileProgressThickness + mobileExtraSide;
+  const mobileBottomSpace = settings.mobileProgressPosition === "top" ? 0 : settings.mobileProgressGap + settings.mobileProgressThickness + mobileExtraSide;
+
+  return (
+    <>
+    <section
+      className={`${styles.page}${embedded ? ` ${styles.embedded}` : ""}${previewDevice === "mobile" ? ` ${styles.forceMobile}` : ""}`}
+      style={{
+        "--dm-desktop-overlap": `${settings.desktopOverlap}px`,
+        "--dm-mobile-overlap": `${settings.mobileOverlap}px`,
+        "--dm-desktop-card-width": `${settings.desktopCardWidth}px`,
+        "--dm-desktop-card-height": `${settings.desktopCardHeight}px`,
+        "--dm-mobile-card-width": `${settings.mobileCardWidth}px`,
+        "--dm-mobile-card-height": `${settings.mobileCardHeight}px`,
+        "--dm-desktop-card-gap": `${settings.desktopCardGap}px`,
+        "--dm-mobile-card-gap": `${settings.mobileCardGap}px`,
+        "--dm-desktop-edge-scroll-padding": `${settings.desktopEdgeScrollPadding}px`,
+        "--dm-mobile-edge-scroll-padding": `${settings.mobileEdgeScrollPadding}px`,
+        "--dm-desktop-content-gap": `${settings.desktopContentGap}px`,
+        "--dm-mobile-content-gap": `${settings.mobileContentGap}px`,
+        "--dm-desktop-progress-start": settings.desktopProgressStartColor,
+        "--dm-desktop-progress-end": settings.desktopProgressEndColor,
+        "--dm-desktop-progress-track": settings.desktopProgressTrackColor,
+        "--dm-mobile-progress-start": settings.mobileProgressStartColor,
+        "--dm-mobile-progress-end": settings.mobileProgressEndColor,
+        "--dm-mobile-progress-track": settings.mobileProgressTrackColor,
+        "--dm-desktop-progress-top-space": `${desktopTopSpace}px`,
+        "--dm-desktop-progress-bottom-space": `${desktopBottomSpace}px`,
+        "--dm-mobile-progress-top-space": `${mobileTopSpace}px`,
+        "--dm-mobile-progress-bottom-space": `${mobileBottomSpace}px`,
+        "--dm-desktop-progress-thickness": `${settings.desktopProgressThickness}px`,
+        "--dm-mobile-progress-thickness": `${settings.mobileProgressThickness}px`,
+        "--dm-desktop-category-alignment": settings.desktopCategoryAlignment === "center" ? "safe center" : "flex-start",
+        "--dm-desktop-image-fit": settings.desktopImageFit,
+        "--dm-mobile-image-fit": settings.mobileImageFit,
+        "--dm-desktop-image-position": settings.desktopImagePosition,
+        "--dm-mobile-image-position": settings.mobileImagePosition,
+        "--dm-desktop-radius": `${settings.desktopBorderRadius}px`,
+        "--dm-mobile-radius": `${settings.mobileBorderRadius}px`,
+        "--dm-desktop-border-width": `${settings.desktopBorderWidth}px`,
+        "--dm-mobile-border-width": `${settings.mobileBorderWidth}px`,
+        "--dm-desktop-border-color": settings.desktopBorderColor,
+        "--dm-mobile-border-color": settings.mobileBorderColor,
+        "--dm-desktop-shadow": shadowValue[settings.desktopShadow],
+        "--dm-mobile-shadow": shadowValue[settings.mobileShadow],
+        "--dm-desktop-image-bg": settings.desktopImageBackgroundColor,
+        "--dm-mobile-image-bg": settings.mobileImageBackgroundColor,
+        "--dm-lower-desktop-display": "block",
+        "--dm-lower-mobile-display": "block",
+        "--dm-lower-desktop-max": `${settings.lowerDesktop.sectionMaxWidth}px`,
+        "--dm-lower-mobile-max": `${settings.lowerMobile.sectionMaxWidth}px`,
+        "--dm-lower-desktop-padding": `${settings.lowerDesktop.sectionPadding}px`,
+        "--dm-lower-mobile-padding": `${settings.lowerMobile.sectionPadding}px`,
+        "--dm-lower-desktop-gap": `${settings.lowerDesktop.sectionGap}px`,
+        "--dm-lower-mobile-gap": `${settings.lowerMobile.sectionGap}px`,
+        "--dm-lower-desktop-heading-gap": `${settings.lowerDesktop.headingGap}px`,
+        "--dm-lower-mobile-heading-gap": `${settings.lowerMobile.headingGap}px`,
+        "--dm-lower-desktop-heading-display": settings.lowerDesktop.showHeading ? "flex" : "none",
+        "--dm-lower-mobile-heading-display": settings.lowerMobile.showHeading ? "flex" : "none",
+        "--dm-lower-desktop-bottom-gap": `${settings.lowerDesktop.sectionBottomGap}px`,
+        "--dm-lower-mobile-bottom-gap": `${settings.lowerMobile.sectionBottomGap}px`,
+        "--dm-lower-desktop-card-width": `${settings.lowerDesktop.cardWidth}px`,
+        "--dm-lower-mobile-card-width": `${settings.lowerMobile.cardWidth}px`,
+        "--dm-lower-desktop-card-gap": `${settings.lowerDesktop.cardGap}px`,
+        "--dm-lower-mobile-card-gap": `${settings.lowerMobile.cardGap}px`,
+        "--dm-lower-desktop-card-radius": `${settings.lowerDesktop.cardRadius}px`,
+        "--dm-lower-mobile-card-radius": `${settings.lowerMobile.cardRadius}px`,
+        "--dm-lower-desktop-card-padding": `${settings.lowerDesktop.cardPadding}px`,
+        "--dm-lower-mobile-card-padding": `${settings.lowerMobile.cardPadding}px`,
+        "--dm-lower-desktop-card-bg": settings.lowerDesktop.cardBackground,
+        "--dm-lower-mobile-card-bg": settings.lowerMobile.cardBackground,
+        "--dm-lower-desktop-border": `${settings.lowerDesktop.cardBorderWidth}px solid ${settings.lowerDesktop.cardBorderColor}`,
+        "--dm-lower-mobile-border": `${settings.lowerMobile.cardBorderWidth}px solid ${settings.lowerMobile.cardBorderColor}`,
+        "--dm-lower-desktop-shadow": shadowValue[settings.lowerDesktop.cardShadow],
+        "--dm-lower-mobile-shadow": shadowValue[settings.lowerMobile.cardShadow],
+        "--dm-lower-desktop-image-display": settings.lowerDesktop.imageVisible ? "block" : "none",
+        "--dm-lower-mobile-image-display": settings.lowerMobile.imageVisible ? "block" : "none",
+        "--dm-lower-desktop-image-height": `${settings.lowerDesktop.imageHeight}px`,
+        "--dm-lower-mobile-image-height": `${settings.lowerMobile.imageHeight}px`,
+        "--dm-lower-desktop-image-radius": `${settings.lowerDesktop.imageRadius}px`,
+        "--dm-lower-mobile-image-radius": `${settings.lowerMobile.imageRadius}px`,
+        "--dm-lower-desktop-image-fit": settings.lowerDesktop.imageFit,
+        "--dm-lower-mobile-image-fit": settings.lowerMobile.imageFit,
+        "--dm-lower-desktop-title-size": `${settings.lowerDesktop.titleSize}px`,
+        "--dm-lower-mobile-title-size": `${settings.lowerMobile.titleSize}px`,
+        "--dm-lower-desktop-title-color": settings.lowerDesktop.titleColor,
+        "--dm-lower-mobile-title-color": settings.lowerMobile.titleColor,
+        "--dm-lower-desktop-title-weight": settings.lowerDesktop.titleWeight,
+        "--dm-lower-mobile-title-weight": settings.lowerMobile.titleWeight,
+        "--dm-lower-desktop-title-display": settings.lowerDesktop.titleVisible ? "block" : "none",
+        "--dm-lower-mobile-title-display": settings.lowerMobile.titleVisible ? "block" : "none",
+        "--dm-lower-desktop-description-display": settings.lowerDesktop.descriptionVisible ? "block" : "none",
+        "--dm-lower-mobile-description-display": settings.lowerMobile.descriptionVisible ? "block" : "none",
+        "--dm-lower-desktop-description-size": `${settings.lowerDesktop.descriptionSize}px`,
+        "--dm-lower-mobile-description-size": `${settings.lowerMobile.descriptionSize}px`,
+        "--dm-lower-desktop-description-color": settings.lowerDesktop.descriptionColor,
+        "--dm-lower-mobile-description-color": settings.lowerMobile.descriptionColor,
+        "--dm-lower-desktop-choice-height": `${settings.lowerDesktop.priceButtonHeight}px`,
+        "--dm-lower-mobile-choice-height": `${settings.lowerMobile.priceButtonHeight}px`,
+        "--dm-lower-desktop-choice-radius": `${settings.lowerDesktop.priceButtonRadius}px`,
+        "--dm-lower-mobile-choice-radius": `${settings.lowerMobile.priceButtonRadius}px`,
+        "--dm-lower-desktop-choice-bg": settings.lowerDesktop.priceBackground,
+        "--dm-lower-mobile-choice-bg": settings.lowerMobile.priceBackground,
+        "--dm-lower-desktop-choice-color": settings.lowerDesktop.priceTextColor,
         "--dm-lower-mobile-choice-color": settings.lowerMobile.priceTextColor,
         "--dm-lower-desktop-selected-bg": settings.lowerDesktop.selectedPriceBackground,
         "--dm-lower-mobile-selected-bg": settings.lowerMobile.selectedPriceBackground,
@@ -717,4 +1301,3 @@ function DonationCardCommerce({
     </>
   );
 }
-
